@@ -105,7 +105,6 @@ public class EmployeesModel(
                     RealName = @RealName,
                     PreferredName = @PreferredName,
                     ResidentialAddress = @ResidentialAddress,
-                    Phone = @Phone,
                     WorkEmail = @WorkEmail,
                     PrivateEmail = @PrivateEmail,
                     EmployeePasswordHash = COALESCE(@EmployeePasswordHash, EmployeePasswordHash),
@@ -114,7 +113,6 @@ public class EmployeesModel(
                     GstNumber = @GstNumber,
                     BankAccountNumber = @BankAccountNumber,
                     StartDate = @StartDate,
-                    EndDate = @EndDate,
                     JobTitle = @JobTitle,
                     EmploymentType = @EmploymentType,
                     PayType = @PayType,
@@ -140,15 +138,15 @@ public class EmployeesModel(
             const string insertSql = """
                 INSERT INTO bee_CrmEmployee
                     (ProjectId, MerchantId, OfficeAddressId, RoleId, RealName, PreferredName, ResidentialAddress,
-                     Phone, WorkEmail, PrivateEmail, EmployeePasswordHash, MustChangePassword, LoginEnabled,
-                     GstNumber, BankAccountNumber, StartDate, EndDate,
+                     WorkEmail, PrivateEmail, EmployeePasswordHash, MustChangePassword, LoginEnabled,
+                     GstNumber, BankAccountNumber, StartDate,
                      JobTitle, EmploymentType, PayType, HourlyRate, AnnualSalary, StandardWeeklyHours,
                      ScheduledStartTime, ScheduledEndTime,
                      Status, Notes, ProfileCompletedAtUtc, InviteSentAtUtc)
                 VALUES
                     (@ProjectId, @MerchantId, @OfficeAddressId, @RoleId, @RealName, @PreferredName, @ResidentialAddress,
-                     @Phone, @WorkEmail, @PrivateEmail, @EmployeePasswordHash, @MustChangePassword, @LoginEnabled,
-                     @GstNumber, @BankAccountNumber, @StartDate, @EndDate,
+                     @WorkEmail, @PrivateEmail, @EmployeePasswordHash, @MustChangePassword, @LoginEnabled,
+                     @GstNumber, @BankAccountNumber, @StartDate,
                      @JobTitle, @EmploymentType, @PayType, @HourlyRate, @AnnualSalary, @StandardWeeklyHours,
                      @ScheduledStartTime, @ScheduledEndTime,
                      @Status, @Notes, NULL, UTC_TIMESTAMP(6));
@@ -186,7 +184,6 @@ public class EmployeesModel(
         const string sql = """
             UPDATE bee_CrmEmployee
             SET Status = @Status,
-                EndDate = CASE WHEN @Status = 'Inactive' AND EndDate IS NULL THEN CURRENT_DATE() ELSE EndDate END,
                 UpdatedAtUtc = UTC_TIMESTAMP(6)
             WHERE id = @EmployeeId AND MerchantId = @MerchantId;
             """;
@@ -262,7 +259,7 @@ public class EmployeesModel(
         const string sql = """
             SELECT employee.id, employee.RealName, employee.PreferredName, employee.Phone,
                 employee.WorkEmail, employee.PrivateEmail, employee.GstNumber, employee.BankAccountNumber,
-                employee.ResidentialAddress, employee.StartDate, employee.EndDate, employee.JobTitle,
+                employee.ResidentialAddress, employee.StartDate, employee.JobTitle,
                 employee.EmploymentType, employee.PayType, employee.HourlyRate, employee.AnnualSalary,
                 employee.StandardWeeklyHours, employee.ScheduledStartTime, employee.ScheduledEndTime,
                 employee.LoginEnabled, employee.MustChangePassword,
@@ -291,7 +288,6 @@ public class EmployeesModel(
                 reader["BankAccountNumber"] as string,
                 reader["ResidentialAddress"] as string,
                 reader.IsDBNull(reader.GetOrdinal("StartDate")) ? null : reader.GetDateTime(reader.GetOrdinal("StartDate")),
-                reader.IsDBNull(reader.GetOrdinal("EndDate")) ? null : reader.GetDateTime(reader.GetOrdinal("EndDate")),
                 reader["JobTitle"] as string,
                 reader["EmploymentType"] as string,
                 reader["PayType"] as string ?? "Hourly",
@@ -317,9 +313,9 @@ public class EmployeesModel(
         await using var connection = new MySqlConnection(ConnectionString);
         await connection.OpenAsync(cancellationToken);
         const string sql = """
-            SELECT id, OfficeAddressId, RoleId, RealName, PreferredName, ResidentialAddress, Phone,
+            SELECT id, OfficeAddressId, RoleId, RealName, PreferredName, ResidentialAddress,
                 WorkEmail, PrivateEmail, LoginEnabled, MustChangePassword, GstNumber, BankAccountNumber,
-                StartDate, EndDate, JobTitle, EmploymentType, PayType, HourlyRate, AnnualSalary,
+                StartDate, JobTitle, EmploymentType, PayType, HourlyRate, AnnualSalary,
                 StandardWeeklyHours, ScheduledStartTime, ScheduledEndTime, Status, Notes
             FROM bee_CrmEmployee
             WHERE id = @EmployeeId AND MerchantId = @MerchantId
@@ -342,7 +338,6 @@ public class EmployeesModel(
             RealName = reader["RealName"] as string ?? string.Empty,
             PreferredName = reader["PreferredName"] as string,
             ResidentialAddress = reader["ResidentialAddress"] as string,
-            Phone = reader["Phone"] as string,
             WorkEmail = reader["WorkEmail"] as string,
             PrivateEmail = reader["PrivateEmail"] as string,
             LoginEnabled = reader.GetBoolean(reader.GetOrdinal("LoginEnabled")),
@@ -350,7 +345,6 @@ public class EmployeesModel(
             GstNumber = reader["GstNumber"] as string,
             BankAccountNumber = reader["BankAccountNumber"] as string,
             StartDate = reader.IsDBNull(reader.GetOrdinal("StartDate")) ? null : reader.GetDateTime(reader.GetOrdinal("StartDate")),
-            EndDate = reader.IsDBNull(reader.GetOrdinal("EndDate")) ? null : reader.GetDateTime(reader.GetOrdinal("EndDate")),
             JobTitle = reader["JobTitle"] as string,
             EmploymentType = reader["EmploymentType"] as string,
             PayType = reader["PayType"] as string ?? "Hourly",
@@ -410,7 +404,6 @@ public class EmployeesModel(
         command.Parameters.Add("@RealName", MySqlDbType.VarChar, 160).Value = realName;
         command.Parameters.Add("@PreferredName", MySqlDbType.VarChar, 160).Value = DbValue(Input.PreferredName);
         command.Parameters.Add("@ResidentialAddress", MySqlDbType.VarChar, 700).Value = DbValue(Input.ResidentialAddress);
-        command.Parameters.Add("@Phone", MySqlDbType.VarChar, 80).Value = DbValue(Input.Phone);
         command.Parameters.Add("@WorkEmail", MySqlDbType.VarChar, 180).Value = DbValue(workEmail);
         command.Parameters.Add("@PrivateEmail", MySqlDbType.VarChar, 180).Value = DbValue(Input.PrivateEmail);
         command.Parameters.Add("@EmployeePasswordHash", MySqlDbType.VarChar, 512).Value = (object?)effectivePasswordHash ?? DBNull.Value;
@@ -419,7 +412,6 @@ public class EmployeesModel(
         command.Parameters.Add("@GstNumber", MySqlDbType.VarChar, 80).Value = DbValue(Input.GstNumber);
         command.Parameters.Add("@BankAccountNumber", MySqlDbType.VarChar, 120).Value = DbValue(Input.BankAccountNumber);
         command.Parameters.Add("@StartDate", MySqlDbType.Date).Value = (object?)Input.StartDate?.Date ?? DBNull.Value;
-        command.Parameters.Add("@EndDate", MySqlDbType.Date).Value = (object?)Input.EndDate?.Date ?? DBNull.Value;
         command.Parameters.Add("@JobTitle", MySqlDbType.VarChar, 160).Value = DbValue(Input.JobTitle);
         command.Parameters.Add("@EmploymentType", MySqlDbType.VarChar, 80).Value = DbValue(Input.EmploymentType);
         command.Parameters.Add("@PayType", MySqlDbType.VarChar, 40).Value = NormalizePayType(Input.PayType);
@@ -504,9 +496,6 @@ public sealed class EmployeeInput
     [StringLength(700)]
     public string? ResidentialAddress { get; set; }
 
-    [StringLength(80)]
-    public string? Phone { get; set; }
-
     [EmailAddress]
     [StringLength(180)]
     public string? WorkEmail { get; set; }
@@ -529,8 +518,6 @@ public sealed class EmployeeInput
     public string? BankAccountNumber { get; set; }
 
     public DateTime? StartDate { get; set; }
-
-    public DateTime? EndDate { get; set; }
 
     [StringLength(160)]
     public string? JobTitle { get; set; }
@@ -572,7 +559,6 @@ public sealed record CrmEmployeeRow(
     string? BankAccountNumber,
     string? ResidentialAddress,
     DateTime? StartDate,
-    DateTime? EndDate,
     string? JobTitle,
     string? EmploymentType,
     string PayType,

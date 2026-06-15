@@ -47,3 +47,15 @@
     loading?.setAttribute("aria-hidden", "false");
   });
 })();
+
+(() => {
+  document.addEventListener("DOMContentLoaded", () => {
+    document.querySelectorAll('.oa-auto-modal[data-open="true"]').forEach((modal) => {
+      if (!window.bootstrap?.Modal) {
+        return;
+      }
+
+      window.bootstrap.Modal.getOrCreateInstance(modal).show();
+    });
+  });
+})();

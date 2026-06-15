@@ -9,19 +9,18 @@
     <div class="alert @(Model.StatusMessage.StartsWith("Please", StringComparison.OrdinalIgnoreCase) ? "alert-warning" : "alert-success")">@Model.StatusMessage</div>
 }
 
-<div class="card mb-5">
-    <div class="card-body">
-        <div class="d-flex align-items-start mb-4">
-            <div class="flex-grow-1">
-                <h3 class="card-title fs-6">@(Model.Input.Id > 0 ? "Edit employee" : "Add employee")</h3>
-                <p class="card-subtitle text-body-secondary">Create staff login with work email, role and start date. The employee completes their own profile on first login.</p>
-            </div>
-            @if (Model.Input.Id > 0)
-            {
-                <a asp-page="/Crm/Employees" class="btn btn-outline-secondary btn-sm">New Employee</a>
-            }
-        </div>
+<div class="modal fade oa-auto-modal" id="employee-modal" tabindex="-1" aria-labelledby="employee-modal-title" aria-hidden="true" data-open="@(Model.Input.Id > 0 || !ViewData.ModelState.IsValid ? "true" : "false")">
+    <div class="modal-dialog modal-xl modal-dialog-scrollable">
+        <div class="modal-content">
         <form method="post" asp-page-handler="Save">
+            <div class="modal-header">
+                <div>
+                    <h3 class="modal-title fs-6" id="employee-modal-title">@(Model.Input.Id > 0 ? "Edit employee" : "Add employee")</h3>
+                    <div class="text-body-secondary fs-8">Create staff login with work email, role and start date. The employee completes their own profile on first login.</div>
+                </div>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
             <input type="hidden" asp-for="Input.Id" />
             <div asp-validation-summary="All" class="text-danger fs-8 mb-4"></div>
             <div class="row g-4">
@@ -51,10 +50,6 @@
                         }
                     </select>
                     <span asp-validation-for="Input.RoleId" class="text-danger fs-8"></span>
-                </div>
-                <div class="col-12 col-md-4">
-                    <label class="form-label" asp-for="Input.Phone">Phone</label>
-                    <input asp-for="Input.Phone" class="form-control" />
                 </div>
                 <div class="col-12 col-md-4">
                     <label class="form-label" asp-for="Input.WorkEmail">Work email</label>
@@ -135,10 +130,6 @@
                     <span asp-validation-for="Input.StartDate" class="text-danger fs-8"></span>
                 </div>
                 <div class="col-12 col-md-4">
-                    <label class="form-label" asp-for="Input.EndDate">End date</label>
-                    <input asp-for="Input.EndDate" type="date" class="form-control" />
-                </div>
-                <div class="col-12 col-md-4">
                     <label class="form-label" asp-for="Input.Status">Status</label>
                     <select asp-for="Input.Status" class="form-select">
                         <option value="Active">Active</option>
@@ -163,16 +154,35 @@
                     </div>
                 }
             </div>
-            <div class="d-flex justify-content-end mt-5">
+            </div>
+            <div class="modal-footer">
+                @if (Model.Input.Id > 0)
+                {
+                    <a asp-page="/Crm/Employees" class="btn btn-outline-secondary">New Employee</a>
+                }
+                <button type="button" class="btn btn-light" data-bs-dismiss="modal">Cancel</button>
                 <button type="submit" class="btn btn-primary">@(Model.Input.Id > 0 ? "Save Employee" : "Create and Send Invite")</button>
             </div>
         </form>
+        </div>
     </div>
 </div>
 
 <div class="card">
     <div class="card-body">
-        <h3 class="card-title fs-6">Employee list</h3>
+        <div class="d-flex align-items-start mb-4">
+            <div class="flex-grow-1">
+                <h3 class="card-title fs-6">Employee list</h3>
+            </div>
+            @if (Model.Input.Id > 0)
+            {
+                <a asp-page="/Crm/Employees" class="btn btn-primary btn-sm">Add Employee</a>
+            }
+            else
+            {
+                <button type="button" class="btn btn-primary btn-sm" data-bs-toggle="modal" data-bs-target="#employee-modal">Add Employee</button>
+            }
+        </div>
         <div class="table-responsive mobile-card-table-wrap mt-4">
             <table class="table align-middle mobile-card-table">
                 <thead>
