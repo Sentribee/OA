@@ -1,0 +1,17 @@
+bin/
+obj/
+.vs/
+.vscode/
+*.user
+*.suo
+publish/
+tmp/
+artifacts/
+logs/
+shared/data-protection-keys/
+*.log
+*.zip
+*.tar.gz
+*.pem
+*.key
+*.env
