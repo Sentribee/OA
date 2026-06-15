@@ -1,0 +1,573 @@
+@page "/edge-devices/{id:int}"
+@model SentribeeConsole.Web.Pages.Operations.EdgeDevices.DetailsModel
+@{
+    Layout = "_AdminLayout";
+    ViewData["Title"] = Model.Device.Name;
+    ViewData["PageTitle"] = "Edge Device Details";
+    ViewData["ActiveMenu"] = "EdgeDevices";
+    ViewData["ProjectTimeZoneId"] = Model.Project.TimeZoneId;
+    var lastHeartbeatText = Model.Device.LastHeartbeatAtUtc.HasValue
+        ? SentribeeConsole.Web.Application.Services.ProjectTimeZone.Format(Model.Device.LastHeartbeatAtUtc.Value, Model.Project.TimeZoneId, "yyyy-MM-dd HH:mm:ss")
+        : "No heartbeat received";
+    var canManageEdgeDevices = Model.Project.CanManageEdgeDevices;
+}
+
+<div id="edge-feedback"
+     class="admin-toast @(string.IsNullOrEmpty(Model.StatusMessage) ? null : "is-visible") @(Model.StatusIsError ? "is-error" : null)"
+     role="status"
+     aria-live="polite">
+    <i class="material-symbols-rounded">@(Model.StatusIsError ? "error" : "check_circle")</i>
+    <span>@Model.StatusMessage</span>
+</div>
+
+<div class="admin-page-width">
+    <div class="d-flex align-items-center justify-content-between mb-5 page-action-bar">
+        <div>
+            <div class="d-flex flex-wrap align-items-center gap-3 mb-1">
+                <h3 class="text-body-emphasis mb-0">@Model.Device.Name</h3>
+                <div class="edge-online-status edge-online-status-large @((Model.Device.IsOnline && !Model.Device.NeedsRemoteDeviceRepair) ? "is-online" : "is-offline")" data-device-status="@Model.Device.Id">
+                    <span class="edge-online-dot" aria-hidden="true"></span>
+                    <span data-device-status-text>@(Model.Device.NeedsRemoteDeviceRepair ? "Remote device offline" : Model.Device.IsOnline ? "Online" : "Offline")</span>
+                </div>
+            </div>
+            <div class="text-body-secondary"><code>@Model.Device.DeviceCode</code> · @Model.Device.IpAddress</div>
+        </div>
+        <div class="d-flex flex-wrap gap-2">
+            @if (canManageEdgeDevices)
+            {
+                <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#edit-edge-device-modal">
+                    <i class="material-symbols-rounded fs-6 me-2">edit</i>Edit
+                </button>
+                @if (!Model.Device.IsOnline)
+                {
+                    <button type="button" class="btn btn-outline-primary edge-runtime-start" data-device-id="@Model.Device.Id">
+                        <i class="material-symbols-rounded fs-6 me-2">play_arrow</i>Start Service
+                    </button>
+                }
+            }
+            <a asp-page="/Operations/EdgeDevices/Index" class="btn btn-outline-primary">Back to Devices</a>
+        </div>
+    </div>
+
+    @if (Model.Device.IsOnline && !string.IsNullOrWhiteSpace(Model.LiveStreamUrl))
+    {
+        <section class="edge-live-stream-panel mb-5" data-live-stream-panel>
+            <div class="edge-live-stream-header">
+                <div>
+                    <div class="edge-live-stream-kicker">Live Edge AI Stream</div>
+                    <h4>Real-Time Device View</h4>
+                </div>
+                <a href="@Model.LiveStreamUrl" target="_blank" rel="noreferrer" class="btn btn-light btn-sm">
+                    <i class="material-symbols-rounded fs-6 me-1">open_in_new</i>Open Stream
+                </a>
+            </div>
+            <div class="edge-live-stream-stage">
+                <video id="edge-live-stream-video"
+                       class="edge-live-stream-video"
+                       controls
+                       autoplay
+                       muted
+                       playsinline
+                       data-stream-url="@Model.LiveStreamUrl"></video>
+                <div class="edge-live-stream-empty" data-stream-fallback hidden>
+                    <i class="material-symbols-rounded">videocam_off</i>
+                    <span>Live stream is starting. Open the stream in a new tab if playback does not begin.</span>
+                </div>
+            </div>
+        </section>
+    }
+
+    <div class="row g-5 mb-5">
+        <div class="col-lg-5">
+            <div class="card h-100">
+                <div class="card-body">
+                    <h4 class="card-title fs-5">Device Profile & Field Inventory</h4>
+                    <dl class="edge-detail-list edge-detail-list-compact mb-4">
+                        <dt>Status</dt>
+                        <dd>
+                            <div class="edge-online-status @((Model.Device.IsOnline && !Model.Device.NeedsRemoteDeviceRepair) ? "is-online" : "is-offline")" data-device-status="@Model.Device.Id">
+                                <span class="edge-online-dot" aria-hidden="true"></span>
+                                <span data-device-status-text>@(Model.Device.NeedsRemoteDeviceRepair ? "Remote device offline" : Model.Device.IsOnline ? "Online" : "Offline")</span>
+                            </div>
+                            <div class="text-danger fs-8 mt-2 @(Model.Device.NeedsRemoteDeviceRepair ? null : "d-none")" data-device-repair="@Model.Device.Id">
+                                Remote device offline. Maintenance required.
+                            </div>
+                        </dd>
+                        <dt>Last Heartbeat</dt>
+                        <dd data-device-heartbeat="@Model.Device.Id">@lastHeartbeatText</dd>
+                        <dt>Runtime</dt>
+                        <dd data-device-runtime="@Model.Device.Id">@(Model.Device.RuntimeStatus ?? "Unknown")</dd>
+                        <dt>Connection</dt>
+                        <dd data-device-connection="@Model.Device.Id">@(Model.Device.DeviceStatus ?? "Unknown")</dd>
+                        <dt>Address</dt>
+                        <dd>@Model.Device.Address</dd>
+                        @if (Model.Device.Latitude.HasValue && Model.Device.Longitude.HasValue)
+                        {
+                            <dt>Location</dt>
+                            <dd>@Model.Device.Latitude.Value.ToString("0.0000000"), @Model.Device.Longitude.Value.ToString("0.0000000")</dd>
+                        }
+                        <dt>Description</dt>
+                        <dd>@(Model.Device.Description ?? "No description.")</dd>
+                        <dt>Created</dt>
+                        <dd>@SentribeeConsole.Web.Application.Services.ProjectTimeZone.Format(Model.Device.CreatedAtUtc, Model.Project.TimeZoneId)</dd>
+                    </dl>
+                    <div class="border-top pt-4">
+                        <div class="text-body-secondary fs-8 mb-3">Field Device Inventory</div>
+                        @if (Model.Device.Endpoints.Count == 0)
+                        {
+                            <div class="rounded border p-3 text-body-secondary fs-8">No field devices attached.</div>
+                        }
+                        else
+                        {
+                            <div class="d-flex flex-column gap-2">
+                                @foreach (var endpoint in Model.Device.Endpoints)
+                                {
+                                    <div class="edge-inventory-item rounded border px-3 py-2">
+                                        <div class="fw-medium">@endpoint.DeviceName</div>
+                                        <a href="@endpoint.AccessUrl" target="_blank" rel="noreferrer" class="fs-8">@endpoint.AccessUrl</a>
+                                    </div>
+                                }
+                            </div>
+                        }
+                    </div>
+                    <div class="border-top pt-4 mt-4">
+                        <div class="d-flex align-items-start justify-content-between gap-3 mb-3">
+                            <div>
+                                <div class="fw-semibold text-body-emphasis">App Binding QR Code</div>
+                                <div class="text-body-secondary fs-8">Scan from the client app to bind this edge device.</div>
+                            </div>
+                        </div>
+                        <div class="edge-binding-panel">
+                            <div class="edge-binding-qr rounded border bg-white">
+                                <img src="@Url.Page("/Operations/EdgeDevices/Details", "BindingQr", new { id = Model.Device.Id })"
+                                     alt="App binding QR code for @Model.Device.Name"
+                                     width="220"
+                                     height="220" />
+                            </div>
+                            <div class="edge-binding-users">
+                                <div class="text-body-secondary fs-8 mb-2">Bound Users</div>
+                                @if (Model.BoundUsers.Count == 0)
+                                {
+                                    <div class="rounded border px-3 py-2 text-body-secondary fs-8">No app users are bound yet.</div>
+                                }
+                                else
+                                {
+                                    <div class="d-flex flex-column gap-2">
+                                        @foreach (var user in Model.BoundUsers)
+                                        {
+                                                <div class="rounded border px-3 py-2 edge-binding-user">
+                                                    <div class="fw-medium">@user.DisplayName</div>
+                                                    <div class="text-body-secondary fs-8">@(string.IsNullOrWhiteSpace(user.Email) ? user.PhoneNumber : user.Email)</div>
+                                                </div>
+                                        }
+                                    </div>
+                                }
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-lg-7">
+            <div class="card h-100">
+                <div class="card-body">
+                    <h4 class="card-title fs-5">Map Location</h4>
+                    <div class="edge-map-weather-grid edge-map-weather-grid-detail mb-4">
+                        @if (Model.Device.Latitude.HasValue && Model.Device.Longitude.HasValue && !string.IsNullOrWhiteSpace(Model.GoogleMapsApiKey))
+                        {
+                            <div id="edge-device-map"
+                                 class="edge-device-map edge-device-map-compact rounded border"
+                                 data-lat="@Model.Device.Latitude.Value.ToString(System.Globalization.CultureInfo.InvariantCulture)"
+                                 data-lng="@Model.Device.Longitude.Value.ToString(System.Globalization.CultureInfo.InvariantCulture)"
+                                 data-title="@Model.Device.Name"></div>
+                        }
+                        else
+                        {
+                            <div class="rounded border p-4 text-body-secondary">
+                                Map location is not available for this device.
+                            </div>
+                        }
+                        @{
+                            ViewData["WeatherHourLimit"] = 24;
+                        }
+                        <partial name="_WeatherForecastPanel" model="Model.Weather" />
+                        @{
+                            ViewData.Remove("WeatherHourLimit");
+                        }
+                    </div>
+
+                    @if (!string.IsNullOrWhiteSpace(Model.Device.StreetViewThumbnailUrl) && !string.IsNullOrWhiteSpace(Model.GoogleMapsApiKey))
+                    {
+                        <div class="d-flex align-items-center justify-content-between gap-3 mb-2">
+                            <h5 class="fs-6 text-body-emphasis mb-0">Street View Thumbnail</h5>
+                            <span class="badge bg-warning text-warning-emphasis" style="--bs-bg-opacity:.14">Sunlight simulation</span>
+                        </div>
+                        <div class="street-view-thumbnail-frame rounded overflow-hidden border weather-street-view sun-street-view @Model.Weather.ConditionClass"
+                             data-sun-street-view
+                             data-lat="@Model.Device.Latitude?.ToString(System.Globalization.CultureInfo.InvariantCulture)"
+                             data-lng="@Model.Device.Longitude?.ToString(System.Globalization.CultureInfo.InvariantCulture)"
+                             data-heading="@Model.StreetViewHeadingDegrees.ToString(System.Globalization.CultureInfo.InvariantCulture)">
+                            <img src="@(Model.Device.StreetViewThumbnailUrl)&key=@Model.GoogleMapsApiKey"
+                                 alt="Street View thumbnail for @Model.Device.Name"
+                                 class="street-view-thumbnail-image" />
+                            <span class="street-sun-layer" aria-hidden="true"></span>
+                            <span class="street-shade-layer" aria-hidden="true"></span>
+                            <span class="street-sun-caption" data-sun-caption>Calculating sunlight</span>
+                        </div>
+                    }
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row g-5 mb-5">
+        <div class="col-xl-7">
+            <div class="card h-100">
+                <div class="card-body">
+                    <div class="d-flex flex-wrap align-items-start justify-content-between gap-3 mb-4">
+                        <div>
+                            <h4 class="card-title fs-5 mb-1">Daily Risk Statistics</h4>
+                            <p class="card-subtitle mb-0">Daily device activity, scene recognition, PPE and risk counts.</p>
+                        </div>
+                    </div>
+                    @if (Model.DailyStats.Count == 0)
+                    {
+                        <div class="rounded border p-4 text-body-secondary">No daily statistics have been generated yet.</div>
+                    }
+                    else
+                    {
+                        <div class="table-responsive mobile-card-table-wrap">
+                            <table class="table align-middle mb-0 mobile-card-table">
+                                <thead>
+                                    <tr>
+                                        <th>Date</th>
+                                        <th>People</th>
+                                        <th>Machinery</th>
+                                        <th>PPE</th>
+                                        <th>Risk Events</th>
+                                        <th>Risk People</th>
+                                        <th>Top Risk Person</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    @foreach (var stat in Model.DailyStats)
+                                    {
+                                        <tr>
+                                            <td data-label="Date">@stat.StatDate.ToString("yyyy-MM-dd")</td>
+                                            <td data-label="People">@stat.PeopleCount</td>
+                                            <td data-label="Machinery">@stat.MachineryVehicleCount</td>
+                                            <td data-label="PPE">@(stat.PpeComplianceRate.HasValue ? $"{stat.PpeComplianceRate.Value:0.##}%" : "-")</td>
+                                            <td data-label="Risk Events">@stat.RiskEventCount</td>
+                                            <td data-label="Risk People">@stat.RiskPersonCount</td>
+                                            <td data-label="Top Risk Person">
+                                                @if (!string.IsNullOrWhiteSpace(stat.TopRiskSubjectKey))
+                                                {
+                                                    <span>@stat.TopRiskSubjectKey</span>
+                                                    <span class="text-body-secondary fs-8">× @stat.TopRiskSubjectRiskCount</span>
+                                                }
+                                                else
+                                                {
+                                                    <span class="text-body-secondary">-</span>
+                                                }
+                                            </td>
+                                        </tr>
+                                    }
+                                </tbody>
+                            </table>
+                        </div>
+                    }
+                </div>
+            </div>
+        </div>
+        <div class="col-xl-5">
+            <div class="card h-100">
+                <div class="card-body">
+                    <h4 class="card-title fs-5 mb-1">Top Risk People</h4>
+                    <p class="card-subtitle mb-4">Similarity-merged risk person ranking for the latest day.</p>
+                    @if (Model.DailyRiskPeople.Count == 0)
+                    {
+                        <div class="rounded border p-4 text-body-secondary">No risk person ranking is available for the latest day.</div>
+                    }
+                    else
+                    {
+                        <div class="d-flex flex-column gap-3">
+                            @for (var index = 0; index < Model.DailyRiskPeople.Count; index++)
+                            {
+                                var person = Model.DailyRiskPeople[index];
+                                var imageUrl = person.RepresentativeSubjectId.HasValue
+                                    ? $"/api/edge-event-subjects/{person.RepresentativeSubjectId.Value}/image/preview"
+                                    : !string.IsNullOrWhiteSpace(person.RepresentativePreviewImageUrl)
+                                        ? person.RepresentativePreviewImageUrl
+                                        : person.RepresentativeCropImageUrl;
+                                <div class="d-flex align-items-center gap-3 rounded border p-3">
+                                    <div class="badge bg-danger text-danger-emphasis" style="--bs-bg-opacity:.14">#@(index + 1)</div>
+                                    @if (!string.IsNullOrWhiteSpace(imageUrl))
+                                    {
+                                        <img src="@imageUrl" alt="@person.PersonGroupKey" class="rounded border" style="width:56px;height:56px;object-fit:cover;" />
+                                    }
+                                    <div class="min-w-0 flex-grow-1">
+                                        <div class="fw-semibold text-body-emphasis text-truncate">@(person.DisplayLabel ?? person.PersonGroupKey)</div>
+                                        <div class="text-body-secondary fs-8">@person.PersonGroupKey</div>
+                                    </div>
+                                    <div class="text-end">
+                                        <div class="fw-semibold">@person.RiskEventCount</div>
+                                        <div class="text-body-secondary fs-8">events</div>
+                                    </div>
+                                </div>
+                            }
+                        </div>
+                    }
+                </div>
+            </div>
+        </div>
+    </div>
+
+    @if (Model.ShowRuntimeEnvironment)
+    {
+    <div class="card mb-5">
+        <div class="card-body">
+            <div class="d-flex flex-wrap align-items-start justify-content-between gap-3 mb-4">
+                <div>
+                    <h4 class="card-title fs-5 mb-1">Runtime Environment</h4>
+                    <p class="card-subtitle mb-0">Editable variables from the Edge AI runtime template. Device IDs, RTSP, gateway, and instance paths are generated automatically.</p>
+                </div>
+                <button type="button" class="btn btn-warning edge-runtime-restart" data-device-id="@Model.Device.Id">
+                    <i class="material-symbols-rounded fs-6 me-2">restart_alt</i>Restart Service
+                </button>
+            </div>
+            <form method="post" asp-page-handler="SaveEnvironment" data-global-loading data-loading-label="Saving environment variables...">
+                @if (Model.EnvironmentInput.Count == 0)
+                {
+                    <div class="rounded border p-4 text-body-secondary mb-4">No editable environment variables were found on the selected server.</div>
+                }
+                else
+                {
+                    <div class="table-responsive edge-env-table-wrap mb-4 mobile-card-table-wrap">
+                        <table class="table align-middle mb-0 edge-env-table mobile-card-table">
+                            <thead>
+                                <tr>
+                                    <th style="width: 18rem">Variable</th>
+                                    <th>Value</th>
+                                    <th style="width: 7rem">Source</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @for (var index = 0; index < Model.EnvironmentInput.Count; index++)
+                                {
+                                    var inputType = Model.EnvironmentInput[index].IsSecret ? "password" : "text";
+                                    <tr>
+                                        <td data-label="Variable">
+                                            <input asp-for="EnvironmentInput[index].Name" type="hidden" />
+                                            <input asp-for="EnvironmentInput[index].IsSecret" type="hidden" />
+                                            <input asp-for="EnvironmentInput[index].Source" type="hidden" />
+                                            <code>@Model.EnvironmentInput[index].Name</code>
+                                        </td>
+                                        <td data-label="Value">
+                                            <input asp-for="EnvironmentInput[index].Value" type="@inputType" class="form-control" autocomplete="off" />
+                                        </td>
+                                        <td data-label="Source">
+                                            <span class="badge bg-secondary text-secondary-emphasis" style="--bs-bg-opacity:.12">@Model.EnvironmentInput[index].Source</span>
+                                        </td>
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
+                    </div>
+                }
+                <div class="d-flex justify-content-end">
+                    <button type="submit" class="btn btn-primary px-5" disabled="@(Model.EnvironmentInput.Count == 0)">
+                        <i class="material-symbols-rounded fs-6 me-2">save</i>Save Environment
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+    }
+</div>
+
+@if (canManageEdgeDevices)
+{
+<div class="modal fade" id="edit-edge-device-modal" tabindex="-1" aria-labelledby="edit-edge-device-title" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable">
+        <div class="modal-content">
+            <form method="post" asp-page-handler="Update" data-global-loading data-loading-label="Updating edge device...">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="edit-edge-device-title">Edit Edge Device</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <div asp-validation-summary="ModelOnly" class="text-danger fs-7 mb-4"></div>
+                    <input asp-for="EditInput.ServerResourceInstanceName" type="hidden" />
+                    <div class="mb-4">
+                        <label asp-for="EditInput.Name" class="form-label"></label>
+                        <input asp-for="EditInput.Name" class="form-control" />
+                        <span asp-validation-for="EditInput.Name" class="text-danger fs-8"></span>
+                    </div>
+                    <div>
+                        <label asp-for="EditInput.Description" class="form-label"></label>
+                        <textarea asp-for="EditInput.Description" class="form-control" rows="4"></textarea>
+                        <span asp-validation-for="EditInput.Description" class="text-danger fs-8"></span>
+                    </div>
+                    <div class="mt-4">
+                        <div class="fw-semibold text-body-emphasis">External Device Configuration</div>
+                        <div class="text-body-secondary fs-8 mb-3">Update field device names and access URLs used by this edge device.</div>
+                        @if (Model.EditInput.Endpoints.Count == 0)
+                        {
+                            <div class="rounded border p-3 text-body-secondary fs-8">No external devices are attached.</div>
+                        }
+                        else
+                        {
+                            <div class="d-flex flex-column gap-3">
+                                @for (var index = 0; index < Model.EditInput.Endpoints.Count; index++)
+                                {
+                                    <div class="edge-endpoint-row rounded border p-3">
+                                        <input asp-for="EditInput.Endpoints[index].CatalogDeviceId" type="hidden" />
+                                        <div class="row g-3">
+                                            <div class="col-md-5">
+                                                <label asp-for="EditInput.Endpoints[index].DeviceName" class="form-label">Device Name</label>
+                                                <input asp-for="EditInput.Endpoints[index].DeviceName" class="form-control" maxlength="150" required />
+                                            </div>
+                                            <div class="col-md-7">
+                                                <label asp-for="EditInput.Endpoints[index].AccessUrl" class="form-label">Access URL</label>
+                                                <input asp-for="EditInput.Endpoints[index].AccessUrl" class="form-control" maxlength="500" required />
+                                            </div>
+                                        </div>
+                                    </div>
+                                }
+                            </div>
+                        }
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-outline-primary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-primary">Save Changes</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+}
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+    <script>
+        window.sentribeeGoogleMapsKey = "@Model.GoogleMapsApiKey";
+    </script>
+    <script src="~/js/edge-device-maps.js" asp-append-version="true"></script>
+    <script src="~/js/solar-street-view.js" asp-append-version="true"></script>
+    <script src="~/js/event-annotation.js" asp-append-version="true"></script>
+    @if (Model.Device.IsOnline && !string.IsNullOrWhiteSpace(Model.LiveStreamUrl))
+    {
+        <script src="https://cdn.jsdelivr.net/npm/hls.js@1.5.18/dist/hls.min.js"></script>
+        <script>
+            (() => {
+                const video = document.getElementById("edge-live-stream-video");
+                const fallback = document.querySelector("[data-stream-fallback]");
+                if (!video) return;
+
+                const source = video.dataset.streamUrl;
+                if (!source) return;
+
+                if (video.canPlayType("application/vnd.apple.mpegurl")) {
+                    video.src = source;
+                    video.play().catch(() => fallback?.removeAttribute("hidden"));
+                    return;
+                }
+
+                if (window.Hls?.isSupported()) {
+                    const hls = new Hls({ liveDurationInfinity: true });
+                    hls.loadSource(source);
+                    hls.attachMedia(video);
+                    hls.on(Hls.Events.MANIFEST_PARSED, () => {
+                        video.play().catch(() => fallback?.removeAttribute("hidden"));
+                    });
+                    hls.on(Hls.Events.ERROR, (_event, data) => {
+                        if (data?.fatal) fallback?.removeAttribute("hidden");
+                    });
+                    return;
+                }
+
+                fallback?.removeAttribute("hidden");
+            })();
+        </script>
+    }
+    <script>
+        (() => {
+            const statusEndpoint = "@Url.Page("/Operations/EdgeDevices/Details", "Status", new { id = Model.Device.Id })";
+            const startEndpoint = "@Url.Page("/Operations/EdgeDevices/Details", "StartRuntime", new { id = Model.Device.Id })";
+            const restartEndpoint = "@Url.Page("/Operations/EdgeDevices/Details", "RestartRuntime", new { id = Model.Device.Id })";
+            const antiforgeryToken = document.querySelector('input[name="__RequestVerificationToken"]')?.value || "";
+
+            const applyStatus = (device) => {
+                document.querySelectorAll(`[data-device-status="${device.id}"]`).forEach((status) => {
+                    status.classList.toggle("is-online", device.isOnline && !device.needsRemoteDeviceRepair);
+                    status.classList.toggle("is-offline", !device.isOnline || device.needsRemoteDeviceRepair);
+                    status.querySelector("[data-device-status-text]").textContent = device.statusText;
+                });
+                document.querySelectorAll(`[data-device-heartbeat="${device.id}"]`).forEach((element) => element.textContent = device.lastHeartbeat);
+                document.querySelectorAll(`[data-device-runtime="${device.id}"]`).forEach((element) => element.textContent = device.runtimeStatus);
+                document.querySelectorAll(`[data-device-connection="${device.id}"]`).forEach((element) => element.textContent = device.deviceStatus);
+                document.querySelectorAll(`[data-device-repair="${device.id}"]`).forEach((element) => element.classList.toggle("d-none", !device.needsRemoteDeviceRepair));
+                if (device.isOnline) {
+                    document.querySelectorAll(".edge-runtime-start").forEach((button) => button.remove());
+                }
+            };
+
+            const refreshStatus = async () => {
+                try {
+                    const response = await fetch(statusEndpoint, { headers: { "Accept": "application/json" }, credentials: "same-origin" });
+                    if (!response.ok) return;
+                    const payload = await response.json();
+                    if (payload.found) applyStatus(payload);
+                } catch {
+                    // Retry on the next poll.
+                }
+            };
+
+            const wireRuntimeButton = (button, endpoint, loadingLabel, failureLabel) => {
+                button.addEventListener("click", async () => {
+                    if (button.disabled) return;
+                    const original = button.innerHTML;
+                    button.disabled = true;
+                    button.innerHTML = `<i class="material-symbols-rounded fs-6 me-2">progress_activity</i>${loadingLabel}`;
+                    window.setTimeout(() => {
+                        if (document.body.contains(button)) {
+                            button.disabled = false;
+                            button.innerHTML = original;
+                        }
+                    }, 10000);
+
+                    const body = new URLSearchParams();
+                    if (antiforgeryToken) {
+                        body.set("__RequestVerificationToken", antiforgeryToken);
+                    }
+                    try {
+                        const response = await fetch(endpoint, {
+                            method: "POST",
+                            headers: { "Content-Type": "application/x-www-form-urlencoded" },
+                            credentials: "same-origin",
+                            body
+                        });
+                        const payload = await response.json();
+                        if (!response.ok || !payload.success) {
+                            alert(payload.message || failureLabel);
+                        }
+                    } catch (error) {
+                        alert(error.message || failureLabel);
+                    }
+                });
+            };
+
+            document.querySelectorAll(".edge-runtime-start").forEach((button) =>
+                wireRuntimeButton(button, startEndpoint, "Starting", "Unable to start Edge AI runtime."));
+            document.querySelectorAll(".edge-runtime-restart").forEach((button) =>
+                wireRuntimeButton(button, restartEndpoint, "Restarting", "Unable to restart Edge AI runtime."));
+
+            window.setInterval(refreshStatus, 1000);
+        })();
+    </script>
+    @if (Model.Device.Latitude.HasValue && Model.Device.Longitude.HasValue && !string.IsNullOrWhiteSpace(Model.GoogleMapsApiKey))
+    {
+        <script async defer src="https://maps.googleapis.com/maps/api/js?key=@Model.GoogleMapsApiKey&callback=initEdgeDeviceDetailsMap"></script>
+    }
+}

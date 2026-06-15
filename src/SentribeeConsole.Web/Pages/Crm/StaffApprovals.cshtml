@@ -1,0 +1,71 @@
+@page "/oa/staff/approvals"
+@model SentribeeConsole.Web.Pages.Crm.StaffApprovalsModel
+@{
+    Layout = "_CrmStaffLayout";
+}
+
+@if (!string.IsNullOrWhiteSpace(Model.StatusMessage))
+{
+    <div class="alert alert-success">@Model.StatusMessage</div>
+}
+
+<div class="card">
+    <div class="card-body">
+        <h3 class="card-title fs-6">Pending approvals</h3>
+        <div class="table-responsive mobile-card-table-wrap mt-4">
+            <table class="table align-middle mobile-card-table">
+                <thead>
+                    <tr>
+                        <th>Step</th>
+                        <th>Employee</th>
+                        <th>Leave</th>
+                        <th>Date</th>
+                        <th>Hours</th>
+                        <th>Reason</th>
+                        <th>Decision</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @if (Model.Approvals.Count == 0)
+                    {
+                        <tr><td colspan="7" class="text-body-secondary">No pending approvals.</td></tr>
+                    }
+                    else
+                    {
+                        @foreach (var item in Model.Approvals)
+                        {
+                            <tr>
+                                <td data-label="Step">@item.StepName</td>
+                                <td data-label="Employee">@item.RequesterName</td>
+                                <td data-label="Leave">
+                                    <div>@item.LeaveType</div>
+                                    <div class="text-body-secondary fs-8">@(item.IsPaid ? "Paid" : "Unpaid")</div>
+                                </td>
+                                <td data-label="Date">
+                                    <div>@item.StartDate.ToString("yyyy-MM-dd")</div>
+                                    <div class="text-body-secondary fs-8">@item.EndDate.ToString("yyyy-MM-dd")</div>
+                                </td>
+                                <td data-label="Hours">@item.Hours.ToString("0.##")</td>
+                                <td data-label="Reason">@item.Reason</td>
+                                <td data-label="Decision">
+                                    <form method="post" asp-page-handler="Decide" class="d-flex flex-column gap-2">
+                                        <input type="hidden" name="approvalId" value="@item.Id" />
+                                        <input asp-for="DecisionNote" class="form-control form-control-sm" placeholder="Decision note" />
+                                        <div class="d-flex gap-2">
+                                            <button type="submit" name="decision" value="Approved" class="btn btn-primary btn-sm">Approve</button>
+                                            <button type="submit" name="decision" value="Rejected" class="btn btn-outline-secondary btn-sm">Reject</button>
+                                        </div>
+                                    </form>
+                                </td>
+                            </tr>
+                        }
+                    }
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+}

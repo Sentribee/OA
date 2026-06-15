@@ -1,0 +1,90 @@
+@page
+@model SentribeeConsole.Web.Pages.Operations.Crm.UsageModel
+@using SentribeeConsole.Web.Domain.Entities
+@{
+    Layout = "_AdminLayout";
+}
+
+<div class="admin-page-width">
+    <div class="dashboard-metric-grid mb-5">
+        <div class="card dashboard-metric-card">
+            <div class="dashboard-metric-value text-primary">@Model.Totals.ConversationCount</div>
+            <div class="dashboard-metric-label">Conversations</div>
+        </div>
+        <div class="card dashboard-metric-card">
+            <div class="dashboard-metric-value text-success">@Model.Totals.MessageCount</div>
+            <div class="dashboard-metric-label">Messages</div>
+        </div>
+        <div class="card dashboard-metric-card">
+            <div class="dashboard-metric-value text-warning">@Model.Totals.TotalTokens</div>
+            <div class="dashboard-metric-label">Model Tokens</div>
+        </div>
+        <div class="card dashboard-metric-card">
+            <div class="dashboard-metric-value text-danger">US$@Model.Totals.EstimatedCostUsd.ToString("0.0000")</div>
+            <div class="dashboard-metric-label">Estimated Cost</div>
+        </div>
+    </div>
+
+    <div class="card">
+        <div class="card-body">
+            <div class="d-flex align-items-start justify-content-between gap-3 mb-4">
+                <div>
+                    <h3 class="card-title fs-6">Model and chat usage</h3>
+                    <p class="card-subtitle text-body-secondary mb-0">Daily usage by merchant, model, image count, message volume, and estimated OpenAI cost.</p>
+                </div>
+                <span class="badge bg-primary-subtle text-primary">@Model.UsageRows.TotalCount rows</span>
+            </div>
+            <div class="table-responsive mobile-card-table-wrap">
+                <table class="table align-middle mobile-card-table">
+                    <thead>
+                    <tr>
+                        <th>Date</th>
+                        <th>Merchant</th>
+                        <th>Model</th>
+                        <th>Chat</th>
+                        <th>Cost</th>
+                    </tr>
+                    </thead>
+                    <tbody>
+                    @if (Model.UsageRows.Items.Count == 0)
+                    {
+                        <tr><td colspan="5" class="text-body-secondary">No Sentribee OA usage records yet.</td></tr>
+                    }
+                    else
+                    {
+                        @foreach (var item in Model.UsageRows.Items)
+                        {
+                            <tr>
+                                <td data-label="Date">@item.UsageDate.ToString("yyyy-MM-dd")</td>
+                                <td data-label="Merchant">
+                                    <div class="fw-medium">@item.BusinessName</div>
+                                    <div class="text-body-secondary fs-8">chat.sentribee.ai/@item.CorpId</div>
+                                </td>
+                                <td data-label="Model">
+                                    <div>@item.ModelName</div>
+                                    <div class="text-body-secondary fs-8">@item.TotalTokens tokens</div>
+                                </td>
+                                <td data-label="Chat">
+                                    <div>@item.ConversationCount conversation@(item.ConversationCount == 1 ? "" : "s")</div>
+                                    <div class="text-body-secondary fs-8">@item.MessageCount messages, @item.ImageCount images</div>
+                                </td>
+                                <td data-label="Cost">
+                                    <div class="fw-semibold">US$@item.EstimatedCostUsd.ToString("0.0000")</div>
+                                    <div class="text-body-secondary fs-8">@item.PromptTokens prompt / @item.CompletionTokens completion</div>
+                                </td>
+                            </tr>
+                        }
+                    }
+                    </tbody>
+                </table>
+            </div>
+            @await Html.PartialAsync("_Pagination", new PagedResult<object>
+            {
+                Items = Model.UsageRows.Items.Cast<object>().ToList(),
+                PageNumber = Model.UsageRows.PageNumber,
+                PageSize = Model.UsageRows.PageSize,
+                TotalCount = Model.UsageRows.TotalCount
+            })
+        </div>
+    </div>
+</div>

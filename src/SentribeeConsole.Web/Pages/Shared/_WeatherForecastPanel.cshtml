@@ -1,0 +1,36 @@
+@model SentribeeConsole.Web.Domain.Entities.WeatherForecastSummary
+@{
+    var hourLimit = ViewData["WeatherHourLimit"] is int limit ? limit : 8;
+    var timeZoneId = ViewData["ProjectTimeZoneId"] as string;
+}
+
+<div class="weather-panel @Model.ConditionClass">
+    <div class="weather-panel-header">
+        <div>
+            <div class="weather-kicker">MetService Forecast</div>
+            <h4>@Model.LocationName</h4>
+        </div>
+        <span class="weather-condition">@Model.Condition</span>
+    </div>
+    @if (!Model.IsAvailable)
+    {
+        <div class="weather-empty">@Model.Message</div>
+    }
+    else
+    {
+        <div class="weather-current">
+            <strong>@(Model.CurrentTemperatureC?.ToString("0.#") ?? "-")°C</strong>
+            <span>Rain @(Model.MaxRainMmPerHour?.ToString("0.#") ?? "-") mm/h · Wind @(Model.MaxWindKmh?.ToString("0") ?? "-") km/h</span>
+        </div>
+        <div class="weather-hours">
+            @foreach (var hour in Model.Hours.Take(hourLimit))
+            {
+                <div class="weather-hour">
+                    <span>@SentribeeConsole.Web.Application.Services.ProjectTimeZone.Format(hour.TimeUtc, timeZoneId, "HH:mm")</span>
+                    <strong>@(hour.TemperatureC?.ToString("0") ?? "-")°</strong>
+                    <small>@(hour.RainMmPerHour?.ToString("0.#") ?? "0") mm</small>
+                </div>
+            }
+        </div>
+    }
+</div>

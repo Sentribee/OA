@@ -1,0 +1,58 @@
+@model SentribeeConsole.Web.Domain.Entities.PagedResult<object>
+@using Microsoft.AspNetCore.WebUtilities
+@functions {
+    private string BuildPageUrl(int pageNumber)
+    {
+        var query = Context.Request.Query
+            .Where(pair => !string.Equals(pair.Key, "pageNumber", StringComparison.OrdinalIgnoreCase))
+            .ToDictionary(pair => pair.Key, pair => (string?)pair.Value.ToString(), StringComparer.OrdinalIgnoreCase);
+        query["pageNumber"] = Math.Max(1, pageNumber).ToString(System.Globalization.CultureInfo.InvariantCulture);
+        return QueryHelpers.AddQueryString(Context.Request.Path.ToString(), query);
+    }
+}
+
+@if (Model.TotalPages > 1)
+{
+    var currentPage = Math.Clamp(Model.PageNumber, 1, Model.TotalPages);
+    var pageWindow = 10;
+    var startPage = Math.Max(1, currentPage - pageWindow / 2);
+    var endPage = Math.Min(Model.TotalPages, startPage + pageWindow - 1);
+    startPage = Math.Max(1, endPage - pageWindow + 1);
+    <nav class="pagination-shell d-flex flex-wrap align-items-center justify-content-between gap-3 mt-4" aria-label="Pagination">
+        <div class="pagination-summary text-body-secondary fs-8">
+            Page @currentPage of @Model.TotalPages &middot; @Model.TotalCount total &middot; @Model.PageSize per page
+        </div>
+        <ul class="pagination pagination-desktop pagination-sm mb-0 flex-wrap">
+            <li class="page-item @(Model.HasPreviousPage ? null : "disabled")">
+                <a class="page-link" href="@BuildPageUrl(1)">First</a>
+            </li>
+            <li class="page-item @(Model.HasPreviousPage ? null : "disabled")">
+                <a class="page-link" href="@BuildPageUrl(currentPage - 1)">Previous</a>
+            </li>
+            @for (var pageIndex = startPage; pageIndex <= endPage; pageIndex++)
+            {
+                <li class="page-item @(pageIndex == currentPage ? "active" : null)">
+                    <a class="page-link" href="@BuildPageUrl(pageIndex)">@pageIndex</a>
+                </li>
+            }
+            <li class="page-item @(Model.HasNextPage ? null : "disabled")">
+                <a class="page-link" href="@BuildPageUrl(currentPage + 1)">Next</a>
+            </li>
+            <li class="page-item @(Model.HasNextPage ? null : "disabled")">
+                <a class="page-link" href="@BuildPageUrl(Model.TotalPages)">Last</a>
+            </li>
+        </ul>
+        <form method="get" class="pagination-jump d-flex align-items-center gap-2">
+            @foreach (var pair in Context.Request.Query.Where(pair => !string.Equals(pair.Key, "pageNumber", StringComparison.OrdinalIgnoreCase)))
+            {
+                foreach (var value in pair.Value)
+                {
+                    <input type="hidden" name="@pair.Key" value="@value" />
+                }
+            }
+            <label class="form-label fs-8 text-body-secondary mb-0" for="pagination-page-number">Go to</label>
+            <input id="pagination-page-number" class="form-control form-control-sm" style="width: 5.5rem;" type="number" name="pageNumber" min="1" max="@Model.TotalPages" value="@currentPage" />
+            <button class="btn btn-sm btn-outline-secondary" type="submit">Go</button>
+        </form>
+    </nav>
+}

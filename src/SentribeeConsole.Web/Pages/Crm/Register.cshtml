@@ -1,0 +1,88 @@
+@page "/oa/register"
+@model SentribeeConsole.Web.Pages.Crm.RegisterModel
+@{
+    Layout = "_AuthLayout";
+    ViewData["Title"] = "Sentribee OA Register";
+}
+
+<div id="login-feedback"
+     class="login-toast @(string.IsNullOrEmpty(Model.AlertMessage) ? null : "is-visible")"
+     role="alert"
+     aria-live="assertive">
+    <i class="material-symbols-rounded">error</i>
+    <span>@Model.AlertMessage</span>
+</div>
+
+<section class="card login-card mw-560 w-100 p-7 p-md-8">
+    <div class="d-flex align-items-center gap-3 mb-7">
+        <img class="brand-logo" src="~/images/sentribee-mark.png" alt="SentriBee" width="44" height="44" />
+        <div>
+            <h1 class="login-brand-name fs-5 mb-0">Sentribee OA</h1>
+            <div class="text-body-secondary fs-7">Create a Business operations workspace</div>
+        </div>
+    </div>
+
+    @if (!string.IsNullOrWhiteSpace(Model.CodeMessage))
+    {
+        <div class="alert alert-success py-2">@Model.CodeMessage</div>
+    }
+
+    <form method="post" asp-page="/Crm/Register" class="row g-3" novalidate>
+        <div class="col-12 col-md-7">
+            <label class="form-label" asp-for="Input.BusinessName">Business name</label>
+            <input asp-for="Input.BusinessName" class="form-control" autocomplete="organization" />
+            <span asp-validation-for="Input.BusinessName" class="text-danger fs-8"></span>
+        </div>
+        <div class="col-12 col-md-5">
+            <label class="form-label" asp-for="Input.CorpId">Corp id</label>
+            <input asp-for="Input.CorpId" class="form-control" placeholder="optional" />
+            <span asp-validation-for="Input.CorpId" class="text-danger fs-8"></span>
+        </div>
+        <div class="col-12 col-md-6">
+            <label class="form-label" asp-for="Input.ContactName">Contact name</label>
+            <input asp-for="Input.ContactName" class="form-control" autocomplete="name" />
+        </div>
+        <div class="col-12 col-md-6">
+            <label class="form-label" asp-for="Input.IndustryId">Industry</label>
+            <select asp-for="Input.IndustryId" class="form-select">
+                <option value="">Select required industry</option>
+                @foreach (var industry in Model.Industries)
+                {
+                    <option value="@industry.Id">@industry.Name</option>
+                }
+            </select>
+            <span asp-validation-for="Input.IndustryId" class="text-danger fs-8"></span>
+        </div>
+        <div class="col-12 col-md-6">
+            <label class="form-label" asp-for="Input.Email">Email</label>
+            <div class="input-group">
+                <input asp-for="Input.Email" class="form-control" autocomplete="email" inputmode="email" />
+                <button class="btn btn-outline-primary" type="submit" asp-page-handler="SendCode" formnovalidate>Send code</button>
+            </div>
+            <span asp-validation-for="Input.Email" class="text-danger fs-8"></span>
+        </div>
+        <div class="col-12 col-md-6">
+            <label class="form-label" asp-for="Input.Password">Password</label>
+            <input asp-for="Input.Password" type="password" class="form-control" autocomplete="new-password" />
+            <span asp-validation-for="Input.Password" class="text-danger fs-8"></span>
+        </div>
+        <div class="col-12 col-md-6">
+            <label class="form-label" asp-for="Input.VerificationCode">Email verification code</label>
+            <input asp-for="Input.VerificationCode" class="form-control" inputmode="numeric" autocomplete="one-time-code" maxlength="6" />
+            <span asp-validation-for="Input.VerificationCode" class="text-danger fs-8"></span>
+        </div>
+        <div class="col-12">
+            <label class="form-label" asp-for="Input.WebsiteUrl">Website</label>
+            <input asp-for="Input.WebsiteUrl" class="form-control" placeholder="https://example.com" />
+            <span asp-validation-for="Input.WebsiteUrl" class="text-danger fs-8"></span>
+        </div>
+        <div class="col-12 d-grid gap-3 mt-5">
+            <button type="submit" class="btn btn-primary">Create Workspace</button>
+            <a asp-page="/Crm/Login" class="text-center">Already have an account?</a>
+        </div>
+    </form>
+</section>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+}

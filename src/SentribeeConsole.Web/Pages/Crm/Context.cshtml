@@ -1,0 +1,38 @@
+@page "/oa/context"
+@model SentribeeConsole.Web.Pages.Crm.ContextModel
+@{
+    Layout = "_CrmLayout";
+}
+
+@if (!string.IsNullOrWhiteSpace(Model.StatusMessage))
+{
+    <div class="alert alert-success">@Model.StatusMessage</div>
+}
+
+<form method="post" class="card">
+    <div class="card-body">
+        <h3 class="card-title fs-6">Conversation context</h3>
+        <p class="card-subtitle text-body-secondary">Set global instructions for how the assistant should handle customers, escalation, tone, unsupported questions, and sensitive topics.</p>
+        <textarea asp-for="ContextInstructions" class="form-control mt-4" rows="14" placeholder="Example: Always answer in the customer's language. For refund requests, collect order number and email first. If confidence is low, ask one follow-up question."></textarea>
+        <span asp-validation-for="ContextInstructions" class="text-danger fs-8"></span>
+        <div class="row g-4 mt-2">
+            <div class="col-12 col-xl-6">
+                <label class="form-label" asp-for="ProfileGuidanceInstructions">Customer profile guidance</label>
+                <textarea asp-for="ProfileGuidanceInstructions" class="form-control" rows="10" placeholder="Example: Naturally learn who the customer is, what they need, how urgent it is, their decision role, and the next best action. Ask only one profile question at a time."></textarea>
+                <span asp-validation-for="ProfileGuidanceInstructions" class="text-danger fs-8"></span>
+            </div>
+            <div class="col-12 col-xl-6">
+                <label class="form-label" asp-for="ProfileDimensionFocus">Industry profile dimensions</label>
+                <textarea asp-for="ProfileDimensionFocus" class="form-control" rows="10" placeholder="Example: For real estate, capture buyer/renter, suburbs, budget, bedrooms, school zone, moving timeline, financing status, must-have features, and deal blockers."></textarea>
+                <span asp-validation-for="ProfileDimensionFocus" class="text-danger fs-8"></span>
+            </div>
+        </div>
+        <div class="d-flex justify-content-end mt-5">
+            <button type="submit" class="btn btn-primary">Save Context</button>
+        </div>
+    </div>
+</form>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+}

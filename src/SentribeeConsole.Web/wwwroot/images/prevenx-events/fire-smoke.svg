@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="960" height="540" viewBox="0 0 960 540">
+  <rect width="960" height="540" fill="#111827"/>
+  <path d="M140 430h680V240H140z" fill="#1f2937" stroke="#475569" stroke-width="6"/>
+  <path d="M300 430c-44-94 28-126 15-196 78 52 42 120 104 196z" fill="#ef4444"/>
+  <path d="M352 430c-25-62 20-89 14-137 47 37 26 86 66 137z" fill="#f97316"/>
+  <circle cx="575" cy="180" r="50" fill="#64748b" opacity=".72"/>
+  <circle cx="636" cy="150" r="70" fill="#94a3b8" opacity=".46"/>
+  <circle cx="710" cy="178" r="48" fill="#cbd5e1" opacity=".32"/>
+  <rect x="596" y="324" width="238" height="78" rx="16" fill="#2a1020" stroke="#ef4444" stroke-width="3"/>
+  <text x="622" y="358" font-family="Arial" font-size="22" font-weight="700" fill="#fecaca">CRITICAL</text>
+  <text x="622" y="387" font-family="Arial" font-size="17" fill="#fff">Smoke/fire detected</text>
+</svg>

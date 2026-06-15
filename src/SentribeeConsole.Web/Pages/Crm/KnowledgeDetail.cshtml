@@ -1,0 +1,53 @@
+@page "/oa/knowledge/{documentId:long}"
+@model SentribeeConsole.Web.Pages.Crm.KnowledgeDetailModel
+@using SentribeeConsole.Web.Application.Services
+@{
+    Layout = "_CrmLayout";
+    var doc = Model.Document!;
+    var fileUrl = $"/api/crm/knowledge-documents/{doc.Id}/file";
+    var downloadUrl = $"/api/crm/knowledge-documents/{doc.Id}/file?download=true";
+    var isImage = doc.ContentType?.StartsWith("image/", StringComparison.OrdinalIgnoreCase) == true;
+}
+
+<div class="mb-4">
+    <a class="btn btn-outline-secondary btn-sm" asp-page="/Crm/Knowledge">
+        <span class="material-symbols-rounded">arrow_back</span>
+        Back
+    </a>
+</div>
+
+<div class="card">
+    <div class="card-body">
+        <div class="d-flex flex-wrap align-items-start justify-content-between gap-3 mb-4">
+            <div class="min-w-0">
+                <h3 class="card-title fs-6 text-break">@doc.FileName</h3>
+                <p class="card-subtitle text-body-secondary mb-0">
+                    @doc.SourceType &middot; @doc.Status &middot; @ProjectTimeZone.Format(doc.UploadedAtUtc, Model.Merchant.TimeZoneId)
+                </p>
+            </div>
+            <div class="d-flex flex-wrap gap-2">
+                <a class="btn btn-outline-primary btn-sm" href="@fileUrl" target="_blank" rel="noopener">Open File</a>
+                <a class="btn btn-outline-secondary btn-sm" href="@downloadUrl">Download</a>
+            </div>
+        </div>
+
+        @if (isImage)
+        {
+            <div class="crm-knowledge-preview mb-4">
+                <img src="@fileUrl" alt="" />
+            </div>
+        }
+
+        <div class="crm-profile-field-grid mb-4">
+            <div><span>Content Type</span><strong>@(doc.ContentType ?? "Unknown")</strong></div>
+            <div><span>File Size</span><strong>@(doc.FileSizeBytes.HasValue ? $"{Math.Round(doc.FileSizeBytes.Value / 1024m, 1)} KB" : "Unknown")</strong></div>
+            <div><span>Processed</span><strong>@(doc.ProcessedAtUtc.HasValue ? ProjectTimeZone.Format(doc.ProcessedAtUtc.Value, Model.Merchant.TimeZoneId) : "Unknown")</strong></div>
+            <div><span>Document ID</span><strong>@doc.Id</strong></div>
+        </div>
+
+        <div class="crm-profile-section">
+            <span>Knowledge Content</span>
+            <p>@(string.IsNullOrWhiteSpace(doc.ExtractedText) ? "No extracted text or notes were saved for this file yet." : doc.ExtractedText)</p>
+        </div>
+    </div>
+</div>

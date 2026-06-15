@@ -1,0 +1,173 @@
+@page "/settings/profile"
+@model SentribeeConsole.Web.Pages.Settings.ProfileModel
+@{
+    Layout = "_AdminLayout";
+    ViewData["Title"] = "Administrator Profile";
+    ViewData["PageTitle"] = "Administrator Profile";
+    ViewData["ActiveMenu"] = "Settings";
+    var avatarUrl = string.IsNullOrWhiteSpace(Model.Admin.AvatarUrl)
+        ? Url.Content("~/theme/5-yWga3pRp.jpg")
+        : $"/api/admin/avatar?v={DateTimeOffset.UtcNow.ToUnixTimeMilliseconds()}";
+}
+
+<div id="profile-feedback"
+     class="admin-toast @(string.IsNullOrEmpty(Model.StatusMessage) ? null : "is-visible") @(Model.StatusIsError ? "is-error" : null)"
+     role="status"
+     aria-live="polite">
+    <i class="material-symbols-rounded">@(Model.StatusIsError ? "error" : "check_circle")</i>
+    <span>@Model.StatusMessage</span>
+</div>
+
+<div class="admin-page-width admin-page-width-narrow">
+    <div class="row g-4">
+        <div class="col-lg-4">
+            <div class="card p-5 text-center">
+                <div class="avatar-upload mx-auto mb-5">
+                    <img id="profile-avatar" data-admin-avatar class="rounded-circle" src="@avatarUrl" alt="Administrator avatar" />
+                    <div id="avatar-progress" class="avatar-progress" aria-hidden="true">
+                        <div class="loading-spinner"></div>
+                    </div>
+                </div>
+                <h2 class="fs-5 text-body-emphasis mb-1">@Model.Input.DisplayName</h2>
+                <p class="text-body-secondary mb-5">@Model.Admin.Roles</p>
+                <button type="button"
+                        id="avatar-edit-button"
+                        class="btn btn-primary w-100 mb-3"
+                        data-bs-toggle="modal"
+                        data-bs-target="#avatar-editor-modal">
+                    Edit Avatar
+                </button>
+                <input id="avatar-file" class="visually-hidden" type="file" accept="image/*" />
+                <div class="form-text">Choose an image, crop it, then upload the final avatar.</div>
+            </div>
+        </div>
+        <div class="col-lg-8">
+            <div class="card">
+                <div class="card-body">
+                    <h3 class="card-title fs-5">Profile Details</h3>
+                    <p class="card-subtitle mb-6">Manage the administrator identity displayed in the console.</p>
+                    <form id="profile-form" method="post" data-global-loading>
+                        <div asp-validation-summary="ModelOnly" class="text-danger fs-7 mb-4"></div>
+                        <div class="mb-4">
+                            <label class="form-label">Email</label>
+                            <input class="form-control" value="@Model.Admin.Email" disabled />
+                            <div class="form-text">Email is used for sign in and cannot be changed here.</div>
+                        </div>
+                        <div class="mb-4">
+                            <label asp-for="Input.DisplayName" class="form-label"></label>
+                            <input asp-for="Input.DisplayName" class="form-control" autocomplete="name" />
+                            <span asp-validation-for="Input.DisplayName" class="text-danger fs-8"></span>
+                        </div>
+                        <div class="d-flex justify-content-end">
+                            <button type="submit" class="btn btn-primary px-6">Save Changes</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+            <div class="card mt-4">
+                <div class="card-body d-flex flex-wrap align-items-center justify-content-between gap-3">
+                    <div>
+                        <h3 class="card-title fs-5 mb-1">Password</h3>
+                        <p class="card-subtitle mb-0">Use at least 10 characters with letters and numbers.</p>
+                    </div>
+                    <button type="button" class="btn btn-outline-primary px-6" data-bs-toggle="modal" data-bs-target="#reset-password-modal">
+                        Reset Password
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade"
+     id="avatar-editor-modal"
+     tabindex="-1"
+     aria-labelledby="avatar-editor-title"
+     aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <div>
+                    <h5 class="modal-title" id="avatar-editor-title">Edit Avatar</h5>
+                    <div class="text-body-secondary fs-8">Drag to position the image and use zoom for a precise crop.</div>
+                </div>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <div id="avatar-crop-stage" class="avatar-crop-stage" aria-label="Avatar crop preview">
+                    <canvas id="avatar-crop-canvas" width="720" height="720"></canvas>
+                    <div class="avatar-crop-mask" aria-hidden="true"></div>
+                </div>
+                <div class="d-flex align-items-center gap-3 mt-4">
+                    <i class="material-symbols-rounded text-body-secondary">zoom_out</i>
+                    <input id="avatar-zoom" class="form-range mb-0" type="range" min="1" max="4" step="0.01" value="1" aria-label="Avatar zoom" />
+                    <i class="material-symbols-rounded text-body-secondary">zoom_in</i>
+                </div>
+                <div id="avatar-editor-error" class="text-danger fs-8 mt-3" role="status"></div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" id="avatar-choose-button" class="btn btn-outline-primary">Choose Image</button>
+                <button type="button" class="btn btn-outline-primary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" id="avatar-upload-button" class="btn btn-primary px-6">Upload Avatar</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade"
+     id="reset-password-modal"
+     tabindex="-1"
+     aria-labelledby="reset-password-title"
+     aria-hidden="true"
+     data-password-reset-modal
+     data-show-password-modal="@Model.ShowPasswordModal.ToString().ToLowerInvariant()">
+    <div class="modal-dialog modal-dialog-centered modal-dialog-scrollable">
+        <div class="modal-content">
+            <form method="post" asp-page-handler="Password" data-password-reset-form data-global-loading data-loading-label="Resetting password...">
+                <div class="modal-header">
+                    <div>
+                        <h5 class="modal-title" id="reset-password-title">Reset Password</h5>
+                        <div class="text-body-secondary fs-8">Use at least 10 characters with letters and numbers.</div>
+                    </div>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    @if (Model.FirstLogin)
+                    {
+                        <div class="alert alert-primary mb-4">
+                            This account is using a temporary password. Reset it before continuing regular work.
+                        </div>
+                    }
+                    <div asp-validation-summary="ModelOnly" class="text-danger fs-7 mb-4"></div>
+                    <div class="mb-4">
+                        <label asp-for="Password.CurrentPassword" class="form-label"></label>
+                        <input asp-for="Password.CurrentPassword" class="form-control" autocomplete="current-password" />
+                        <span asp-validation-for="Password.CurrentPassword" class="text-danger fs-8"></span>
+                    </div>
+                    <div class="mb-4">
+                        <label asp-for="Password.NewPassword" class="form-label"></label>
+                        <input asp-for="Password.NewPassword" class="form-control" autocomplete="new-password" />
+                        <span asp-validation-for="Password.NewPassword" class="text-danger fs-8"></span>
+                        <div data-password-new-error class="text-danger fs-8 mt-1"></div>
+                    </div>
+                    <div class="mb-0">
+                        <label asp-for="Password.ConfirmPassword" class="form-label"></label>
+                        <input asp-for="Password.ConfirmPassword" class="form-control" autocomplete="new-password" />
+                        <span asp-validation-for="Password.ConfirmPassword" class="text-danger fs-8"></span>
+                        <div data-password-confirm-error class="text-danger fs-8 mt-1"></div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-outline-primary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-primary px-6">Reset Password</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+    <script src="~/js/profile.js" asp-append-version="true"></script>
+    <script src="~/js/password-reset.js" asp-append-version="true"></script>
+}

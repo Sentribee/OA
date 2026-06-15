@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="960" height="540" viewBox="0 0 960 540">
+  <rect width="960" height="540" fill="#111827"/>
+  <path d="M110 430h740M170 430V110m155 320V110m155 320V110m155 320V110m155 320V110M120 190h720M120 300h720" stroke="#64748b" stroke-width="12"/>
+  <circle cx="502" cy="236" r="34" fill="#f1c299"/>
+  <path d="M464 292h78l28 102H436z" fill="#dc2626"/>
+  <path d="M464 202h76l18 34H446z" fill="#facc15"/>
+  <path d="M395 182h240v166H395z" fill="none" stroke="#ef4444" stroke-width="5" stroke-dasharray="14 10"/>
+  <rect x="610" y="80" width="248" height="80" rx="16" fill="#2a1020" stroke="#ef4444" stroke-width="3"/>
+  <text x="636" y="115" font-family="Arial" font-size="22" font-weight="700" fill="#fecaca">HIGH WORK</text>
+  <text x="636" y="144" font-family="Arial" font-size="17" fill="#fff">Harness verification required</text>
+</svg>

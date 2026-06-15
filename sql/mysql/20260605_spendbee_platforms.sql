@@ -1,0 +1,140 @@
+CREATE TABLE IF NOT EXISTS bee_SpendBeePlatform (
+  id BIGINT NOT NULL AUTO_INCREMENT,
+  ProjectId INT NOT NULL,
+  Name VARCHAR(160) NOT NULL,
+  DisplayName VARCHAR(160) NULL,
+  NormalizedName VARCHAR(180) NOT NULL,
+  PlatformType VARCHAR(80) NOT NULL DEFAULT 'FoodDelivery',
+  LogoUrl VARCHAR(1000) NULL,
+  WebsiteUrl VARCHAR(700) NULL,
+  CountryOrRegion VARCHAR(120) NULL,
+  KnownAliasesJson JSON NULL,
+  SourceJson JSON NULL,
+  CreatedAtUtc DATETIME(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6),
+  UpdatedAtUtc DATETIME(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6) ON UPDATE CURRENT_TIMESTAMP(6),
+  PRIMARY KEY (id),
+  UNIQUE KEY UX_bee_SpendBeePlatform_Project_Name (ProjectId, NormalizedName),
+  KEY IX_bee_SpendBeePlatform_Project_Type (ProjectId, PlatformType),
+  CONSTRAINT FK_bee_SpendBeePlatform_Project FOREIGN KEY (ProjectId)
+    REFERENCES bee_Project (id) ON DELETE CASCADE
+) ENGINE=InnoDB;
+
+SET @sql := IF(
+  EXISTS (
+    SELECT 1 FROM INFORMATION_SCHEMA.COLUMNS
+    WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'bee_SpendBeeReceipt' AND COLUMN_NAME = 'PlatformId'
+  ),
+  'SELECT 1',
+  'ALTER TABLE bee_SpendBeeReceipt ADD COLUMN PlatformId BIGINT NULL AFTER MerchantId'
+);
+PREPARE stmt FROM @sql; EXECUTE stmt; DEALLOCATE PREPARE stmt;
+
+SET @sql := IF(
+  EXISTS (
+    SELECT 1 FROM INFORMATION_SCHEMA.COLUMNS
+    WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'bee_SpendBeeReceipt' AND COLUMN_NAME = 'ReceiptType'
+  ),
+  'SELECT 1',
+  'ALTER TABLE bee_SpendBeeReceipt ADD COLUMN ReceiptType VARCHAR(60) NULL AFTER Status'
+);
+PREPARE stmt FROM @sql; EXECUTE stmt; DEALLOCATE PREPARE stmt;
+
+SET @sql := IF(
+  EXISTS (
+    SELECT 1 FROM INFORMATION_SCHEMA.COLUMNS
+    WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'bee_SpendBeeReceipt' AND COLUMN_NAME = 'FulfillmentType'
+  ),
+  'SELECT 1',
+  'ALTER TABLE bee_SpendBeeReceipt ADD COLUMN FulfillmentType VARCHAR(60) NULL AFTER ReceiptType'
+);
+PREPARE stmt FROM @sql; EXECUTE stmt; DEALLOCATE PREPARE stmt;
+
+SET @sql := IF(
+  EXISTS (
+    SELECT 1 FROM INFORMATION_SCHEMA.COLUMNS
+    WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'bee_SpendBeeReceipt' AND COLUMN_NAME = 'PlatformOrderNumber'
+  ),
+  'SELECT 1',
+  'ALTER TABLE bee_SpendBeeReceipt ADD COLUMN PlatformOrderNumber VARCHAR(120) NULL AFTER MerchantAddress'
+);
+PREPARE stmt FROM @sql; EXECUTE stmt; DEALLOCATE PREPARE stmt;
+
+SET @sql := IF(
+  EXISTS (
+    SELECT 1 FROM INFORMATION_SCHEMA.COLUMNS
+    WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'bee_SpendBeeReceipt' AND COLUMN_NAME = 'OrderedAtUtc'
+  ),
+  'SELECT 1',
+  'ALTER TABLE bee_SpendBeeReceipt ADD COLUMN OrderedAtUtc DATETIME(6) NULL AFTER PurchasedAtUtc'
+);
+PREPARE stmt FROM @sql; EXECUTE stmt; DEALLOCATE PREPARE stmt;
+
+SET @sql := IF(
+  EXISTS (
+    SELECT 1 FROM INFORMATION_SCHEMA.COLUMNS
+    WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'bee_SpendBeeReceipt' AND COLUMN_NAME = 'PickupAtUtc'
+  ),
+  'SELECT 1',
+  'ALTER TABLE bee_SpendBeeReceipt ADD COLUMN PickupAtUtc DATETIME(6) NULL AFTER OrderedAtUtc'
+);
+PREPARE stmt FROM @sql; EXECUTE stmt; DEALLOCATE PREPARE stmt;
+
+SET @sql := IF(
+  EXISTS (
+    SELECT 1 FROM INFORMATION_SCHEMA.COLUMNS
+    WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'bee_SpendBeeReceipt' AND COLUMN_NAME = 'DeliveredAtUtc'
+  ),
+  'SELECT 1',
+  'ALTER TABLE bee_SpendBeeReceipt ADD COLUMN DeliveredAtUtc DATETIME(6) NULL AFTER PickupAtUtc'
+);
+PREPARE stmt FROM @sql; EXECUTE stmt; DEALLOCATE PREPARE stmt;
+
+SET @sql := IF(
+  EXISTS (
+    SELECT 1 FROM INFORMATION_SCHEMA.COLUMNS
+    WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'bee_SpendBeeReceipt' AND COLUMN_NAME = 'DeliveryFee'
+  ),
+  'SELECT 1',
+  'ALTER TABLE bee_SpendBeeReceipt ADD COLUMN DeliveryFee DECIMAL(12,2) NULL AFTER Tax'
+);
+PREPARE stmt FROM @sql; EXECUTE stmt; DEALLOCATE PREPARE stmt;
+
+SET @sql := IF(
+  EXISTS (
+    SELECT 1 FROM INFORMATION_SCHEMA.COLUMNS
+    WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'bee_SpendBeeReceipt' AND COLUMN_NAME = 'ServiceFee'
+  ),
+  'SELECT 1',
+  'ALTER TABLE bee_SpendBeeReceipt ADD COLUMN ServiceFee DECIMAL(12,2) NULL AFTER DeliveryFee'
+);
+PREPARE stmt FROM @sql; EXECUTE stmt; DEALLOCATE PREPARE stmt;
+
+SET @sql := IF(
+  EXISTS (
+    SELECT 1 FROM INFORMATION_SCHEMA.COLUMNS
+    WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'bee_SpendBeeReceipt' AND COLUMN_NAME = 'PlatformDiscount'
+  ),
+  'SELECT 1',
+  'ALTER TABLE bee_SpendBeeReceipt ADD COLUMN PlatformDiscount DECIMAL(12,2) NULL AFTER ServiceFee'
+);
+PREPARE stmt FROM @sql; EXECUTE stmt; DEALLOCATE PREPARE stmt;
+
+SET @sql := IF(
+  EXISTS (
+    SELECT 1 FROM INFORMATION_SCHEMA.STATISTICS
+    WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'bee_SpendBeeReceipt' AND INDEX_NAME = 'IX_bee_SpendBeeReceipt_Platform_Time'
+  ),
+  'SELECT 1',
+  'ALTER TABLE bee_SpendBeeReceipt ADD KEY IX_bee_SpendBeeReceipt_Platform_Time (PlatformId, CreatedAtUtc)'
+);
+PREPARE stmt FROM @sql; EXECUTE stmt; DEALLOCATE PREPARE stmt;
+
+SET @sql := IF(
+  EXISTS (
+    SELECT 1 FROM INFORMATION_SCHEMA.KEY_COLUMN_USAGE
+    WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'bee_SpendBeeReceipt' AND CONSTRAINT_NAME = 'FK_bee_SpendBeeReceipt_Platform'
+  ),
+  'SELECT 1',
+  'ALTER TABLE bee_SpendBeeReceipt ADD CONSTRAINT FK_bee_SpendBeeReceipt_Platform FOREIGN KEY (PlatformId) REFERENCES bee_SpendBeePlatform (id) ON DELETE SET NULL'
+);
+PREPARE stmt FROM @sql; EXECUTE stmt; DEALLOCATE PREPARE stmt;

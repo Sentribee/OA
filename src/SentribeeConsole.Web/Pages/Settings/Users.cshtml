@@ -1,0 +1,138 @@
+@page "/settings/users"
+@model SentribeeConsole.Web.Pages.Settings.UsersModel
+@using SentribeeConsole.Web.Domain.Entities
+@{
+    Layout = "_AdminLayout";
+    ViewData["Title"] = "Project Users";
+    ViewData["PageTitle"] = "Project Users";
+    ViewData["ActiveMenu"] = "Users";
+}
+
+<div id="users-feedback"
+     class="admin-toast @(string.IsNullOrEmpty(Model.StatusMessage) ? null : "is-visible") @(Model.StatusIsError ? "is-error" : null)"
+     role="status"
+     aria-live="polite">
+    <i class="material-symbols-rounded">@(Model.StatusIsError ? "error" : "check_circle")</i>
+    <span>@Model.StatusMessage</span>
+</div>
+
+<div class="admin-page-width">
+    <div class="card mb-5">
+        <div class="card-body">
+            <form method="post" asp-page-handler="Invite" class="row g-3 align-items-end">
+                <div class="col-12 col-lg">
+                    <label asp-for="Invite.Email" class="form-label">Invite User</label>
+                    <input asp-for="Invite.Email" class="form-control" placeholder="name@example.com" autocomplete="email" inputmode="email" />
+                    <span asp-validation-for="Invite.Email" class="text-danger fs-8"></span>
+                </div>
+                <div class="col-12 col-lg-auto">
+                    <button type="submit" class="btn btn-primary w-100">
+                        <i class="material-symbols-rounded">mail</i>
+                        Send Invite
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <div class="card">
+        <div class="card-body">
+            <div class="d-flex align-items-start mb-5">
+                <div class="flex-grow-1">
+                    <h3 class="card-title fs-5">User Roles</h3>
+                    <p class="card-subtitle">Manage project role assignments for @Model.Project.Name.</p>
+                </div>
+                <span class="badge bg-primary text-primary-emphasis" style="--bs-bg-opacity:.12">@Model.Members.Count users</span>
+            </div>
+            <div class="table-responsive mobile-card-table-wrap">
+                <table class="table align-middle mobile-card-table">
+                    <thead>
+                        <tr>
+                            <th>User</th>
+                            <th>Invitation</th>
+                            <th>Last Login</th>
+                            <th>Role</th>
+                            <th></th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var member in Model.Members)
+                        {
+                            <tr>
+                                <td data-label="User">
+                                    <div class="fw-medium">@(!string.IsNullOrWhiteSpace(member.DisplayName) ? member.DisplayName : member.Email)</div>
+                                    <div class="text-body-secondary fs-8">@member.Email</div>
+                                </td>
+                                <td data-label="Invitation">
+                                    @if (member.HasAcceptedInvitation)
+                                    {
+                                        <span class="badge bg-success text-success-emphasis" style="--bs-bg-opacity:.12">Password Set</span>
+                                    }
+                                    else if (member.HasPendingInvitation && member.InvitationExpiresAtUtc is { } expiresAt && expiresAt > DateTime.UtcNow)
+                                    {
+                                        <span class="badge bg-warning text-warning-emphasis" style="--bs-bg-opacity:.14">Pending</span>
+                                        <div class="text-body-secondary fs-8 mt-1">
+                                            Expires @SentribeeConsole.Web.Application.Services.ProjectTimeZone.Format(expiresAt, Model.Project.TimeZoneId, fallback: "Soon")
+                                        </div>
+                                    }
+                                    else if (member.HasPendingInvitation)
+                                    {
+                                        <span class="badge bg-danger text-danger-emphasis" style="--bs-bg-opacity:.12">Expired</span>
+                                    }
+                                    else
+                                    {
+                                        <span class="badge bg-secondary text-secondary-emphasis" style="--bs-bg-opacity:.12">Active</span>
+                                    }
+                                </td>
+                                <td data-label="Last Login">@SentribeeConsole.Web.Application.Services.ProjectTimeZone.Format(member.LastLoginTime, Model.Project.TimeZoneId, fallback: "Never")</td>
+                                <td data-label="Role">
+                                    @if (member.AdminId != Model.Project.AdminId)
+                                    {
+                                        <form method="post" asp-page-handler="Role" class="user-role-form">
+                                            <input type="hidden" name="memberAdminId" value="@member.AdminId" />
+                                            <select name="role" class="form-select form-select-sm" aria-label="Role for @member.Email">
+                                                @foreach (var role in Model.AvailableRoles)
+                                                {
+                                                    <option value="@role" selected="@(role == member.Role)">@role</option>
+                                                }
+                                            </select>
+                                            <button type="submit" class="btn btn-outline-primary btn-sm user-role-save" title="Save role">
+                                                <i class="material-symbols-rounded">check</i>
+                                                <span class="visually-hidden">Save role</span>
+                                            </button>
+                                        </form>
+                                    }
+                                    else
+                                    {
+                                        <span class="badge bg-secondary text-secondary-emphasis" style="--bs-bg-opacity:.12">@member.Role</span>
+                                    }
+                                </td>
+                                <td class="text-end mobile-card-actions" data-label="Role">
+                                    @if (member.AdminId == Model.Project.AdminId)
+                                    {
+                                        <span class="text-body-secondary fs-8">Owner</span>
+                                    }
+                                    else
+                                    {
+                                        <form method="post"
+                                              asp-page-handler="Delete"
+                                              asp-route-memberAdminId="@member.AdminId"
+                                              onsubmit="return confirm('Delete this user from the project?');">
+                                            <button type="submit" class="user-delete-btn" title="Delete user" aria-label="Delete @member.Email">
+                                                <i class="material-symbols-rounded">delete</i>
+                                            </button>
+                                        </form>
+                                    }
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+}

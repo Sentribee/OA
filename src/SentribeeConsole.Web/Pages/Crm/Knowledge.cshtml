@@ -1,0 +1,85 @@
+@page "/oa/knowledge"
+@model SentribeeConsole.Web.Pages.Crm.KnowledgeModel
+@using SentribeeConsole.Web.Application.Services
+@{
+    Layout = "_CrmLayout";
+}
+
+@if (!string.IsNullOrWhiteSpace(Model.StatusMessage))
+{
+    <div class="alert alert-success">@Model.StatusMessage</div>
+}
+
+<div class="row g-5">
+    <div class="col-12 col-xl-5">
+        <form method="post" asp-page-handler="Upload" enctype="multipart/form-data" class="card">
+            <div class="card-body">
+                <h3 class="card-title fs-6">Upload knowledge</h3>
+                <p class="card-subtitle text-body-secondary">Upload documents or screenshots used by the support bot. Text files are indexed immediately; other files can include notes.</p>
+                <div class="mb-4 mt-4">
+                    <label class="form-label" for="knowledge-file">Document or screenshot</label>
+                    <input id="knowledge-file" class="form-control" type="file" name="file" accept=".txt,.md,.csv,.json,.pdf,.doc,.docx,image/*" />
+                </div>
+                <div class="mb-4">
+                    <label class="form-label" asp-for="Notes">Notes or extracted text</label>
+                    <textarea asp-for="Notes" class="form-control" rows="8" placeholder="Paste key policy, FAQ, product details, or screenshot notes here."></textarea>
+                </div>
+                <button type="submit" class="btn btn-primary w-100">Upload</button>
+            </div>
+        </form>
+    </div>
+    <div class="col-12 col-xl-7">
+        <div class="card">
+            <div class="card-body">
+                <div class="d-flex align-items-start justify-content-between gap-3 mb-4">
+                    <div>
+                        <h3 class="card-title fs-6">Knowledge files</h3>
+                        <p class="card-subtitle text-body-secondary mb-0">Files available to the public support bot.</p>
+                    </div>
+                    <span class="badge bg-primary-subtle text-primary">@Model.Documents.Count total</span>
+                </div>
+                <div class="table-responsive mobile-card-table-wrap">
+                    <table class="table align-middle mobile-card-table">
+                        <thead>
+                        <tr><th>File</th><th>Type</th><th>Status</th><th></th></tr>
+                        </thead>
+                        <tbody>
+                        @if (Model.Documents.Count == 0)
+                        {
+                            <tr><td colspan="4" class="text-body-secondary">No knowledge files uploaded.</td></tr>
+                        }
+                        else
+                        {
+                            @foreach (var item in Model.Documents)
+                            {
+                                <tr>
+                                    <td data-label="File">
+                                        <a class="fw-medium" asp-page="/Crm/KnowledgeDetail" asp-route-documentId="@item.Id">@item.FileName</a>
+                                        <div class="text-body-secondary fs-8">@ProjectTimeZone.Format(item.UploadedAtUtc, Model.Merchant.TimeZoneId)</div>
+                                    </td>
+                                    <td data-label="Type">
+                                        <div>@item.SourceType</div>
+                                        <div class="text-body-secondary fs-8">@item.ContentType</div>
+                                    </td>
+                                    <td data-label="Status">
+                                        <span class="badge bg-success-subtle text-success">@item.Status</span>
+                                    </td>
+                                    <td data-label="" class="text-end">
+                                        <div class="mobile-card-actions d-flex gap-2 justify-content-end">
+                                        <a class="btn btn-sm btn-outline-primary" asp-page="/Crm/KnowledgeDetail" asp-route-documentId="@item.Id">Open</a>
+                                        <form method="post" asp-page-handler="Delete">
+                                            <input type="hidden" name="documentId" value="@item.Id" />
+                                            <button type="submit" class="btn btn-sm btn-outline-danger">Remove</button>
+                                        </form>
+                                        </div>
+                                    </td>
+                                </tr>
+                            }
+                        }
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>

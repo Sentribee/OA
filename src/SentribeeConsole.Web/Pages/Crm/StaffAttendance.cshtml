@@ -1,0 +1,118 @@
+@page "/oa/staff/attendance"
+@model SentribeeConsole.Web.Pages.Crm.StaffAttendanceModel
+@using SentribeeConsole.Web.Application.Services
+@{
+    Layout = "_CrmStaffLayout";
+}
+
+@if (!string.IsNullOrWhiteSpace(Model.StatusMessage))
+{
+    <div class="alert alert-success">@Model.StatusMessage</div>
+}
+
+<div class="row g-5 mb-5">
+    <div class="col-12 col-xl-6">
+        <div class="card h-100">
+            <div class="card-body">
+                <h3 class="card-title fs-6">Clock in</h3>
+                <form method="post" asp-page-handler="ClockIn" class="mt-4">
+                    <div class="mb-4">
+                        <label class="form-label" asp-for="Input.OfficeAddressId">Office address</label>
+                        <select asp-for="Input.OfficeAddressId" class="form-select">
+                            <option value="">No office selected</option>
+                            @foreach (var office in Model.Offices)
+                            {
+                                <option value="@office.Id">@office.LocationName</option>
+                            }
+                        </select>
+                    </div>
+                    <div class="mb-4">
+                        <label class="form-label" asp-for="Input.ClockInNote">Note</label>
+                        <textarea asp-for="Input.ClockInNote" rows="3" class="form-control"></textarea>
+                    </div>
+                    <button type="submit" class="btn btn-primary w-100">Clock In</button>
+                </form>
+            </div>
+        </div>
+    </div>
+    <div class="col-12 col-xl-6">
+        <div class="card h-100">
+            <div class="card-body">
+                <h3 class="card-title fs-6">Clock out</h3>
+                <form method="post" asp-page-handler="ClockOut" class="mt-4">
+                    <div class="mb-4">
+                        <label class="form-label" asp-for="Input.ClockOutNote">Note</label>
+                        <textarea asp-for="Input.ClockOutNote" rows="3" class="form-control"></textarea>
+                    </div>
+                    <button type="submit" class="btn btn-outline-primary w-100">Clock Out</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="card">
+    <div class="card-body">
+        <h3 class="card-title fs-6">My attendance</h3>
+        <div class="table-responsive mobile-card-table-wrap mt-4">
+            <table class="table align-middle mobile-card-table">
+                <thead>
+                    <tr>
+                        <th>Office</th>
+                        <th>Date</th>
+                        <th>Clock in</th>
+                        <th>Clock out</th>
+                        <th>Status</th>
+                        <th>Notes</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @if (Model.Records.Count == 0)
+                    {
+                        <tr><td colspan="6" class="text-body-secondary">No attendance records yet.</td></tr>
+                    }
+                    else
+                    {
+                        @foreach (var item in Model.Records)
+                        {
+                            <tr>
+                                <td data-label="Office">@item.OfficeName</td>
+                                <td data-label="Date">@item.AttendanceDate.ToString("yyyy-MM-dd")</td>
+                                <td data-label="Clock in">@ProjectTimeZone.Format(item.ClockInAtUtc, Model.Staff.TimeZoneId)</td>
+                                <td data-label="Clock out">@ProjectTimeZone.Format(item.ClockOutAtUtc, Model.Staff.TimeZoneId, fallback: "-")</td>
+                                <td data-label="Status">
+                                    <span class="badge bg-light text-body">@item.Status</span>
+                                    @if (item.IsCompleteDay)
+                                    {
+                                        <span class="badge bg-success ms-1">Complete</span>
+                                    }
+                                    @if (item.IsLateBeyondGrace)
+                                    {
+                                        <span class="badge bg-warning text-dark ms-1">Late &gt; 10m</span>
+                                    }
+                                    @if (!string.IsNullOrWhiteSpace(item.WorkloadLevel))
+                                    {
+                                        <div class="text-body-secondary fs-8 mt-1">Workload: @item.WorkloadLevel</div>
+                                    }
+                                </td>
+                                <td data-label="Notes">
+                                    <div class="fs-8">@item.ClockInNote</div>
+                                    <div class="text-body-secondary fs-8">@item.ClockOutNote</div>
+                                    @if (!string.IsNullOrWhiteSpace(item.WorkLogSummary))
+                                    {
+                                        <div class="fs-8 mt-1">@item.WorkLogSummary</div>
+                                        <div class="text-body-secondary fs-8">@item.WorkloadReason</div>
+                                    }
+                                </td>
+                            </tr>
+                        }
+                    }
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+}

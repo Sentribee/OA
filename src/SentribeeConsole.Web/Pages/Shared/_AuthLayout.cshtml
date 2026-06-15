@@ -1,0 +1,31 @@
+@{
+    var authBodyClass = ViewData["AuthBodyClass"] as string;
+}
+<!doctype html>
+<html lang="en" data-bs-theme="dark" data-theme-color="purple">
+<head>
+    <meta charset="utf-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>@ViewData["Title"] - SentriBee Console</title>
+    <link rel="icon" type="image/x-icon" href="~/favicon.ico" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Google+Sans:wght@400;500;600;700&display=swap" rel="stylesheet" />
+    <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" rel="stylesheet" />
+    <link rel="stylesheet" href="~/theme/vendor-DDXwb3B2.css" asp-append-version="true" />
+    <link rel="stylesheet" href="~/css/site.css" asp-append-version="true" />
+</head>
+<body class="login-shell @authBodyClass d-flex align-items-center p-4 p-md-5">
+    <partial name="_LoginNetwork" />
+    <main class="login-content">
+        @RenderBody()
+    </main>
+    <footer class="login-footer">
+        &copy; 2026 SentriBee. All rights reserved.
+    </footer>
+    <script type="module" src="~/theme/vendor-DWdXmVBv.js" asp-append-version="true"></script>
+    <script src="~/js/site.js" asp-append-version="true"></script>
+    @await RenderSectionAsync("Scripts", required: false)
+</body>
+</html>

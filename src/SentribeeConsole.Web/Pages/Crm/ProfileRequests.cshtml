@@ -1,0 +1,84 @@
+@page "/oa/profile-requests"
+@model SentribeeConsole.Web.Pages.Crm.ProfileRequestsModel
+@{
+    Layout = "_CrmLayout";
+}
+
+@if (!string.IsNullOrWhiteSpace(Model.StatusMessage))
+{
+    <div class="alert alert-success">@Model.StatusMessage</div>
+}
+
+<div class="card">
+    <div class="card-body">
+        <div class="d-flex justify-content-between align-items-start gap-3">
+            <div>
+                <h3 class="card-title fs-6">Employee profile approvals</h3>
+                <div class="text-body-secondary fs-8">Approved requests update the employee table and keep the request history.</div>
+            </div>
+        </div>
+        <div class="table-responsive mobile-card-table-wrap mt-4">
+            <table class="table align-middle mobile-card-table">
+                <thead>
+                    <tr>
+                        <th>Employee</th>
+                        <th>Date</th>
+                        <th>Changes</th>
+                        <th>Status</th>
+                        <th>Details</th>
+                        <th>Decision</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @if (Model.Requests.Count == 0)
+                    {
+                        <tr><td colspan="6" class="text-body-secondary">No profile requests.</td></tr>
+                    }
+                    else
+                    {
+                        @foreach (var item in Model.Requests)
+                        {
+                            <tr>
+                                <td data-label="Employee">
+                                    <div class="fw-semibold">@item.EmployeeName</div>
+                                    <div class="text-body-secondary fs-8">@item.EmployeeEmail</div>
+                                </td>
+                                <td data-label="Date">@item.CreatedAtUtc.ToString("yyyy-MM-dd HH:mm")</td>
+                                <td data-label="Changes">@item.ChangeSummary</td>
+                                <td data-label="Status"><span class="badge bg-light text-dark">@item.Status</span></td>
+                                <td data-label="Details">
+                                    <details>
+                                        <summary>Requested data</summary>
+                                        <pre class="oa-profile-json">@item.RequestedProfileJson</pre>
+                                    </details>
+                                </td>
+                                <td data-label="Decision">
+                                    @if (string.Equals(item.Status, "Pending", StringComparison.OrdinalIgnoreCase))
+                                    {
+                                        <form method="post" asp-page-handler="Decide" class="d-flex flex-column gap-2">
+                                            <input type="hidden" name="requestId" value="@item.Id" />
+                                            <input asp-for="DecisionNote" class="form-control form-control-sm" placeholder="Decision note" />
+                                            <div class="d-flex gap-2">
+                                                <button type="submit" name="decision" value="Approved" class="btn btn-primary btn-sm">Approve</button>
+                                                <button type="submit" name="decision" value="Rejected" class="btn btn-outline-secondary btn-sm">Reject</button>
+                                            </div>
+                                        </form>
+                                    }
+                                    else
+                                    {
+                                        <div>@item.DecisionNote</div>
+                                        <div class="text-body-secondary fs-8">@(item.DecisionAtUtc?.ToString("yyyy-MM-dd HH:mm") ?? "")</div>
+                                    }
+                                </td>
+                            </tr>
+                        }
+                    }
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+}

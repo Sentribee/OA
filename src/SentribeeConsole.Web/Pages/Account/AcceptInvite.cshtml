@@ -1,0 +1,59 @@
+@page "/invite/{Token}"
+@model SentribeeConsole.Web.Pages.Account.AcceptInviteModel
+@{
+    Layout = "_AuthLayout";
+    ViewData["Title"] = "Set Password";
+}
+
+<div id="login-feedback"
+     class="login-toast @(string.IsNullOrEmpty(Model.AlertMessage) ? null : "is-visible")"
+     role="alert"
+     aria-live="assertive">
+    <i class="material-symbols-rounded">@(Model.InvitationIsValid ? "check_circle" : "error")</i>
+    <span>@Model.AlertMessage</span>
+</div>
+
+<div id="global-loading" class="global-loading" aria-hidden="true" aria-label="Saving password">
+    <div class="loading-spinner" aria-hidden="true"></div>
+    <div class="loading-label">Saving password...</div>
+</div>
+
+<section class="card login-card mw-400 w-100 p-7 p-md-8">
+    <div class="d-flex align-items-center gap-3 mb-7">
+        <img class="brand-logo" src="~/images/sentribee-mark.png" alt="SentriBee" width="44" height="44" />
+        <div>
+            <h1 class="login-brand-name fs-5 mb-0">SentriBee</h1>
+            <div class="text-body-secondary fs-7">Console Invitation</div>
+        </div>
+    </div>
+
+    @if (Model.InvitationIsValid)
+    {
+        <h2 class="fs-6 text-body-emphasis">Set your password</h2>
+        <div class="text-body-secondary mb-5">@Model.Email for @Model.ProjectName</div>
+        <form method="post" class="mb-5" novalidate>
+            <input asp-for="Token" type="hidden" />
+            <div class="form-icon mb-3">
+                <i class="material-symbols-rounded">lock</i>
+                <input asp-for="Password" type="password" class="form-control" placeholder="New password" autocomplete="new-password" />
+            </div>
+            <span asp-validation-for="Password" class="text-danger fs-8 d-block mt-n2 mb-3"></span>
+            <div class="form-icon mb-5">
+                <i class="material-symbols-rounded">verified_user</i>
+                <input asp-for="ConfirmPassword" type="password" class="form-control" placeholder="Confirm password" autocomplete="new-password" />
+            </div>
+            <span asp-validation-for="ConfirmPassword" class="text-danger fs-8 d-block mt-n4 mb-4"></span>
+            <button type="submit" class="btn btn-primary w-100">Save Password</button>
+        </form>
+    }
+    else
+    {
+        <h2 class="fs-6 text-body-emphasis">Invitation unavailable</h2>
+        <div class="text-body-secondary mb-5">This invitation link is invalid, expired, or already used.</div>
+        <a asp-page="/Account/Login" class="btn btn-primary w-100">Back to Sign In</a>
+    }
+</section>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+}

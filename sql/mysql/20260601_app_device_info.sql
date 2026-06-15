@@ -1,0 +1,22 @@
+CREATE TABLE IF NOT EXISTS bee_AppUserDevice (
+  id BIGINT NOT NULL AUTO_INCREMENT,
+  ProjectId INT NOT NULL,
+  AppUserId INT NOT NULL,
+  DeviceIdentifier VARCHAR(160) NOT NULL,
+  DeviceType VARCHAR(80) NULL,
+  Platform VARCHAR(80) NULL,
+  OsVersion VARCHAR(80) NULL,
+  AppVersion VARCHAR(80) NULL,
+  PushProvider VARCHAR(40) NULL,
+  PushToken VARCHAR(500) NULL,
+  LastLoginAtUtc DATETIME(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6),
+  CreatedAtUtc DATETIME(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6),
+  UpdatedAtUtc DATETIME(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6) ON UPDATE CURRENT_TIMESTAMP(6),
+  PRIMARY KEY (id),
+  UNIQUE KEY UX_bee_AppUserDevice_User_Device (AppUserId, DeviceIdentifier),
+  KEY IX_bee_AppUserDevice_Project_LastLogin (ProjectId, LastLoginAtUtc),
+  CONSTRAINT FK_bee_AppUserDevice_Project FOREIGN KEY (ProjectId)
+    REFERENCES bee_Project (id) ON DELETE CASCADE,
+  CONSTRAINT FK_bee_AppUserDevice_User FOREIGN KEY (AppUserId)
+    REFERENCES bee_AppUser (id) ON DELETE CASCADE
+) ENGINE=InnoDB;

@@ -1,0 +1,169 @@
+@page "/api-docs/common"
+@model SentribeeConsole.Web.Pages.ApiDocs.CommonModel
+@{
+    Layout = null;
+}
+
+<!doctype html>
+<html class="api-docs-html" lang="zh-CN" data-bs-theme="light" data-theme-color="purple">
+<head>
+    <meta charset="utf-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Common API - SentriBee Platform</title>
+    <link rel="icon" type="image/x-icon" href="~/favicon.ico" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Google+Sans:wght@400;500;600;700&display=swap" rel="stylesheet" />
+    <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" rel="stylesheet" />
+    <link rel="stylesheet" href="~/theme/vendor-DDXwb3B2.css" asp-append-version="true" />
+    <link rel="stylesheet" href="~/css/site.css" asp-append-version="true" />
+</head>
+<body class="api-docs-standalone">
+    <header class="api-docs-topbar">
+        <a href="/api-docs/common" class="api-docs-brand" aria-label="Common API Documentation">
+            <img src="~/images/sentribee-mark.png" alt="" width="32" height="32" />
+            <span>Common Platform API</span>
+        </a>
+        <a href="/login" class="api-docs-console-link">Console Login</a>
+    </header>
+
+    <div class="api-docs-shell">
+        <aside class="api-docs-nav" aria-label="API documentation sections">
+            <div class="api-docs-nav-title">Documentation</div>
+            <a href="/api-docs/common">Common APIs</a>
+            <a href="/api-docs">SentriBee Project</a>
+            <a href="/api-docs/spendbee">SpendBee Project</a>
+            <div class="api-docs-nav-title mt-4">Common Sections</div>
+            <a href="#overview">Overview</a>
+            <a href="#auth">Authentication</a>
+            <a href="#accounts">Accounts</a>
+            <a href="#uploads">Uploads</a>
+            <a href="#errors">Errors</a>
+            <a href="#versioning">Versioning</a>
+        </aside>
+
+        <main class="api-docs-content">
+            <section id="overview" class="api-doc-section api-doc-hero">
+                <p class="api-doc-kicker">Shared API Contract</p>
+                <h1>公共 API 文档</h1>
+                <p>
+                    这一页只放所有项目共用的前端 API 约定。SentriBee 面向工地和边缘设备，SpendBee 面向消费者，
+                    但登录、用户资料、设备信息、上传文件、错误格式、分页和版本管理应保持一致，避免每个 App 重复实现一套基础协议。
+                </p>
+                <div class="api-doc-meta">
+                    <span>Base URL</span>
+                    <code>https://console.sentribee.ai</code>
+                    <span>API Prefix</span>
+                    <code>/api/common</code>
+                </div>
+            </section>
+
+            <section id="auth" class="api-doc-section">
+                <h2>Authentication</h2>
+                <p>
+                    消费端 App 不直接使用项目长 API key。App 启动时由后端配置项目渠道，用户登录后返回 app bearer token。
+                    token 默认 30 天有效，移动端需要在过期前刷新。
+                </p>
+                <table class="api-doc-table">
+                    <thead><tr><th>Endpoint</th><th>Purpose</th><th>Auth</th></tr></thead>
+                    <tbody>
+                        <tr><td><code>POST /api/common/auth/email-code</code></td><td>发送邮箱验证码，支持注册、登录、敏感操作确认。</td><td>None or Project Bearer</td></tr>
+                        <tr><td><code>POST /api/common/auth/login</code></td><td>邮箱验证码登录，返回 app token、用户资料和项目列表。</td><td>None or Project Bearer</td></tr>
+                        <tr><td><code>POST /api/common/auth/refresh</code></td><td>刷新 app token。</td><td>App Bearer</td></tr>
+                        <tr><td><code>POST /api/common/auth/logout</code></td><td>注销当前设备 token。</td><td>App Bearer</td></tr>
+                    </tbody>
+                </table>
+                <pre class="api-code"><code>POST /api/common/auth/login
+{
+  "projectCode": "SPENDBEE",
+  "email": "user@example.com",
+  "verificationCode": "123456",
+  "device": {
+    "deviceIdentifier": "ios-vendor-id-or-android-id",
+    "platform": "iOS",
+    "osVersion": "18.5",
+    "appVersion": "1.0.0",
+    "pushProvider": "apns",
+    "pushToken": "..."
+  }
+}</code></pre>
+            </section>
+
+            <section id="accounts" class="api-doc-section">
+                <h2>Accounts And Profile</h2>
+                <table class="api-doc-table">
+                    <thead><tr><th>Endpoint</th><th>Purpose</th><th>Auth</th></tr></thead>
+                    <tbody>
+                        <tr><td><code>GET /api/common/me</code></td><td>读取当前用户、头像、默认地区、语言和隐私开关。</td><td>App Bearer</td></tr>
+                        <tr><td><code>PUT /api/common/me</code></td><td>更新昵称、头像、语言、地区和基础资料。</td><td>App Bearer</td></tr>
+                        <tr><td><code>GET /api/common/devices</code></td><td>读取当前账号登录过的手机设备。</td><td>App Bearer</td></tr>
+                        <tr><td><code>DELETE /api/common/devices/{deviceId}</code></td><td>移除某个已登录设备。</td><td>App Bearer</td></tr>
+                        <tr><td><code>PUT /api/common/privacy</code></td><td>更新发现页可见性、同桌发现、图片合成授权等隐私开关。</td><td>App Bearer</td></tr>
+                    </tbody>
+                </table>
+            </section>
+
+            <section id="uploads" class="api-doc-section">
+                <h2>Uploads</h2>
+                <p>
+                    发票、照片和合成图片都走统一上传初始化接口。前端先申请上传，再把二进制文件传到返回的上传 URL，
+                    最后用业务 API 引用 <code>assetId</code>。
+                </p>
+                <table class="api-doc-table">
+                    <thead><tr><th>Endpoint</th><th>Purpose</th><th>Auth</th></tr></thead>
+                    <tbody>
+                        <tr><td><code>POST /api/common/assets/uploads</code></td><td>创建一次图片或 PDF 上传，返回 <code>assetId</code> 和上传 URL。</td><td>App Bearer</td></tr>
+                        <tr><td><code>PUT {uploadUrl}</code></td><td>上传原始文件。生产环境建议直传对象存储。</td><td>Signed URL</td></tr>
+                        <tr><td><code>GET /api/common/assets/{assetId}</code></td><td>读取文件元数据和安全访问 URL。</td><td>App Bearer</td></tr>
+                    </tbody>
+                </table>
+                <pre class="api-code"><code>POST /api/common/assets/uploads
+Authorization: Bearer sb_app_...
+{
+  "purpose": "ReceiptImage",
+  "fileName": "receipt.jpg",
+  "contentType": "image/jpeg",
+  "fileSizeBytes": 2481200
+}</code></pre>
+            </section>
+
+            <section id="errors" class="api-doc-section">
+                <h2>Error Format</h2>
+                <pre class="api-code"><code>{
+  "error": {
+    "code": "receipt.review_required",
+    "message": "Receipt recognition confidence is below the auto-confirm threshold.",
+    "requestId": "req_01HX...",
+    "details": {
+      "field": "lineItems[2].amount"
+    }
+  }
+}</code></pre>
+                <table class="api-doc-table">
+                    <thead><tr><th>Status</th><th>Meaning</th><th>Frontend Handling</th></tr></thead>
+                    <tbody>
+                        <tr><td><code>400</code></td><td>参数错误</td><td>显示字段级错误或阻止提交。</td></tr>
+                        <tr><td><code>401</code></td><td>未登录或 token 过期</td><td>刷新 token，失败后回登录页。</td></tr>
+                        <tr><td><code>403</code></td><td>无权限</td><td>显示无权限状态，不重试。</td></tr>
+                        <tr><td><code>409</code></td><td>状态冲突</td><td>重新拉取资源后提示用户。</td></tr>
+                        <tr><td><code>422</code></td><td>业务校验失败</td><td>展示具体业务原因。</td></tr>
+                        <tr><td><code>429</code></td><td>限流</td><td>按 <code>retryAfterSeconds</code> 延迟重试。</td></tr>
+                        <tr><td><code>500</code></td><td>服务端错误</td><td>展示稍后重试，并带上 requestId。</td></tr>
+                    </tbody>
+                </table>
+            </section>
+
+            <section id="versioning" class="api-doc-section">
+                <h2>Versioning And Pagination</h2>
+                <ul class="api-doc-list">
+                    <li>所有时间使用 ISO 8601 UTC，例如 <code>2026-06-05T08:30:00Z</code>。</li>
+                    <li>列表默认使用游标分页：<code>?limit=20&amp;cursor=...</code>，响应返回 <code>nextCursor</code>。</li>
+                    <li>破坏性变更使用新路径，例如 <code>/api/spendbee/v2/receipts</code>。</li>
+                    <li>所有写接口支持 <code>Idempotency-Key</code>，用于避免重复创建发票、晒图或 AA 账单。</li>
+                </ul>
+            </section>
+        </main>
+    </div>
+</body>
+</html>

@@ -1,0 +1,652 @@
+@page "/api-docs/spendbee"
+@model SentribeeConsole.Web.Pages.ApiDocs.SpendBeeModel
+@{
+    Layout = null;
+}
+
+<!doctype html>
+<html class="api-docs-html" lang="zh-CN" data-bs-theme="light" data-theme-color="purple">
+<head>
+    <meta charset="utf-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>SpendBee API Documentation</title>
+    <link rel="icon" type="image/x-icon" href="~/favicon.ico" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Google+Sans:wght@400;500;600;700&display=swap" rel="stylesheet" />
+    <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" rel="stylesheet" />
+    <link rel="stylesheet" href="~/theme/vendor-DDXwb3B2.css" asp-append-version="true" />
+    <link rel="stylesheet" href="~/css/site.css" asp-append-version="true" />
+</head>
+<body class="api-docs-standalone">
+    <header class="api-docs-topbar">
+        <a href="/api-docs/spendbee" class="api-docs-brand" aria-label="SpendBee API Documentation">
+            <img src="~/images/sentribee-mark.png" alt="" width="32" height="32" />
+            <span>SpendBee API Documentation</span>
+        </a>
+        <a href="/login" class="api-docs-console-link">Console Login</a>
+    </header>
+
+    <div class="api-docs-shell">
+        <aside class="api-docs-nav" aria-label="API documentation sections">
+            <div class="api-docs-nav-title">Documentation</div>
+            <a href="/api-docs/common">Common APIs</a>
+            <a href="/api-docs">SentriBee Project</a>
+            <a href="/api-docs/spendbee">SpendBee Project</a>
+            <div class="api-docs-nav-title mt-4">SpendBee APIs</div>
+            <a href="#overview">Overview</a>
+            <a href="#auth">Auth</a>
+            <a href="#profile">Profile</a>
+            <a href="#receipts">Receipts</a>
+            <a href="#resumable">Resumable Upload</a>
+            <a href="#merchants">Merchants</a>
+            <a href="#messages">Messages</a>
+            <a href="#assets">Images</a>
+        </aside>
+
+        <main class="api-docs-content">
+            <section id="overview" class="api-doc-section api-doc-hero">
+                <p class="api-doc-kicker">Implemented Consumer API</p>
+                <h1>SpendBee API 文档</h1>
+                <p>
+                    本页只保留当前已经实现的 SpendBee 接口。尚未实现的晒图、同桌发现、AA 分账、
+                    行为分析、识别复核等规划接口已经从文档中移除，避免客户端误接。
+                </p>
+                <div class="api-doc-meta">
+                    <span>Project</span>
+                    <code>SpendBee</code>
+                    <span>API Prefix</span>
+                    <code>/api/spendbee/v1</code>
+                    <span>Auth</span>
+                    <code>Authorization: Bearer sb_app_...</code>
+                </div>
+                <div class="api-doc-callout">
+                    客户端响应中的发票图片、商户封面图片必须使用 API 返回的 URL。不要直接使用数据库里的 S3 原始地址。
+                    这些图片 URL 会经过 SpendBee API 鉴权后由服务端代理读取。
+                </div>
+            </section>
+
+            <section id="auth" class="api-doc-section">
+                <h2>Auth</h2>
+                <table class="api-doc-table">
+                    <thead><tr><th>Endpoint</th><th>Purpose</th><th>Auth</th></tr></thead>
+                    <tbody>
+                        <tr><td><code>POST /api/spendbee/v1/auth/email-code</code></td><td>发送注册或登录验证码。</td><td>None</td></tr>
+                        <tr><td><code>POST /api/spendbee/v1/auth/register</code></td><td>创建并激活用户，绑定设备，返回 app token。</td><td>None</td></tr>
+                        <tr><td><code>POST /api/spendbee/v1/auth/login</code></td><td>验证码登录，更新设备信息，返回 app token。</td><td>None</td></tr>
+                    </tbody>
+                </table>
+                <pre class="api-code"><code>POST /api/spendbee/v1/auth/email-code
+{
+  "email": "rock@sentribee.ai",
+  "purpose": "Login"
+}</code></pre>
+                <pre class="api-code"><code>POST /api/spendbee/v1/auth/register
+{
+  "email": "user@example.com",
+  "verificationCode": "123456",
+  "displayName": "Alex",
+  "gender": "Female",
+  "avatarUrl": "https://example.com/avatar.jpg",
+  "bio": "Coffee and noodles.",
+  "device": {
+    "deviceIdentifier": "ios-vendor-id-or-android-id",
+    "deviceType": "iPhone 15 Pro",
+    "platform": "iOS",
+    "osVersion": "18.5",
+    "appVersion": "1.0.0",
+    "pushProvider": "apns",
+    "pushToken": "push-token"
+  }
+}</code></pre>
+                <pre class="api-code"><code>200 OK
+{
+  "accessToken": "sb_app_...",
+  "token": "sb_app_...",
+  "tokenType": "Bearer",
+  "expiresAtUtc": "2026-07-05T00:00:00Z",
+  "isNewUser": true,
+  "user": {
+    "id": 10,
+    "email": "user@example.com",
+    "displayName": "Alex",
+    "gender": "Female",
+    "avatarUrl": "https://example.com/avatar.jpg",
+    "bio": "Coffee and noodles.",
+    "projectId": 2,
+    "status": "Active"
+  }
+}</code></pre>
+            </section>
+
+            <section id="profile" class="api-doc-section">
+                <h2>Profile</h2>
+                <table class="api-doc-table">
+                    <thead><tr><th>Endpoint</th><th>Purpose</th><th>Auth</th></tr></thead>
+                    <tbody>
+                        <tr><td><code>PUT /api/spendbee/v1/profile</code></td><td>更新昵称、头像、性别和一句话简介。</td><td>App Bearer</td></tr>
+                    </tbody>
+                </table>
+                <pre class="api-code"><code>PUT /api/spendbee/v1/profile
+Authorization: Bearer sb_app_...
+{
+  "displayName": "Rock",
+  "gender": "Male",
+  "avatarUrl": "https://example.com/avatar.jpg",
+  "bio": "Auckland food notes."
+}</code></pre>
+                <pre class="api-code"><code>PUT /api/spendbee/v1/devices/current
+Authorization: Bearer sb_app_...
+{
+  "deviceIdentifier": "ios-vendor-id-or-android-id",
+  "deviceType": "iPhone 15 Pro",
+  "platform": "iOS",
+  "osVersion": "18.5",
+  "appVersion": "1.0.0",
+  "pushProvider": "apns",
+  "pushToken": "latest-push-token"
+}</code></pre>
+                <pre class="api-code"><code>200 OK
+{
+  "success": true
+}</code></pre>
+            </section>
+
+            <section id="receipts" class="api-doc-section">
+                <h2>Receipts</h2>
+                <table class="api-doc-table">
+                    <thead><tr><th>Endpoint</th><th>Purpose</th><th>Auth</th></tr></thead>
+                    <tbody>
+                        <tr><td><code>POST /api/spendbee/v1/receipts</code></td><td>一次上传一张发票的多张 base64 图片，保存原图并运行 OCR。</td><td>App Bearer</td></tr>
+                        <tr><td><code>GET /api/spendbee/v1/receipts</code></td><td>读取当前用户的发票列表，可按商户分页。</td><td>App Bearer</td></tr>
+                        <tr><td><code>GET /api/spendbee/v1/receipts/{receiptId}</code></td><td>读取单张发票详情，包含全部菜品明细。</td><td>App Bearer</td></tr>
+                    </tbody>
+                </table>
+                <pre class="api-code"><code>POST /api/spendbee/v1/receipts
+Authorization: Bearer sb_app_...
+{
+  "timezone": "Pacific/Auckland",
+  "images": [
+    {
+      "imageBase64": "/9j/4AAQSkZJRgABAQ...",
+      "contentType": "image/jpeg",
+      "fileName": "receipt-front.jpg"
+    }
+  ]
+}</code></pre>
+                <pre class="api-code"><code>200 OK
+{
+  "receiptId": 123,
+  "status": "Recognized",
+  "recognition": {
+    "merchantName": "Willow",
+    "merchantAddress": "42 Tawa Drive, Albany",
+    "purchasedAt": "2026-06-02T13:26:00",
+    "currency": "NZD",
+    "subtotal": 93.91,
+    "tax": 14.09,
+    "total": 108.00,
+    "lineItems": [
+      {
+        "name": "Americano",
+        "quantity": 1,
+        "unitPrice": 4.50,
+        "amount": 4.50,
+        "category": "Drink",
+        "confidence": 0.98
+      }
+    ],
+    "quality": {
+      "overallConfidence": 0.98,
+      "estimatedErrorRate": 0.01,
+      "needsHumanReview": false,
+      "failedChecks": []
+    }
+  },
+  "merchant": {
+    "id": 55,
+    "name": "Willow",
+    "address": "42 Tawa Drive, Albany",
+    "coverImageUrl": "https://console.sentribee.ai/api/spendbee/v1/merchants/55/cover"
+  },
+  "images": [
+    {
+      "id": 9001,
+      "url": "https://console.sentribee.ai/api/spendbee/v1/receipts/123/images/9001",
+      "imageUrl": "https://console.sentribee.ai/api/spendbee/v1/receipts/123/images/9001",
+      "contentType": "image/jpeg",
+      "sortOrder": 0
+    }
+  ]
+}</code></pre>
+                <h3>Duplicate Receipt</h3>
+                <p>
+                    同一个用户重复上传自己的发票会返回 <code>200 receipt_already_uploaded</code>，客户端可以直接打开已有发票。
+                    其他用户上传同一张发票会返回 <code>409 receipt_already_bound</code>，后续应进入 AA 关系流程。
+                    例外：如果已有发票状态是 <code>ReviewRequired</code>、<code>RecognitionFailed</code> 或 <code>Processing</code>，当前用户可以重新上传同一张发票；系统会重新 OCR，并更新原来的 <code>receiptId</code>，不受“一张发票只能上传一次”限制。
+                </p>
+                <pre class="api-code"><code>200 OK
+{
+  "success": true,
+  "duplicate": true,
+  "code": "receipt_already_uploaded",
+  "message": "This receipt is already uploaded by the current user.",
+  "receiptId": 1,
+  "duplicateReceipt": {
+    "receiptId": 1,
+    "appUserId": 10,
+    "displayName": "Rock",
+    "merchantName": "Willow",
+    "total": 108.00,
+    "currency": "NZD"
+  }
+}</code></pre>
+                <pre class="api-code"><code>200 OK
+{
+  "receiptId": 1,
+  "status": "Recognized",
+  "retried": true,
+  "recognition": { "...": "new OCR result" },
+  "images": [
+    {
+      "id": 9101,
+      "imageUrl": "https://console.sentribee.ai/api/spendbee/v1/receipts/1/images/9101"
+    }
+  ]
+}</code></pre>
+                <pre class="api-code"><code>GET /api/spendbee/v1/receipts?limit=20&amp;beforeId=123&amp;merchantId=55
+Authorization: Bearer sb_app_...</code></pre>
+                <pre class="api-code"><code>200 OK
+{
+  "receipts": [
+    {
+      "id": 123,
+      "status": "Recognized",
+      "receiptType": "restaurant_receipt",
+      "fulfillmentType": "dine_in",
+      "merchantName": "Willow",
+      "merchantAddress": "42 Tawa Drive, Albany",
+      "platformOrderNumber": null,
+      "purchasedAtUtc": "2026-06-02T01:26:00.0000000Z",
+      "orderedAtUtc": null,
+      "pickupAtUtc": null,
+      "deliveredAtUtc": null,
+      "currency": "NZD",
+      "subtotal": 93.91,
+      "tax": 14.09,
+      "deliveryFee": null,
+      "serviceFee": null,
+      "platformDiscount": null,
+      "total": 108.00,
+      "overallConfidence": 0.98,
+      "estimatedErrorRate": 0.01,
+      "createdAtUtc": "2026-06-05T08:00:00.0000000Z",
+      "imageCount": 1,
+      "lineItemCount": 7,
+      "merchant": {
+        "id": 55,
+        "name": "Willow",
+        "address": "42 Tawa Drive, Albany",
+        "coverImageUrl": "https://console.sentribee.ai/api/spendbee/v1/merchants/55/cover",
+        "coverImageApiUrl": "https://console.sentribee.ai/api/spendbee/v1/merchants/55/cover"
+      },
+      "platform": null
+    }
+  ],
+  "page": {
+    "limit": 20,
+    "nextBeforeId": null
+  }
+}</code></pre>
+                <pre class="api-code"><code>GET /api/spendbee/v1/receipts/123
+Authorization: Bearer sb_app_...
+
+200 OK
+{
+  "receipt": { "...": "receipt fields" },
+  "images": [
+    {
+      "id": 9001,
+      "imageUrl": "https://console.sentribee.ai/api/spendbee/v1/receipts/123/images/9001",
+      "contentType": "image/jpeg",
+      "sortOrder": 0
+    }
+  ],
+  "lineItems": [
+    {
+      "id": 1,
+      "name": "Americano",
+      "quantity": 1,
+      "unitPrice": 4.50,
+      "amount": 4.50,
+      "category": "Drink",
+      "confidence": 0.98,
+      "sortOrder": 0
+    }
+  ]
+}</code></pre>
+            </section>
+
+            <section id="resumable" class="api-doc-section">
+                <h2>Resumable Upload</h2>
+                <table class="api-doc-table">
+                    <thead><tr><th>Endpoint</th><th>Purpose</th><th>Auth</th></tr></thead>
+                    <tbody>
+                        <tr><td><code>POST /api/spendbee/v1/receipt-uploads</code></td><td>创建一张发票的断点续传任务。</td><td>App Bearer</td></tr>
+                        <tr><td><code>PUT /api/spendbee/v1/receipt-uploads/{receiptUploadId}/images/{imageUploadId}/parts/{partNumber}</code></td><td>上传或重传一个图片分片。</td><td>App Bearer</td></tr>
+                        <tr><td><code>GET /api/spendbee/v1/receipt-uploads/{receiptUploadId}</code></td><td>读取续传状态、已上传分片和完成图片 URL。</td><td>App Bearer</td></tr>
+                        <tr><td><code>GET /api/spendbee/v1/receipt-uploads/{receiptUploadId}/images/{imageUploadId}</code></td><td>读取已完成上传图片。返回的是鉴权代理图片流。</td><td>App Bearer</td></tr>
+                        <tr><td><code>POST /api/spendbee/v1/receipt-uploads/{receiptUploadId}/complete</code></td><td>完成所有图片，创建发票并运行 OCR。</td><td>App Bearer</td></tr>
+                        <tr><td><code>DELETE /api/spendbee/v1/receipt-uploads/{receiptUploadId}</code></td><td>取消未完成的上传任务。</td><td>App Bearer</td></tr>
+                    </tbody>
+                </table>
+                <pre class="api-code"><code>POST /api/spendbee/v1/receipt-uploads
+Authorization: Bearer sb_app_...
+{
+  "timezone": "Pacific/Auckland",
+  "images": [
+    {
+      "contentType": "image/jpeg",
+      "fileName": "receipt-front.jpg",
+      "fileSizeBytes": 7340032
+    }
+  ]
+}</code></pre>
+                <pre class="api-code"><code>PUT /api/spendbee/v1/receipt-uploads/42/images/101/parts/1
+Authorization: Bearer sb_app_...
+Content-Type: image/jpeg
+
+&lt;binary bytes&gt;</code></pre>
+            </section>
+
+            <section id="merchants" class="api-doc-section">
+                <h2>Merchants</h2>
+                <table class="api-doc-table">
+                    <thead><tr><th>Endpoint</th><th>Purpose</th><th>Auth</th></tr></thead>
+                    <tbody>
+                        <tr><td><code>GET /api/spendbee/v1/merchants/recent</code></td><td>按用户最近发票列出商户。传 lat/lng 时返回距离并按远到近排序。</td><td>App Bearer</td></tr>
+                        <tr><td><code>GET /api/spendbee/v1/merchants/nearby</code></td><td>拍照页用当前 GPS 获取附近商户，合并本地和 Google Places 数据。</td><td>App Bearer</td></tr>
+                        <tr><td><code>POST /api/spendbee/v1/merchants/google-place</code></td><td>把 Google-only 候选商户创建或更新为本地商户。</td><td>App Bearer</td></tr>
+                        <tr><td><code>GET /api/spendbee/v1/merchants/{merchantId}</code></td><td>读取商户详情和当前用户在该商户的消费记录。</td><td>App Bearer</td></tr>
+                        <tr><td><code>GET /api/spendbee/v1/merchants/{merchantId}/receipts</code></td><td>读取当前用户在该商户的发票列表。这个接口和照片墙分开。</td><td>App Bearer</td></tr>
+                        <tr><td><code>GET /api/spendbee/v1/merchants/{merchantId}/cover</code></td><td>读取商户封面图片。返回公开代理图片流，可直接用于客户端图片控件。</td><td>Public</td></tr>
+                    </tbody>
+                </table>
+                <p class="api-doc-note">Merchant covers prefer Google Street View metadata and imagery. The server stores a small OpenAI cartoonized JPEG and returns it through the public cover proxy URL. If Street View is unavailable, merchants reuse a shared cartoon fallback by industry category. If the merchant still has no stored cover, the same cover endpoint falls back to the highest-liked ready <code>group</code> photo for that merchant. Merchant responses include latitude and longitude when known.</p>
+                <pre class="api-code"><code>GET /api/spendbee/v1/merchants/recent?lat=-36.8485&amp;lng=174.7633
+Authorization: Bearer sb_app_...</code></pre>
+                <pre class="api-code"><code>GET /api/spendbee/v1/merchants/nearby?lat=-36.8485&amp;lng=174.7633&amp;radiusMeters=800&amp;limit=20
+Authorization: Bearer sb_app_...
+
+200 OK
+{
+  "lat": -36.8485,
+  "lng": 174.7633,
+  "radiusMeters": 800,
+  "merchants": [
+    {
+      "source": "local",
+      "merchantId": 55,
+      "googlePlaceId": "ChIJ...",
+      "name": "Willow",
+      "address": "42 Tawa Drive, Albany",
+      "latitude": -36.7355839,
+      "longitude": 174.7153028,
+      "distanceMeters": 120.5,
+      "coverImageUrl": "https://console.sentribee.ai/api/spendbee/v1/merchants/55/cover",
+      "syncStatus": "GoogleMatched",
+      "canBindOnUpload": true
+    },
+    {
+      "source": "google",
+      "merchantId": null,
+      "googlePlaceId": "ChIJ...",
+      "name": "Nearby Cafe",
+      "address": "Auckland",
+      "distanceMeters": 220.1,
+      "coverImageUrl": "https://lh3.googleusercontent.com/...",
+      "syncStatus": "GoogleOnly",
+      "canBindOnUpload": true
+    }
+  ]
+}</code></pre>
+                <pre class="api-code"><code>POST /api/spendbee/v1/merchants/google-place
+Authorization: Bearer sb_app_...
+{
+  "googlePlaceId": "ChIJ..."
+}</code></pre>
+            </section>
+
+            <section id="merchant-photos" class="api-doc-section">
+                <h2>Merchant Photos</h2>
+                <p class="api-doc-note">Merchant photos are only for the merchant gallery. Do not upload receipts or avatars here. Receipt images must use <code>/api/spendbee/v1/receipt-uploads</code>, and merchant receipt history should be read through <code>/api/spendbee/v1/merchants/{merchantId}/receipts</code>.</p>
+                <p class="api-doc-note">
+                    Cartoon generation is style transfer only: the backend preserves the uploaded people, food, table, storefront, and scene facts.
+                    It must not infer relationships, add people, remove people, or reinterpret who is with whom.
+                </p>
+                <p>
+                    用户照片先上传原图到 S3；完成上传后后端会用 OpenAI 统一生成卡通化展示图。原图会保存但不会在列表或图片接口中返回。
+                    App 展示时使用 <code>imageUrl</code>，这是公开代理 URL，可以直接给图片控件使用。
+                </p>
+                <table class="api-doc-table">
+                    <thead><tr><th>Endpoint</th><th>Purpose</th><th>Auth</th></tr></thead>
+                    <tbody>
+                        <tr><td><code>POST /api/spendbee/v1/merchant-photo-uploads</code></td><td>创建商户照片 S3 multipart 上传任务。</td><td>App Bearer</td></tr>
+                        <tr><td><code>PUT /api/spendbee/v1/merchant-photo-uploads/{photoUploadId}/parts/{partNumber}</code></td><td>上传或重传一个图片分片。</td><td>App Bearer</td></tr>
+                        <tr><td><code>GET /api/spendbee/v1/merchant-photo-uploads/{photoUploadId}</code></td><td>读取照片上传状态。</td><td>App Bearer</td></tr>
+                        <tr><td><code>POST /api/spendbee/v1/merchant-photo-uploads/{photoUploadId}/complete</code></td><td>完成 S3 上传，保存原图，OpenAI 卡通化处理并生成展示图。</td><td>App Bearer</td></tr>
+                        <tr><td><code>GET /api/spendbee/v1/merchants/{merchantId}/photos</code></td><td>读取该商户所有已处理图片，可用 category 分类过滤。</td><td>App Bearer</td></tr>
+                        <tr><td><code>GET /api/spendbee/v1/merchant-photos/{photoId}/image</code></td><td>读取卡通化展示图。</td><td>Public</td></tr>
+                        <tr><td><code>POST /api/spendbee/v1/merchant-photos/{photoId}/like</code></td><td>点赞或取消点赞图片。</td><td>App Bearer</td></tr>
+                        <tr><td><code>GET /api/spendbee/v1/merchant-photos/{photoId}/likes</code></td><td>读取图片点赞者列表，返回头像、昵称和性别；别人给你的图片点赞时会生成消息。</td><td>App Bearer</td></tr>
+                        <tr><td><code>GET /api/spendbee/v1/merchant-photos/{photoId}/comments</code></td><td>读取图片评论列表。</td><td>App Bearer</td></tr>
+                        <tr><td><code>POST /api/spendbee/v1/merchant-photos/{photoId}/comments</code></td><td>新增图片评论；传 parentCommentId 时作为回复。</td><td>App Bearer</td></tr>
+                        <tr><td><code>POST /api/spendbee/v1/merchant-photo-comments/{commentId}/replies</code></td><td>回复指定评论。</td><td>App Bearer</td></tr>
+                        <tr><td><code>POST /api/spendbee/v1/merchant-photo-comments/{commentId}/like</code></td><td>点赞或取消点赞评论。</td><td>App Bearer</td></tr>
+                    </tbody>
+                </table>
+                <pre class="api-code"><code>POST /api/spendbee/v1/merchant-photo-uploads
+Authorization: Bearer sb_app_...
+{
+  "merchantId": 55,
+  "contentType": "image/jpeg",
+  "fileName": "table-photo.jpg",
+  "fileSizeBytes": 5242880,
+  "category": "food",
+  "caption": "Brunch table"
+}</code></pre>
+                <pre class="api-code"><code>200 OK
+{
+  "success": true,
+  "photoUploadId": 77,
+  "uploadId": "...",
+  "key": "spendbee/merchant-photos/...",
+  "recommendedPartSizeBytes": 8388608,
+  "uploadedParts": []
+}</code></pre>
+                <pre class="api-code"><code>PUT /api/spendbee/v1/merchant-photo-uploads/77/parts/1
+Authorization: Bearer sb_app_...
+Content-Type: image/jpeg
+
+&lt;binary bytes&gt;</code></pre>
+                <pre class="api-code"><code>POST /api/spendbee/v1/merchant-photo-uploads/77/complete
+Authorization: Bearer sb_app_...
+
+200 OK
+{
+  "success": true,
+  "photoUploadId": 77,
+  "photoId": 900,
+  "status": "Ready",
+  "imageUrl": "https://console.sentribee.ai/api/spendbee/v1/merchant-photos/900/image"
+}</code></pre>
+                <pre class="api-code"><code>GET /api/spendbee/v1/merchants/55/photos?category=food&amp;limit=20&amp;beforeId=900
+Authorization: Bearer sb_app_...
+
+200 OK
+{
+  "photos": [
+    {
+      "id": 900,
+      "merchantId": 55,
+      "category": "food",
+      "caption": "Brunch table",
+      "imageUrl": "https://console.sentribee.ai/api/spendbee/v1/merchant-photos/900/image",
+      "likeCount": 3,
+      "commentCount": 2,
+      "likedByMe": true,
+      "createdAtUtc": "2026-06-06T03:00:00.0000000Z",
+      "user": {
+        "id": 10,
+        "displayName": "Rock",
+        "avatarUrl": null,
+        "gender": "Male"
+      }
+    }
+  ],
+  "categories": [
+    { "category": "food", "count": 12 },
+    { "category": "storefront", "count": 2 }
+  ],
+  "page": {
+    "limit": 20,
+    "nextBeforeId": null
+  }
+}</code></pre>
+                <pre class="api-code"><code>POST /api/spendbee/v1/merchant-photos/900/like
+Authorization: Bearer sb_app_...
+{ "liked": true }</code></pre>
+                <pre class="api-code"><code>GET /api/spendbee/v1/merchant-photos/900/likes?limit=20
+Authorization: Bearer sb_app_...
+
+200 OK
+{
+  "likes": [
+    {
+      "appUserId": 10,
+      "displayName": "Rock",
+      "avatarUrl": "https://console.sentribee.ai/api/spendbee/v1/avatar/10",
+      "gender": "Male",
+      "likedAtUtc": "2026-06-06T03:10:00.0000000Z"
+    }
+  ],
+  "page": {
+    "limit": 20,
+    "nextBeforeUserId": null
+  }
+}</code></pre>
+                <pre class="api-code"><code>POST /api/spendbee/v1/merchant-photos/900/comments
+Authorization: Bearer sb_app_...
+{
+  "body": "This looks great.",
+  "parentCommentId": null
+}</code></pre>
+                <pre class="api-code"><code>POST /api/spendbee/v1/merchant-photo-comments/501/replies
+Authorization: Bearer sb_app_...
+{ "body": "Agree." }</code></pre>
+                <pre class="api-code"><code>POST /api/spendbee/v1/merchant-photo-comments/501/like
+Authorization: Bearer sb_app_...
+{ "liked": true }</code></pre>
+            </section>
+
+            <section id="messages" class="api-doc-section">
+                <h2>Messages</h2>
+                <p>
+                    SpendBee 站内消息用于通知用户上传结果和需要处理的问题。消息会带 <code>targetType</code>、<code>targetId</code> 和
+                    <code>targetUrl</code>，App 点击消息后按这些字段打开对应界面。
+                </p>
+                <table class="api-doc-table">
+                    <thead><tr><th>Endpoint</th><th>Purpose</th><th>Auth</th></tr></thead>
+                    <tbody>
+                        <tr><td><code>GET /api/spendbee/v1/messages</code></td><td>读取当前用户消息列表，支持分页和只看未读。</td><td>App Bearer</td></tr>
+                        <tr><td><code>GET /api/spendbee/v1/messages/unread-count</code></td><td>读取未读消息数量。</td><td>App Bearer</td></tr>
+                        <tr><td><code>POST /api/spendbee/v1/messages/{messageId}/open</code></td><td>App 打开消息时调用：标记已读并返回消息和最新未读数。</td><td>App Bearer</td></tr>
+                        <tr><td><code>POST /api/spendbee/v1/messages/{messageId}/read</code></td><td>标记单条消息已读。</td><td>App Bearer</td></tr>
+                        <tr><td><code>POST /api/spendbee/v1/messages/read-all</code></td><td>标记当前用户全部消息已读。</td><td>App Bearer</td></tr>
+                    </tbody>
+                </table>
+                <p>
+                    当前自动写入消息的场景包括：发票上传成功、发票识别失败、发票低置信度需要重传、低置信度发票重新识别完成、
+                    商户照片上传并卡通化成功、商户照片卡通化失败、照片被点赞。头像更新不会生成消息。
+                </p>
+                <pre class="api-code"><code>GET /api/spendbee/v1/messages?limit=20&amp;beforeId=100&amp;unreadOnly=true
+Authorization: Bearer sb_app_...
+
+200 OK
+{
+  "messages": [
+    {
+      "id": 101,
+      "messageType": "receipt_review_required",
+      "severity": "Success",
+      "title": "Receipt uploaded",
+      "body": "Your receipt has been uploaded.",
+      "targetType": "Receipt",
+      "targetId": 123,
+      "targetUrl": "spendbee://receipts/123",
+      "payload": {
+        "receiptId": 123,
+        "status": "ReviewRequired",
+        "estimatedErrorRate": 0.08
+      },
+      "readAtUtc": null,
+      "createdAtUtc": "2026-06-06T03:00:00.0000000Z"
+    }
+  ],
+  "page": {
+    "limit": 20,
+    "nextBeforeId": null
+  }
+}</code></pre>
+                <pre class="api-code"><code>GET /api/spendbee/v1/messages/unread-count
+Authorization: Bearer sb_app_...
+
+200 OK
+{ "unreadCount": 3 }</code></pre>
+                <pre class="api-code"><code>POST /api/spendbee/v1/messages/101/read
+Authorization: Bearer sb_app_...
+
+200 OK
+{
+  "success": true,
+  "messageId": 101,
+  "message": { "...": "message with readAtUtc" },
+  "unreadCount": 2
+}</code></pre>
+                <pre class="api-code"><code>POST /api/spendbee/v1/messages/101/open
+Authorization: Bearer sb_app_...
+
+200 OK
+{
+  "success": true,
+  "message": {
+    "id": 101,
+    "targetType": "Receipt",
+    "targetId": 123,
+    "targetUrl": "spendbee://receipts/123",
+    "readAtUtc": "2026-06-07T03:20:00.0000000Z"
+  },
+  "unreadCount": 2
+}</code></pre>
+            </section>
+
+            <section id="assets" class="api-doc-section">
+                <h2>Images</h2>
+                <p>
+                    以下图片接口均已实现。商户封面是公开代理 URL，可直接显示；发票相关图片仍会校验当前 app token。
+                </p>
+                <table class="api-doc-table">
+                    <thead><tr><th>Endpoint</th><th>Purpose</th><th>Auth</th></tr></thead>
+                    <tbody>
+                        <tr><td><code>GET /api/spendbee/v1/receipts/{receiptId}/images/{imageId}</code></td><td>读取发票原图。</td><td>App Bearer</td></tr>
+                        <tr><td><code>GET /api/spendbee/v1/receipt-uploads/{receiptUploadId}/images/{imageUploadId}</code></td><td>读取断点续传完成后的图片。</td><td>App Bearer</td></tr>
+                        <tr><td><code>GET /api/spendbee/v1/merchants/{merchantId}/cover</code></td><td>读取商户封面图。</td><td>Public</td></tr>
+                        <tr><td><code>GET /api/spendbee/v1/merchant-photos/{photoId}/image</code></td><td>读取用户上传照片的 OpenAI 卡通化展示图；原图不对外显示。</td><td>Public</td></tr>
+                    </tbody>
+                </table>
+            </section>
+        </main>
+    </div>
+</body>
+</html>

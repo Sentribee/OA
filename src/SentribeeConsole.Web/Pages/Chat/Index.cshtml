@@ -1,0 +1,148 @@
+@page "/chat/{corpId}"
+@model SentribeeConsole.Web.Pages.Chat.IndexModel
+@{
+    Layout = null;
+    ViewData["Title"] = Model.Bot?.BotName ?? "Support Chat";
+}
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="utf-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>@ViewData["Title"] - SentriBee Chat</title>
+    <link rel="icon" type="image/x-icon" href="~/favicon.ico" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Google+Sans:wght@400;500;600;700&display=swap" rel="stylesheet" />
+    <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" rel="stylesheet" />
+    <link rel="stylesheet" href="~/theme/vendor-DDXwb3B2.css" asp-append-version="true" />
+    <link rel="stylesheet" href="~/css/site.css" asp-append-version="true" />
+</head>
+<body class="chatgpt-shell">
+    @if (Model.IsUnavailable)
+    {
+        <main class="chat-unavailable">
+            <img src="~/images/sentribee-mark.png" alt="" />
+            <h1>Support chat unavailable</h1>
+            <p>This business has not enabled a public SentriBee support bot.</p>
+        </main>
+    }
+    else if (Model.RequiresEmailVerification)
+    {
+        <main class="chat-verify-shell">
+            <section class="chat-verify-card">
+                <div class="chat-verify-head">
+                    <div class="chatgpt-bot-avatar">
+                        @if (!string.IsNullOrWhiteSpace(Model.Bot!.AvatarUrl))
+                        {
+                            <img src="/api/crm/public/chat/@Uri.EscapeDataString(Model.Bot.PublicChatPath)/avatar" alt="" />
+                        }
+                        else
+                        {
+                            <span class="material-symbols-rounded">smart_toy</span>
+                        }
+                    </div>
+                    <div>
+                        <h1>@Model.Bot.BotName</h1>
+                        <p>@Model.Bot.BusinessName</p>
+                    </div>
+                </div>
+                @if (!string.IsNullOrWhiteSpace(Model.AlertMessage))
+                {
+                    <div class="chat-verify-status error">@Model.AlertMessage</div>
+                }
+                @if (!string.IsNullOrWhiteSpace(Model.CodeMessage))
+                {
+                    <div class="chat-verify-status success">@Model.CodeMessage</div>
+                }
+                <form class="chat-verify-form" method="post" asp-page-handler="SendCode">
+                    @Html.AntiForgeryToken()
+                    <input asp-for="EmailInput.ConversationId" type="hidden" />
+                    <input asp-for="EmailInput.Resume" type="hidden" />
+                    <label asp-for="EmailInput.Email">邮箱</label>
+                    <div class="chat-verify-row">
+                        <input asp-for="EmailInput.Email" type="email" autocomplete="email" placeholder="name@example.com" />
+                        <button type="submit">发送验证码</button>
+                    </div>
+                </form>
+                <form class="chat-verify-form" method="post" asp-page-handler="Verify">
+                    @Html.AntiForgeryToken()
+                    <input asp-for="EmailInput.ConversationId" type="hidden" />
+                    <input asp-for="EmailInput.Resume" type="hidden" />
+                    <input asp-for="EmailInput.Email" type="hidden" />
+                    <label asp-for="EmailInput.Code">验证码</label>
+                    <div class="chat-verify-row">
+                        <input asp-for="EmailInput.Code" inputmode="numeric" autocomplete="one-time-code" placeholder="6位数字" />
+                        <button type="submit">进入聊天</button>
+                    </div>
+                </form>
+            </section>
+        </main>
+    }
+    else
+    {
+        <main class="chatgpt-app" data-corp-id="@Model.Bot!.PublicChatPath" data-conversation-id="@Model.InitialConversationId">
+            <header class="chatgpt-header">
+                <div class="chatgpt-bot-avatar">
+                    @if (!string.IsNullOrWhiteSpace(Model.Bot.AvatarUrl))
+                    {
+                        <img src="/api/crm/public/chat/@Uri.EscapeDataString(Model.Bot.PublicChatPath)/avatar" alt="" />
+                    }
+                    else
+                    {
+                        <span class="material-symbols-rounded">smart_toy</span>
+                    }
+                </div>
+                <div>
+                    <h1>@Model.Bot.BotName</h1>
+                    <p>@Model.Bot.BusinessName</p>
+                </div>
+            </header>
+            <section id="chat-log" class="chatgpt-log" aria-live="polite">
+                @if (Model.InitialMessages.Count == 0)
+                {
+                    <div class="chatgpt-message assistant">
+                        <div class="chatgpt-bubble">
+                            @(Model.Bot.WelcomeMessage ?? "Hi, how can I help you today?")
+                        </div>
+                    </div>
+                }
+                else
+                {
+                    @foreach (var message in Model.InitialMessages)
+                    {
+                        var role = string.Equals(message.SenderRole, "User", StringComparison.OrdinalIgnoreCase) ? "user" : "assistant";
+                        <div class="chatgpt-message @role">
+                            <div class="chatgpt-bubble">
+                                @if (!string.IsNullOrWhiteSpace(message.ImageUrl))
+                                {
+                                    <img src="@message.ImageUrl" alt="" />
+                                }
+                                @if (!string.IsNullOrWhiteSpace(message.Body))
+                                {
+                                    <div>@message.Body</div>
+                                }
+                            </div>
+                        </div>
+                    }
+                }
+            </section>
+            <form id="chat-form" class="chatgpt-composer" method="post" enctype="multipart/form-data">
+                @Html.AntiForgeryToken()
+                <input id="conversation-id" name="conversationId" type="hidden" />
+                <input id="chat-image" name="image" type="file" accept="image/*" hidden />
+                <button id="chat-image-button" type="button" class="chatgpt-icon-button" title="Attach image">
+                    <span class="material-symbols-rounded">add_photo_alternate</span>
+                </button>
+                <textarea id="chat-message" name="message" rows="1" placeholder="Message @Model.Bot.BotName"></textarea>
+                <button type="submit" class="chatgpt-send" title="Send">
+                    <span class="material-symbols-rounded">arrow_upward</span>
+                </button>
+                <div id="chat-image-name" class="chatgpt-image-name" aria-live="polite"></div>
+            </form>
+        </main>
+    }
+    <script src="~/js/crm-chat.js" asp-append-version="true"></script>
+</body>
+</html>

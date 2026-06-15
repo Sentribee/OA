@@ -1,0 +1,225 @@
+@page "/settings/project"
+@model SentribeeConsole.Web.Pages.Settings.ProjectModel
+@{
+    Layout = "_AdminLayout";
+    ViewData["Title"] = "Project Settings";
+    ViewData["PageTitle"] = "Project Settings";
+    ViewData["ActiveMenu"] = "Project";
+    var logoUrl = string.IsNullOrWhiteSpace(Model.Project.LogoUrl)
+        ? Url.Content("~/images/sentribee-mark.png")
+        : $"/api/projects/current/logo?v={DateTimeOffset.UtcNow.ToUnixTimeMilliseconds()}";
+    var canEditProject = Model.Project.CanEditProjectDetails;
+    var canManageApiKey = Model.Project.CanManageProjectApiKey;
+}
+
+<div id="project-feedback"
+     class="admin-toast @(string.IsNullOrEmpty(Model.StatusMessage) ? null : "is-visible") @(Model.StatusIsError ? "is-error" : null)"
+     role="status"
+     aria-live="polite">
+    <i class="material-symbols-rounded">@(Model.StatusIsError ? "error" : "check_circle")</i>
+    <span>@Model.StatusMessage</span>
+</div>
+
+<div class="admin-page-width admin-page-width-narrow">
+    <div class="row g-4 mb-5">
+        <div class="col-lg-4">
+            <div class="card p-5 text-center h-100">
+                <div class="project-logo-upload mx-auto mb-5">
+                    <img id="project-logo" data-project-logo src="@logoUrl" alt="Project logo" />
+                    <div id="project-logo-progress" class="avatar-progress" aria-hidden="true">
+                        <div class="loading-spinner"></div>
+                    </div>
+                </div>
+                <h2 class="fs-5 text-body-emphasis mb-1">@Model.Project.Name</h2>
+                <p class="text-body-secondary mb-5">@Model.Project.CompanyName</p>
+                @if (canEditProject)
+                {
+                    <button type="button"
+                            id="project-logo-edit-button"
+                            class="btn btn-primary w-100 mb-3"
+                            data-bs-toggle="modal"
+                            data-bs-target="#project-logo-editor-modal">
+                        Edit Project Logo
+                    </button>
+                    <input id="project-logo-file" class="visually-hidden" type="file" accept="image/*" />
+                    <div class="form-text">Choose an image, crop it, then upload the final logo.</div>
+                }
+                else
+                {
+                    <div class="rounded border p-3 text-body-secondary fs-8">Project logo is managed by administrators.</div>
+                }
+            </div>
+        </div>
+        <div class="col-lg-8">
+            <div class="card h-100">
+                <div class="card-body">
+                    <h3 class="card-title fs-5">Project Details</h3>
+                    <p class="card-subtitle mb-6">This project is assigned to your administrator account.</p>
+                    <form id="project-form" method="post" data-global-loading data-loading-label="Saving project...">
+                        <div asp-validation-summary="ModelOnly" class="text-danger fs-7 mb-4"></div>
+                        <div class="mb-4">
+                            <label asp-for="Input.Name" class="form-label"></label>
+                            <input asp-for="Input.Name" class="form-control" disabled="@(!canEditProject)" />
+                            <span asp-validation-for="Input.Name" class="text-danger fs-8"></span>
+                        </div>
+                        <div class="row g-4 mb-4">
+                            <div class="col-md-6">
+                                <label asp-for="Input.CompanyName" class="form-label"></label>
+                                <input asp-for="Input.CompanyName" class="form-control" disabled="@(!canEditProject)" />
+                                <span asp-validation-for="Input.CompanyName" class="text-danger fs-8"></span>
+                            </div>
+                            <div class="col-md-6">
+                                <label asp-for="Input.WebsiteUrl" class="form-label"></label>
+                                <input asp-for="Input.WebsiteUrl" class="form-control" placeholder="https://" disabled="@(!canEditProject)" />
+                                <span asp-validation-for="Input.WebsiteUrl" class="text-danger fs-8"></span>
+                            </div>
+                        </div>
+                        <div class="mb-4">
+                            <label asp-for="Input.TimeZoneId" class="form-label"></label>
+                            <select asp-for="Input.TimeZoneId" class="form-select" disabled="@(!canEditProject)">
+                                @foreach (var option in Model.TimeZoneOptions)
+                                {
+                                    <option value="@option.Id">@option.Label</option>
+                                }
+                            </select>
+                            <span asp-validation-for="Input.TimeZoneId" class="text-danger fs-8"></span>
+                            <div class="form-text">All console times are displayed in this project time zone.</div>
+                        </div>
+                        <div class="mb-6">
+                            <label asp-for="Input.Description" class="form-label"></label>
+                            <textarea asp-for="Input.Description" class="form-control" rows="4" placeholder="Describe this project..." disabled="@(!canEditProject)"></textarea>
+                            <span asp-validation-for="Input.Description" class="text-danger fs-8"></span>
+                        </div>
+                        <div class="border-top pt-5 mb-6">
+                            <div class="d-flex align-items-center gap-2 mb-2">
+                                <i class="material-symbols-rounded text-primary fs-5">privacy_tip</i>
+                                <h4 class="fs-6 text-body-emphasis mb-0">Project Visibility</h4>
+                            </div>
+                            <div class="project-visibility-lock">
+                                <div class="project-private-shield material-symbols-rounded">shield_lock</div>
+                                <div>
+                                    <div class="fw-semibold text-body-emphasis">@Model.Project.Visibility</div>
+                                    <div class="text-body-secondary fs-8">This project is locked as private. Copyrighted data remains fully private and protected.</div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="border-top pt-5 mb-6">
+                            <div class="d-flex align-items-center gap-2 mb-2">
+                                <i class="material-symbols-rounded text-primary fs-5">hub</i>
+                                <h4 class="fs-6 text-body-emphasis mb-0">AI Code Git</h4>
+                            </div>
+                            <p class="text-body-secondary fs-8 mb-4">Use Git as the source of truth for AI code updates, rollback, and collaboration.</p>
+                            <div class="mb-4">
+                                <label asp-for="Input.EdgeAiGitRepositoryUrl" class="form-label"></label>
+                                <input asp-for="Input.EdgeAiGitRepositoryUrl" class="form-control" disabled="@(!canEditProject)" />
+                                <span asp-validation-for="Input.EdgeAiGitRepositoryUrl" class="text-danger fs-8"></span>
+                            </div>
+                            <div class="row g-4">
+                                <div class="col-md-5">
+                                    <label asp-for="Input.EdgeAiGitBranch" class="form-label"></label>
+                                    <input asp-for="Input.EdgeAiGitBranch" class="form-control" disabled="@(!canEditProject)" />
+                                    <span asp-validation-for="Input.EdgeAiGitBranch" class="text-danger fs-8"></span>
+                                </div>
+                                <div class="col-md-7">
+                                    <label asp-for="Input.EdgeAiGitWorkingDirectory" class="form-label"></label>
+                                    <input asp-for="Input.EdgeAiGitWorkingDirectory" class="form-control" placeholder="C:\Sentribee\edge-ai-code" disabled="@(!canEditProject)" />
+                                    <span asp-validation-for="Input.EdgeAiGitWorkingDirectory" class="text-danger fs-8"></span>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="border-top pt-5 mb-6">
+                            <div class="d-flex align-items-center gap-2 mb-2">
+                                <i class="material-symbols-rounded text-primary fs-5">key</i>
+                                <h4 class="fs-6 text-body-emphasis mb-0">Client API Access</h4>
+                            </div>
+                            <p class="text-body-secondary fs-8 mb-4">Generate a project API key for Edge AI clients. The full key is shown only once.</p>
+                            @if (!string.IsNullOrWhiteSpace(Model.GeneratedApiKey))
+                            {
+                                <div class="api-key-reveal mb-4">
+                                    <label class="form-label" for="generated-api-key">New API Key</label>
+                                    <input id="generated-api-key" class="form-control font-monospace" value="@Model.GeneratedApiKey" readonly />
+                                </div>
+                            }
+                            <div class="d-flex flex-wrap align-items-center justify-content-between gap-3">
+                                <div class="text-body-secondary fs-8">
+                                    @if (!string.IsNullOrWhiteSpace(Model.Project.ApiKeyPrefix))
+                                    {
+                                        <span>Current key prefix: <span class="font-monospace">@Model.Project.ApiKeyPrefix...</span></span>
+                                        @if (Model.Project.ApiKeyCreatedAtUtc.HasValue)
+                                        {
+                                            <span class="ms-2">Created @SentribeeConsole.Web.Application.Services.ProjectTimeZone.Format(Model.Project.ApiKeyCreatedAtUtc, Model.Project.TimeZoneId)</span>
+                                        }
+                                    }
+                                    else
+                                    {
+                                        <span>No API key has been generated for this project.</span>
+                                    }
+                                </div>
+                                @if (canManageApiKey)
+                                {
+                                    <button type="submit"
+                                            form="project-api-key-form"
+                                            class="btn btn-outline-primary"
+                                            data-global-loading
+                                            data-loading-label="Generating API key...">
+                                        Generate API Key
+                                    </button>
+                                }
+                            </div>
+                        </div>
+                        @if (canEditProject)
+                        {
+                            <div class="d-flex justify-content-end">
+                                <button type="submit" class="btn btn-primary px-6">Save Project</button>
+                            </div>
+                        }
+                    </form>
+                    <form id="project-api-key-form" method="post" asp-page-handler="GenerateApiKey"></form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@if (canEditProject)
+{
+    <div class="modal fade"
+         id="project-logo-editor-modal"
+         tabindex="-1"
+         aria-labelledby="project-logo-editor-title"
+         aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <div>
+                        <h5 class="modal-title" id="project-logo-editor-title">Edit Project Logo</h5>
+                        <div class="text-body-secondary fs-8">Drag to position the image and use zoom for a precise crop.</div>
+                    </div>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <div id="project-logo-crop-stage" class="avatar-crop-stage" aria-label="Project logo crop preview">
+                        <canvas id="project-logo-crop-canvas" width="720" height="720"></canvas>
+                        <div class="avatar-crop-mask" aria-hidden="true"></div>
+                    </div>
+                    <div class="d-flex align-items-center gap-3 mt-4">
+                        <i class="material-symbols-rounded text-body-secondary">zoom_out</i>
+                        <input id="project-logo-zoom" class="form-range mb-0" type="range" min="1" max="4" step="0.01" value="1" aria-label="Project logo zoom" />
+                        <i class="material-symbols-rounded text-body-secondary">zoom_in</i>
+                    </div>
+                    <div id="project-logo-editor-error" class="text-danger fs-8 mt-3" role="status"></div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" id="project-logo-choose-button" class="btn btn-outline-primary">Choose Image</button>
+                    <button type="button" class="btn btn-outline-primary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="button" id="project-logo-upload-button" class="btn btn-primary px-6">Upload Logo</button>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+    <script src="~/js/project.js" asp-append-version="true"></script>
+}

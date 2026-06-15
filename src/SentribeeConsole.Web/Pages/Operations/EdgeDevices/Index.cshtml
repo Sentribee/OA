@@ -1,0 +1,716 @@
+@page "/edge-devices"
+@model SentribeeConsole.Web.Pages.Operations.EdgeDevices.IndexModel
+@{
+    Layout = "_AdminLayout";
+    ViewData["Title"] = "Edge Devices";
+    ViewData["PageTitle"] = "Edge Devices";
+    ViewData["ActiveMenu"] = "EdgeDevices";
+    var canManageEdgeDevices = Model.Project.CanManageEdgeDevices;
+}
+
+<div id="edge-feedback"
+     class="admin-toast @(string.IsNullOrEmpty(Model.StatusMessage) ? null : "is-visible") @(Model.StatusIsError ? "is-error" : null)"
+     role="status"
+     aria-live="polite">
+    <i class="material-symbols-rounded">@(Model.StatusIsError ? "error" : "check_circle")</i>
+    <span>@Model.StatusMessage</span>
+</div>
+
+<div class="admin-page-width">
+    @if (string.IsNullOrWhiteSpace(Model.GoogleMapsApiKey))
+    {
+        <div class="alert alert-warning mb-5">
+            Google Maps API key is not configured. Address autocomplete and map preview are disabled.
+        </div>
+    }
+    <div class="mb-5">
+        <div class="d-flex flex-wrap align-items-start gap-3 mb-4">
+            <div class="flex-grow-1">
+                <h3 class="card-title fs-5 mb-1">Server Resources</h3>
+                <p class="card-subtitle mb-0">Available runtime capacity for AI Code instances.</p>
+            </div>
+        </div>
+        <div class="row g-4">
+            @foreach (var resource in Model.ServerResources)
+            {
+                var canStartResource = IndexModel.CanStartServerResource(resource);
+                var canStopResource = IndexModel.CanStopServerResource(resource);
+                <div class="col-md-6 col-xl-4">
+                    <div class="server-resource-card w-100 text-start rounded border p-4"
+                         data-server-resource="@resource.InstanceName">
+                        <div class="d-flex align-items-start gap-3 mb-4">
+                            <div class="server-resource-icon">
+                                <i class="material-symbols-rounded">dns</i>
+                            </div>
+                            <div class="flex-grow-1">
+                                <div class="fw-semibold text-body-emphasis">@resource.DisplayName</div>
+                                <div class="text-body-secondary fs-8">@resource.InstanceName</div>
+                                <div class="text-body-secondary fs-8">@resource.PublicDomain</div>
+                            </div>
+                            <span class="badge bg-success text-success-emphasis server-resource-status" style="--bs-bg-opacity:.12">@resource.Status</span>
+                        </div>
+                        <div class="d-flex align-items-end justify-content-between gap-3 mb-3">
+                            <div>
+                                <div class="text-body-secondary fs-8">Instance / Domain</div>
+                                <div class="fw-medium text-body-emphasis">@resource.InstanceName</div>
+                                <div class="fw-medium text-body-emphasis">@resource.PublicDomain</div>
+                            </div>
+                            <div class="text-end">
+                                <div class="server-resource-available" data-server-field="availableInstances">@resource.AvailableInstances</div>
+                                <div class="text-body-secondary fs-8">available</div>
+                            </div>
+                        </div>
+                        <div class="row g-2 mb-3">
+                            <div class="col-6">
+                                <div class="text-body-secondary fs-8">Memory</div>
+                                <div class="server-resource-spec" data-server-field="memorySummary">@resource.MemorySummary</div>
+                            </div>
+                            <div class="col-6">
+                                <div class="text-body-secondary fs-8">Disk</div>
+                                <div class="server-resource-spec" data-server-field="diskSummary">@resource.DiskSummary</div>
+                            </div>
+                            <div class="col-12">
+                                <div class="text-body-secondary fs-8">GPU</div>
+                                <div class="server-resource-spec" data-server-field="gpuSummary">@resource.GpuSummary</div>
+                            </div>
+                            <div class="col-12">
+                                <div class="d-flex justify-content-between text-body-secondary fs-8 mb-1">
+                                    <span>Server Load</span>
+                                    <span data-server-field="loadPercent">@resource.LoadPercent%</span>
+                                </div>
+                                <div class="progress" style="height:.45rem">
+                                    <div class="progress-bar bg-info" data-server-load-bar style="width:@resource.LoadPercent%"></div>
+                                </div>
+                                <div class="text-body-secondary fs-8 mt-1" data-server-field="loadSummary">@resource.LoadSummary</div>
+                            </div>
+                        </div>
+                        <div class="progress" style="height:.5rem">
+                            <div class="progress-bar" data-server-capacity-bar style="width:@resource.UsagePercent%"></div>
+                        </div>
+                        <div class="d-flex justify-content-between text-body-secondary fs-8 mt-2">
+                            <span><span data-server-field="usedInstances">@resource.UsedInstances</span> used</span>
+                            <span><span data-server-field="capacity">@resource.Capacity</span> max</span>
+                        </div>
+                        <div class="text-body-secondary fs-8 mt-2">
+                            Last refreshed <span data-server-field="updatedAt">@SentribeeConsole.Web.Application.Services.ProjectTimeZone.Format(resource.UpdatedAtUtc, Model.Project.TimeZoneId, "HH:mm:ss")</span>
+                        </div>
+                        <div class="d-flex flex-wrap align-items-center gap-2 mt-3">
+                            <button type="button"
+                                    class="btn btn-outline-primary btn-sm"
+                                    data-bs-toggle="modal"
+                                    data-bs-target="#server-resource-modal-@resource.InstanceName">
+                                <i class="material-symbols-rounded fs-6 me-1">info</i>Details
+                            </button>
+                            @if (canManageEdgeDevices)
+                            {
+                                <form method="post"
+                                      asp-page-handler="StartServerResource"
+                                      class="server-resource-action @(canStartResource ? null : "d-none")"
+                                      data-server-action-start
+                                      data-server-resource="@resource.InstanceName"
+                                      data-global-loading
+                                      data-loading-label="Starting server..."
+                                      data-confirm="Start this server resource?">
+                                    <input type="hidden" name="instanceName" value="@resource.InstanceName" />
+                                    <button type="submit" class="btn btn-outline-primary btn-sm">
+                                        <i class="material-symbols-rounded fs-6 me-1">play_arrow</i>Start
+                                    </button>
+                                </form>
+                                <form method="post"
+                                      asp-page-handler="StopServerResource"
+                                      class="server-resource-action @(canStopResource ? null : "d-none")"
+                                      data-server-action-stop
+                                      data-server-resource="@resource.InstanceName"
+                                      data-global-loading
+                                      data-loading-label="Stopping server..."
+                                      data-confirm="Stop this server resource? Running AI runtimes on this host will go offline.">
+                                    <input type="hidden" name="instanceName" value="@resource.InstanceName" />
+                                    <button type="submit" class="btn btn-outline-danger btn-sm">
+                                        <i class="material-symbols-rounded fs-6 me-1">stop</i>Stop
+                                    </button>
+                                </form>
+                            }
+                        </div>
+                    </div>
+                </div>
+            }
+        </div>
+    </div>
+    <div class="card">
+        <div class="card-body">
+            <div class="d-flex align-items-start mb-5">
+                <div class="flex-grow-1">
+                    <h3 class="card-title fs-5">Device List</h3>
+                    <p class="card-subtitle">All edge devices in the current project.</p>
+                </div>
+                @if (canManageEdgeDevices)
+                {
+                    <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#create-edge-device-modal">
+                        Create Edge Device
+                    </button>
+                }
+            </div>
+            @if (Model.Devices.Count == 0)
+            {
+                <div class="rounded border p-5 text-body-secondary">No edge devices have been created yet.</div>
+            }
+            else
+            {
+                <div class="table-responsive mobile-card-table-wrap">
+                    <table class="table align-middle mobile-card-table">
+                        <thead>
+                            <tr><th>Name</th><th>Status</th><th>Server</th><th>Code</th><th>IP</th><th>Inventory</th><th></th></tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var device in Model.Devices)
+                            {
+                                var lastHeartbeatText = device.LastHeartbeatAtUtc.HasValue
+                                    ? SentribeeConsole.Web.Application.Services.ProjectTimeZone.Format(device.LastHeartbeatAtUtc.Value, Model.Project.TimeZoneId, "yyyy-MM-dd HH:mm:ss")
+                                    : "No heartbeat received";
+                                <tr>
+                                    <td data-label="Name">
+                                        <a asp-page="/Operations/EdgeDevices/Details" asp-route-id="@device.Id" class="fw-medium">@device.Name</a>
+                                        <div class="text-body-secondary fs-8">@device.Address</div>
+                                    </td>
+                                    <td data-label="Status">
+                                        <div class="edge-online-status @((device.IsOnline && !device.NeedsRemoteDeviceRepair) ? "is-online" : "is-offline")" data-device-status="@device.Id">
+                                            <span class="edge-online-dot" aria-hidden="true"></span>
+                                            <span data-device-status-text>@(device.NeedsRemoteDeviceRepair ? "Remote device offline" : device.IsOnline ? "Online" : "Offline")</span>
+                                        </div>
+                                        <div class="text-body-secondary fs-8" data-device-heartbeat="@device.Id">@lastHeartbeatText</div>
+                                        <div class="text-danger fs-8 mt-1 @(device.NeedsRemoteDeviceRepair ? null : "d-none")" data-device-repair="@device.Id">
+                                            Remote device offline. Maintenance required.
+                                        </div>
+                                        @if (canManageEdgeDevices && !device.IsOnline)
+                                        {
+                                            <button type="button"
+                                                    class="btn btn-outline-primary btn-sm mt-2 edge-runtime-start"
+                                                    data-device-id="@device.Id">
+                                                <i class="material-symbols-rounded fs-6 me-1">play_arrow</i>Start
+                                            </button>
+                                        }
+                                    </td>
+                                    <td data-label="Server">
+                                        <div class="fw-medium">@Model.GetServerDomain(device.ServerResourceInstanceName)</div>
+                                        <div class="text-body-secondary fs-8">@(device.ServerResourceInstanceName ?? "Unbound")</div>
+                                    </td>
+                                    <td data-label="Code"><code>@device.DeviceCode</code></td>
+                                    <td data-label="IP">@device.IpAddress</td>
+                                    <td data-label="Inventory">@device.Endpoints.Count item(s)</td>
+                                    <td class="text-end mobile-card-actions" data-label="Actions">
+                                        <div class="d-inline-flex align-items-center gap-1">
+                                            <a asp-page="/Operations/EdgeDevices/Details" asp-route-id="@device.Id" class="icon material-symbols-rounded">visibility</a>
+                                            @if (canManageEdgeDevices)
+                                            {
+                                                <button class="icon material-symbols-rounded" type="button" title="Edit" data-bs-toggle="modal" data-bs-target="#edit-edge-device-modal-@device.Id">edit</button>
+                                                <form method="post" asp-page-handler="Delete" class="d-inline" data-global-loading data-loading-label="Deleting edge device..." data-confirm="Delete this edge device and its events?">
+                                                    <input type="hidden" name="deviceId" value="@device.Id" />
+                                                    <button class="icon material-symbols-rounded text-danger" type="submit" title="Delete">delete</button>
+                                                </form>
+                                            }
+                                        </div>
+                                    </td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+                @await Html.PartialAsync("_Pagination", new SentribeeConsole.Web.Domain.Entities.PagedResult<object>
+                {
+                    Items = [],
+                    PageNumber = Model.DevicePage.PageNumber,
+                    PageSize = Model.DevicePage.PageSize,
+                    TotalCount = Model.DevicePage.TotalCount
+                })
+            }
+        </div>
+    </div>
+</div>
+
+@foreach (var resource in Model.ServerResources)
+{
+    <div class="modal fade" id="server-resource-modal-@resource.InstanceName" tabindex="-1" aria-labelledby="server-resource-title-@resource.InstanceName" aria-hidden="true" data-server-resource="@resource.InstanceName">
+        <div class="modal-dialog modal-lg modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <div>
+                        <h5 class="modal-title" id="server-resource-title-@resource.InstanceName">@resource.DisplayName</h5>
+                        <div class="text-body-secondary fs-8">@resource.Description</div>
+                    </div>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <dl class="edge-detail-list edge-detail-list-compact mb-4">
+                        <dt>Instance Name</dt>
+                        <dd>@resource.InstanceName</dd>
+                        <dt>External Domain</dt>
+                        <dd><a href="https://@resource.PublicDomain" target="_blank" rel="noopener">@resource.PublicDomain</a></dd>
+                        <dt>Status</dt>
+                        <dd data-server-field="status">@resource.Status</dd>
+                        <dt>Instance Type</dt>
+                        <dd data-server-field="instanceType">@(resource.InstanceType ?? "Unavailable")</dd>
+                        <dt>Public IP</dt>
+                        <dd data-server-field="publicIpAddress">@(resource.PublicIpAddress ?? "Unavailable")</dd>
+                        <dt>GPU</dt>
+                        <dd data-server-field="gpuSummary">@(resource.GpuSummary ?? "Unavailable")</dd>
+                        <dt>Memory</dt>
+                        <dd data-server-field="memorySummary">@(resource.MemorySummary ?? "Unavailable")</dd>
+                        <dt>Disk</dt>
+                        <dd data-server-field="diskSummary">@(resource.DiskSummary ?? "Unavailable")</dd>
+                        <dt>Server Load</dt>
+                        <dd><span data-server-field="loadSummary">@(resource.LoadSummary ?? "Unavailable")</span> (<span data-server-field="loadPercent">@resource.LoadPercent%</span>)</dd>
+                        <dt>AWS Status</dt>
+                        <dd data-server-field="metadataStatus">@resource.MetadataStatus</dd>
+                        <dt>Max AI Code Instances</dt>
+                        <dd data-server-field="capacity">@resource.Capacity</dd>
+                        <dt>Used Instances</dt>
+                        <dd data-server-field="usedInstances">@resource.UsedInstances</dd>
+                        <dt>Available Instances</dt>
+                        <dd data-server-field="availableInstances">@resource.AvailableInstances</dd>
+                    </dl>
+                    <div class="rounded border p-3">
+                        <div class="d-flex justify-content-between text-body-secondary fs-8 mb-2">
+                            <span>Capacity Usage</span>
+                            <span data-server-field="usagePercent">@resource.UsagePercent%</span>
+                        </div>
+                        <div class="progress" style="height:.65rem">
+                            <div class="progress-bar" data-server-capacity-bar style="width:@resource.UsagePercent%"></div>
+                        </div>
+                    </div>
+                    <div class="text-body-secondary fs-8 mt-3">
+                        Last refreshed <span data-server-field="updatedAt">@SentribeeConsole.Web.Application.Services.ProjectTimeZone.Format(resource.UpdatedAtUtc, Model.Project.TimeZoneId, "HH:mm:ss")</span>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    @if (canManageEdgeDevices)
+                    {
+                        <form method="post"
+                              asp-page-handler="StartServerResource"
+                              class="me-auto server-resource-action @(IndexModel.CanStartServerResource(resource) ? null : "d-none")"
+                              data-server-action-start
+                              data-server-resource="@resource.InstanceName"
+                              data-global-loading
+                              data-loading-label="Starting server..."
+                              data-confirm="Start this server resource?">
+                            <input type="hidden" name="instanceName" value="@resource.InstanceName" />
+                            <button type="submit" class="btn btn-primary">
+                                <i class="material-symbols-rounded fs-6 me-2">play_arrow</i>Start Server
+                            </button>
+                        </form>
+                        <form method="post"
+                              asp-page-handler="StopServerResource"
+                              class="me-auto server-resource-action @(IndexModel.CanStopServerResource(resource) ? null : "d-none")"
+                              data-server-action-stop
+                              data-server-resource="@resource.InstanceName"
+                              data-global-loading
+                              data-loading-label="Stopping server..."
+                              data-confirm="Stop this server resource? Running AI runtimes on this host will go offline.">
+                            <input type="hidden" name="instanceName" value="@resource.InstanceName" />
+                            <button type="submit" class="btn btn-danger">
+                                <i class="material-symbols-rounded fs-6 me-2">stop</i>Stop Server
+                            </button>
+                        </form>
+                    }
+                    <button type="button" class="btn btn-outline-primary" data-bs-dismiss="modal">Close</button>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
+@if (canManageEdgeDevices)
+{
+    foreach (var device in Model.Devices)
+    {
+    <div class="modal fade" id="edit-edge-device-modal-@device.Id" tabindex="-1" aria-labelledby="edit-edge-device-title-@device.Id" aria-hidden="true">
+        <div class="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable">
+            <div class="modal-content">
+                <form method="post" asp-page-handler="Update" data-global-loading data-loading-label="Updating edge device...">
+                    <div class="modal-header">
+                        <h5 class="modal-title" id="edit-edge-device-title-@device.Id">Edit Edge Device</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                    </div>
+                    <div class="modal-body">
+                        <div asp-validation-summary="ModelOnly" class="text-danger fs-7 mb-4"></div>
+                        <input name="EditInput.DeviceId" type="hidden" value="@device.Id" />
+                        <div class="mb-4">
+                            <label for="edit-device-name-@device.Id" class="form-label">Name</label>
+                            <input id="edit-device-name-@device.Id" name="EditInput.Name" class="form-control" value="@device.Name" maxlength="150" required />
+                        </div>
+                        <div class="mb-4">
+                            <label for="edit-device-server-@device.Id" class="form-label">Server Resource</label>
+                            <select id="edit-device-server-@device.Id" name="EditInput.ServerResourceInstanceName" class="form-select" required>
+                                @foreach (var resource in Model.ServerResources)
+                                {
+                                    if (string.Equals(device.ServerResourceInstanceName, resource.InstanceName, StringComparison.OrdinalIgnoreCase))
+                                    {
+                                        <option value="@resource.InstanceName" selected>
+                                            @resource.PublicDomain - @resource.AvailableInstances available
+                                        </option>
+                                    }
+                                    else
+                                    {
+                                        <option value="@resource.InstanceName">
+                                            @resource.PublicDomain - @resource.AvailableInstances available
+                                        </option>
+                                    }
+                                }
+                            </select>
+                        </div>
+                        <div class="mb-4">
+                            <label for="edit-device-description-@device.Id" class="form-label">Description</label>
+                            <textarea id="edit-device-description-@device.Id" name="EditInput.Description" class="form-control" rows="4" maxlength="2000">@device.Description</textarea>
+                        </div>
+                        <div>
+                            <div class="d-flex align-items-start justify-content-between gap-3 mb-3">
+                                <div>
+                                    <div class="fw-semibold text-body-emphasis">External Device Configuration</div>
+                                    <div class="text-body-secondary fs-8">Update field device names and access URLs used by this edge device.</div>
+                                </div>
+                            </div>
+                            @if (device.Endpoints.Count == 0)
+                            {
+                                <div class="rounded border p-3 text-body-secondary fs-8">No external devices are attached.</div>
+                            }
+                            else
+                            {
+                                <div class="d-flex flex-column gap-3">
+                                    @for (var endpointIndex = 0; endpointIndex < device.Endpoints.Count; endpointIndex++)
+                                    {
+                                        var endpoint = device.Endpoints[endpointIndex];
+                                        <div class="edge-endpoint-row rounded border p-3">
+                                            <input name="EditInput.Endpoints[@endpointIndex].CatalogDeviceId" type="hidden" value="@endpoint.CatalogDeviceId" />
+                                            <input name="EditInput.Endpoints[@endpointIndex].CatalogName" type="hidden" value="" />
+                                            <input name="EditInput.Endpoints[@endpointIndex].Selected" type="hidden" value="true" />
+                                            <div class="row g-3">
+                                                <div class="col-md-5">
+                                                    <label for="edit-device-endpoint-name-@device.Id-@endpointIndex" class="form-label">Device Name</label>
+                                                    <input id="edit-device-endpoint-name-@device.Id-@endpointIndex"
+                                                           name="EditInput.Endpoints[@endpointIndex].DeviceName"
+                                                           class="form-control"
+                                                           value="@endpoint.DeviceName"
+                                                           maxlength="150"
+                                                           required />
+                                                </div>
+                                                <div class="col-md-7">
+                                                    <label for="edit-device-endpoint-url-@device.Id-@endpointIndex" class="form-label">Access URL</label>
+                                                    <input id="edit-device-endpoint-url-@device.Id-@endpointIndex"
+                                                           name="EditInput.Endpoints[@endpointIndex].AccessUrl"
+                                                           class="form-control"
+                                                           value="@endpoint.AccessUrl"
+                                                           maxlength="500"
+                                                           required />
+                                                </div>
+                                            </div>
+                                        </div>
+                                    }
+                                </div>
+                            }
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-outline-primary" data-bs-dismiss="modal">Cancel</button>
+                        <button type="submit" class="btn btn-primary">Save Changes</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+    }
+}
+
+@if (canManageEdgeDevices)
+{
+<div class="modal fade" id="create-edge-device-modal" tabindex="-1" aria-labelledby="create-edge-device-title" aria-hidden="true">
+    <div class="modal-dialog modal-xl modal-dialog-centered modal-dialog-scrollable">
+        <div class="modal-content">
+            <form method="post" asp-page-handler="Create" data-global-loading data-loading-label="Creating edge device...">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="create-edge-device-title">Create Edge Device</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <div asp-validation-summary="ModelOnly" class="text-danger fs-7 mb-4"></div>
+                    <div class="row g-4">
+                        <div class="col-lg-6">
+                            <div class="mb-4">
+                                <label asp-for="Input.Name" class="form-label"></label>
+                                <input asp-for="Input.Name" class="form-control" placeholder="Warehouse North Gate" />
+                                <span asp-validation-for="Input.Name" class="text-danger fs-8"></span>
+                            </div>
+                            <div class="mb-4">
+                                <label asp-for="Input.EdgeAiCodeVersionId" class="form-label"></label>
+                                <select asp-for="Input.EdgeAiCodeVersionId" id="edge-ai-version-select" class="form-select">
+                                    <option value="">Select AI code version</option>
+                                    @foreach (var logic in Model.EdgeAiLogics)
+                                    {
+                                        foreach (var version in logic.Versions)
+                                        {
+                                            <option value="@version.Id" data-required-devices="@IndexModel.GetRequiredCatalogNames(version)">
+                                                @logic.Name - @version.VersionName @(version.IsCurrent ? "(Current)" : null)
+                                            </option>
+                                        }
+                                    }
+                                </select>
+                                <span asp-validation-for="Input.EdgeAiCodeVersionId" class="text-danger fs-8"></span>
+                                <div id="edge-ai-required-devices" class="form-text">Select a version to show required external devices.</div>
+                            </div>
+                            <div class="mb-4">
+                                <label asp-for="Input.ServerResourceInstanceName" class="form-label"></label>
+                                <select asp-for="Input.ServerResourceInstanceName" class="form-select">
+                                    <option value="">Select server resource</option>
+                                    @foreach (var resource in Model.ServerResources)
+                                    {
+                                        <option value="@resource.InstanceName">@resource.PublicDomain - @resource.AvailableInstances available</option>
+                                    }
+                                </select>
+                                <span asp-validation-for="Input.ServerResourceInstanceName" class="text-danger fs-8"></span>
+                            </div>
+                            <div class="mb-4">
+                                <label asp-for="Input.Address" class="form-label"></label>
+                                <input asp-for="Input.Address"
+                                       id="edge-address-input"
+                                       class="form-control"
+                                       placeholder="Start typing an address"
+                                       autocomplete="off" />
+                                <input asp-for="Input.Latitude" id="edge-latitude" type="hidden" />
+                                <input asp-for="Input.Longitude" id="edge-longitude" type="hidden" />
+                                <input asp-for="Input.GooglePlaceId" id="edge-place-id" type="hidden" />
+                                <input asp-for="Input.StreetViewThumbnailUrl" id="edge-street-view-url" type="hidden" />
+                                <div id="edge-address-preview" class="edge-address-preview mt-3 d-none">
+                                    <div class="text-body-secondary fs-8">
+                                        Location: <span id="edge-location-preview"></span>
+                                    </div>
+                                </div>
+                                <span asp-validation-for="Input.Address" class="text-danger fs-8"></span>
+                            </div>
+                            <div class="mb-4">
+                                <label asp-for="Input.IpAddress" class="form-label"></label>
+                                <input asp-for="Input.IpAddress" class="form-control" placeholder="192.168.1.10" />
+                                <span asp-validation-for="Input.IpAddress" class="text-danger fs-8"></span>
+                            </div>
+                            <div class="mb-4">
+                                <label asp-for="Input.Description" class="form-label"></label>
+                                <textarea asp-for="Input.Description" class="form-control" rows="3" placeholder="Deployment notes..."></textarea>
+                                <span asp-validation-for="Input.Description" class="text-danger fs-8"></span>
+                            </div>
+                        </div>
+                        <div class="col-lg-6">
+                            <h4 class="fs-6 text-body-emphasis mb-3">External Device Inventory</h4>
+                            <div class="text-body-secondary fs-8 mb-3">
+                                Configure at least one external device. Suggested devices from the selected version are highlighted.
+                            </div>
+                            <div class="d-flex flex-column gap-3">
+                                @for (var index = 0; index < Model.Input.Endpoints.Count; index++)
+                                {
+                                    <div class="edge-endpoint-row rounded border p-3" data-catalog-name="@Model.Input.Endpoints[index].CatalogName">
+                                        <input asp-for="Input.Endpoints[index].CatalogDeviceId" type="hidden" />
+                                        <input asp-for="Input.Endpoints[index].CatalogName" type="hidden" />
+                                        <input asp-for="Input.Endpoints[index].Selected" type="hidden" class="edge-endpoint-selected" value="true" />
+                                        <div class="d-flex align-items-center justify-content-between gap-3 mb-3">
+                                            <div class="fw-medium">@Model.Input.Endpoints[index].CatalogName</div>
+                                            <span class="edge-endpoint-suggested badge bg-primary-subtle text-primary-emphasis d-none">Suggested</span>
+                                        </div>
+                                        <div class="row g-3">
+                                            <div class="col-md-5">
+                                                <input asp-for="Input.Endpoints[index].DeviceName" class="form-control" placeholder="Device name" />
+                                            </div>
+                                            <div class="col-md-7">
+                                                <input asp-for="Input.Endpoints[index].AccessUrl" class="form-control" placeholder="rtsp:// or https:// access URL" />
+                                            </div>
+                                        </div>
+                                    </div>
+                                }
+                                <div id="edge-no-required-devices" class="rounded border p-4 text-body-secondary">
+                                    No required external device has been detected for the selected version.
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-outline-primary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-primary">Create Edge Device</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+}
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+    <script>
+        window.sentribeeGoogleMapsKey = "@Model.GoogleMapsApiKey";
+    </script>
+    <script src="~/js/edge-device-maps.js" asp-append-version="true"></script>
+    <script>
+        (() => {
+            const endpoint = "@Url.Page("/Operations/EdgeDevices/Index", "ServerResources")";
+            const statusEndpoint = "@Url.Page("/Operations/EdgeDevices/Index", "DeviceStatuses")";
+            const startEndpoint = "@Url.Page("/Operations/EdgeDevices/Index", "StartRuntime")";
+            const antiforgeryToken = document.querySelector('input[name="__RequestVerificationToken"]')?.value || "";
+
+            const setText = (scope, field, value) => {
+                scope.querySelectorAll(`[data-server-field="${field}"]`).forEach((element) => {
+                    element.textContent = value ?? "Unavailable";
+                });
+            };
+
+            const setBar = (scope, selector, value) => {
+                const percent = Math.max(0, Math.min(100, Number(value) || 0));
+                scope.querySelectorAll(selector).forEach((element) => {
+                    element.style.width = `${percent}%`;
+                    element.setAttribute("aria-valuenow", String(percent));
+                });
+            };
+
+            const applyResource = (resource) => {
+                document.querySelectorAll(`[data-server-resource="${resource.instanceName}"]`).forEach((scope) => {
+                    setText(scope, "availableInstances", resource.availableInstances);
+                    setText(scope, "usedInstances", resource.usedInstances);
+                    setText(scope, "capacity", resource.capacity);
+                    setText(scope, "status", resource.status);
+                    setText(scope, "publicIpAddress", resource.publicIpAddress);
+                    setText(scope, "instanceType", resource.instanceType);
+                    setText(scope, "gpuSummary", resource.gpuSummary);
+                    setText(scope, "memorySummary", resource.memorySummary);
+                    setText(scope, "diskSummary", resource.diskSummary);
+                    setText(scope, "loadSummary", resource.loadSummary);
+                    setText(scope, "loadPercent", `${resource.loadPercent}%`);
+                    setText(scope, "usagePercent", `${resource.usagePercent}%`);
+                    setText(scope, "metadataStatus", resource.metadataStatus);
+                    setText(scope, "updatedAt", resource.updatedAt);
+                    setBar(scope, "[data-server-load-bar]", resource.loadPercent);
+                    setBar(scope, "[data-server-capacity-bar]", resource.usagePercent);
+
+                    const badge = scope.querySelector(".server-resource-status");
+                    if (badge) {
+                        badge.textContent = resource.status;
+                        badge.classList.toggle("bg-success", resource.status === "Available");
+                        badge.classList.toggle("bg-warning", resource.status !== "Available");
+                    }
+                });
+
+                document.querySelectorAll(`[data-server-action-start][data-server-resource="${resource.instanceName}"]`).forEach((form) => {
+                    form.classList.toggle("d-none", resource.status !== "Stopped");
+                });
+                document.querySelectorAll(`[data-server-action-stop][data-server-resource="${resource.instanceName}"]`).forEach((form) => {
+                    form.classList.toggle("d-none", resource.status !== "Available");
+                });
+            };
+
+            const refreshServerResources = async () => {
+                try {
+                    const response = await fetch(endpoint, {
+                        headers: { "Accept": "application/json" },
+                        credentials: "same-origin"
+                    });
+                    if (!response.ok) {
+                        return;
+                    }
+
+                    const payload = await response.json();
+                    if (!payload.authenticated) {
+                        return;
+                    }
+
+                    payload.resources?.forEach(applyResource);
+                } catch {
+                    // The next interval will retry; keep the current server state visible.
+                }
+            };
+
+            window.addEventListener("load", refreshServerResources);
+            window.setInterval(refreshServerResources, 5000);
+
+            const applyDeviceStatus = (device) => {
+                const status = document.querySelector(`[data-device-status="${device.id}"]`);
+                const heartbeat = document.querySelector(`[data-device-heartbeat="${device.id}"]`);
+                if (status) {
+                    status.classList.toggle("is-online", device.isOnline && !device.needsRemoteDeviceRepair);
+                    status.classList.toggle("is-offline", !device.isOnline || device.needsRemoteDeviceRepair);
+                    status.querySelector("[data-device-status-text]").textContent = device.statusText;
+                }
+                if (heartbeat) {
+                    heartbeat.textContent = device.lastHeartbeat;
+                }
+                const repair = document.querySelector(`[data-device-repair="${device.id}"]`);
+                if (repair) {
+                    repair.classList.toggle("d-none", !device.needsRemoteDeviceRepair);
+                }
+                const startButton = document.querySelector(`.edge-runtime-start[data-device-id="${device.id}"]`);
+                if (startButton && device.isOnline) {
+                    startButton.remove();
+                }
+            };
+
+            const refreshDeviceStatuses = async () => {
+                try {
+                    const response = await fetch(statusEndpoint, {
+                        headers: { "Accept": "application/json" },
+                        credentials: "same-origin"
+                    });
+                    if (!response.ok) return;
+                    const payload = await response.json();
+                    payload.devices?.forEach(applyDeviceStatus);
+                } catch {
+                    // Keep current state until the next status poll.
+                }
+            };
+
+            document.querySelectorAll(".edge-runtime-start").forEach((button) => {
+                button.addEventListener("click", async () => {
+                    if (button.disabled) return;
+                    const original = button.innerHTML;
+                    button.disabled = true;
+                    button.innerHTML = '<i class="material-symbols-rounded fs-6 me-1">progress_activity</i>Starting';
+                    window.setTimeout(() => {
+                        if (document.body.contains(button)) {
+                            button.disabled = false;
+                            button.innerHTML = original;
+                        }
+                    }, 10000);
+
+                    const body = new URLSearchParams();
+                    body.set("deviceId", button.dataset.deviceId);
+                    if (antiforgeryToken) {
+                        body.set("__RequestVerificationToken", antiforgeryToken);
+                    }
+
+                    try {
+                        const response = await fetch(startEndpoint, {
+                            method: "POST",
+                            headers: { "Content-Type": "application/x-www-form-urlencoded" },
+                            credentials: "same-origin",
+                            body
+                        });
+                        const payload = await response.json();
+                        if (!response.ok || !payload.success) {
+                            alert(payload.message || "Unable to start Edge AI runtime.");
+                        }
+                    } catch (error) {
+                        alert(error.message || "Unable to start Edge AI runtime.");
+                    }
+                });
+            });
+
+            window.setInterval(refreshDeviceStatuses, 1000);
+        })();
+    </script>
+    @if (!string.IsNullOrWhiteSpace(Model.GoogleMapsApiKey))
+    {
+        <script async defer src="https://maps.googleapis.com/maps/api/js?key=@Model.GoogleMapsApiKey&libraries=places&callback=initEdgeDeviceAddressAutocomplete"></script>
+    }
+    @if (Model.ReopenCreateModal)
+    {
+        <script>
+            window.addEventListener("load", () => {
+                const modalElement = document.getElementById("create-edge-device-modal");
+                if (modalElement && window.bootstrap?.Modal) {
+                    window.bootstrap.Modal.getOrCreateInstance(modalElement).show();
+                }
+            });
+        </script>
+    }
+}

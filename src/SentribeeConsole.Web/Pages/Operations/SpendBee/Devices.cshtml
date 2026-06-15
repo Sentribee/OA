@@ -1,0 +1,63 @@
+@page
+@model SentribeeConsole.Web.Pages.Operations.SpendBee.DevicesModel
+@using SentribeeConsole.Web.Domain.Entities
+@using SentribeeConsole.Web.Application.Services
+@{
+    Layout = "_AdminLayout";
+}
+
+<div class="admin-page-width">
+    <div class="card">
+        <div class="card-body">
+            <div class="d-flex align-items-start justify-content-between gap-3 mb-4">
+                <div>
+                    <h3 class="card-title fs-6">Active devices</h3>
+                    <p class="card-subtitle text-body-secondary mb-0">Devices are identified by phone identifier and push token.</p>
+                </div>
+                <span class="badge bg-primary-subtle text-primary">@Model.Devices.TotalCount total</span>
+            </div>
+            <div class="table-responsive mobile-card-table-wrap">
+                <table class="table align-middle mobile-card-table">
+                    <thead>
+                    <tr>
+                        <th>User</th>
+                        <th>Device</th>
+                        <th>App</th>
+                        <th>Push</th>
+                        <th>Last active</th>
+                    </tr>
+                    </thead>
+                    <tbody>
+                    @foreach (var item in Model.Devices.Items)
+                    {
+                        <tr>
+                            <td data-label="User">
+                                <div class="fw-medium">@item.DisplayName</div>
+                                <div class="text-body-secondary fs-8">@item.Email</div>
+                            </td>
+                            <td data-label="Device">
+                                <div>@(item.DeviceType ?? "Unknown device")</div>
+                                <div class="text-body-secondary fs-8">@item.Platform @item.OsVersion</div>
+                                <code class="fs-8">@item.DeviceIdentifier</code>
+                            </td>
+                            <td data-label="App">@item.AppVersion</td>
+                            <td data-label="Push">
+                                <div>@(item.PushProvider ?? "None")</div>
+                                <code class="fs-8">@(item.PushToken?.Length > 24 ? item.PushToken[..24] + "..." : item.PushToken)</code>
+                            </td>
+                            <td data-label="Last active">@ProjectTimeZone.Format(item.LastLoginAtUtc, Model.Project.TimeZoneId)</td>
+                        </tr>
+                    }
+                    </tbody>
+                </table>
+            </div>
+            @await Html.PartialAsync("_Pagination", new PagedResult<object>
+            {
+                Items = Model.Devices.Items.Cast<object>().ToList(),
+                PageNumber = Model.Devices.PageNumber,
+                PageSize = Model.Devices.PageSize,
+                TotalCount = Model.Devices.TotalCount
+            })
+        </div>
+    </div>
+</div>

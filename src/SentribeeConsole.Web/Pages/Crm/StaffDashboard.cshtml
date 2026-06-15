@@ -1,0 +1,46 @@
+@page "/oa/staff"
+@model SentribeeConsole.Web.Pages.Crm.StaffDashboardModel
+@{
+    Layout = "_CrmStaffLayout";
+}
+
+@if (!string.IsNullOrWhiteSpace(Model.StatusMessage))
+{
+    <div class="alert alert-success">@Model.StatusMessage</div>
+}
+
+<div class="dashboard-metric-grid mb-5">
+    <div class="card dashboard-metric-card">
+        <div class="dashboard-metric-value text-primary">@Model.Summary.TodayClockRecords</div>
+        <div class="dashboard-metric-label">Today's Records</div>
+    </div>
+    <div class="card dashboard-metric-card">
+        <div class="dashboard-metric-value text-warning">@Model.Summary.PendingLeaveCount</div>
+        <div class="dashboard-metric-label">My Pending Leave</div>
+    </div>
+    <div class="card dashboard-metric-card">
+        <div class="dashboard-metric-value text-success">@Model.Summary.PendingApprovalCount</div>
+        <div class="dashboard-metric-label">Approvals</div>
+    </div>
+</div>
+
+<div class="row g-5">
+    <div class="col-12 col-xl-6">
+        <div class="card h-100">
+            <div class="card-body">
+                <h3 class="card-title fs-6">Attendance</h3>
+                <p class="card-subtitle text-body-secondary">Clock in or close your current shift.</p>
+                <a asp-page="/Crm/StaffAttendance" class="btn btn-primary btn-sm mt-4">Open Attendance</a>
+            </div>
+        </div>
+    </div>
+    <div class="col-12 col-xl-6">
+        <div class="card h-100">
+            <div class="card-body">
+                <h3 class="card-title fs-6">Leave</h3>
+                <p class="card-subtitle text-body-secondary">Submit leave and follow the approval status.</p>
+                <a asp-page="/Crm/StaffLeave" class="btn btn-outline-primary btn-sm mt-4">Open Leave</a>
+            </div>
+        </div>
+    </div>
+</div>

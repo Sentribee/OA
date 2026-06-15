@@ -1,0 +1,44 @@
+@page "/oa/login"
+@model SentribeeConsole.Web.Pages.Crm.LoginModel
+@{
+    Layout = "_AuthLayout";
+    ViewData["Title"] = "Sentribee OA Sign In";
+    ViewData["AuthBodyClass"] = "crm-login-shell";
+}
+
+<div id="login-feedback"
+     class="login-toast @(string.IsNullOrEmpty(Model.AlertMessage) ? null : "is-visible")"
+     role="alert"
+     aria-live="assertive">
+    <i class="material-symbols-rounded">error</i>
+    <span>@Model.AlertMessage</span>
+</div>
+
+<section class="card login-card mw-400 w-100 p-7 p-md-8">
+    <div class="d-flex align-items-center gap-3 mb-7">
+        <img class="brand-logo" src="~/images/sentribee-mark.png" alt="SentriBee" width="44" height="44" />
+        <div>
+            <h1 class="login-brand-name fs-5 mb-0">Sentribee OA</h1>
+            <div class="text-body-secondary fs-7">Business operations workspace</div>
+        </div>
+    </div>
+    <h2 class="fs-6 text-body-emphasis">OA sign in</h2>
+    <div class="text-body-secondary mb-5">Merchants use the admin email. Staff use the work email created by the administrator.</div>
+
+    <form method="post" class="mb-5" novalidate>
+        <div class="form-icon mb-3">
+            <i class="material-symbols-rounded">mail</i>
+            <input asp-for="Email" class="form-control" placeholder="Email" autocomplete="email" inputmode="email" />
+        </div>
+        <div class="form-icon mb-5">
+            <i class="material-symbols-rounded">lock</i>
+            <input asp-for="Password" type="password" class="form-control" placeholder="Password" autocomplete="current-password" />
+        </div>
+        <button type="submit" class="btn btn-primary w-100">Sign In</button>
+    </form>
+
+    <div class="demo-note rounded-4 p-4 fs-7">
+        <div class="fw-medium text-body-emphasis mb-1">New merchant</div>
+        <a asp-page="/Crm/Register">Create a Sentribee OA account</a>
+    </div>
+</section>

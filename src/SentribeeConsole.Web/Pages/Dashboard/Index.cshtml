@@ -1,0 +1,344 @@
+@page "/dashboard"
+@model SentribeeConsole.Web.Pages.Dashboard.IndexModel
+@{
+    Layout = "_AdminLayout";
+    ViewData["Title"] = "Dashboard";
+    ViewData["PageTitle"] = "Dashboard";
+    ViewData["ActiveMenu"] = "Dashboard";
+    ViewData["ProjectTimeZoneId"] = Model.Project.TimeZoneId;
+}
+
+<div class="admin-page-width">
+    @if (Model.IsCrmProject)
+    {
+        <div class="dashboard-metric-grid mb-5">
+            <div class="card dashboard-metric-card">
+                <div class="d-flex align-items-start">
+                    <div class="dashboard-metric-value text-primary">@Model.CrmSummary.MerchantCount</div>
+                    <div class="badge bg-success rounded-pill text-success-emphasis d-inline-flex align-items-center" style="--bs-bg-opacity: .1">
+                        @Model.CrmSummary.ActiveMerchantCount active
+                    </div>
+                </div>
+                <div class="dashboard-metric-label">Sentribee OA Merchants</div>
+            </div>
+            <div class="card dashboard-metric-card">
+                <div class="dashboard-metric-value text-success">@Model.CrmSummary.ChatbotCount</div>
+                <div class="dashboard-metric-label">Support Bots</div>
+            </div>
+            <div class="card dashboard-metric-card">
+                <div class="dashboard-metric-value text-warning">@Model.CrmSummary.KnowledgeDocumentCount</div>
+                <div class="dashboard-metric-label">Knowledge Files</div>
+            </div>
+            <div class="card dashboard-metric-card">
+                <div class="dashboard-metric-value text-danger">@Model.CrmSummary.ConversationCount</div>
+                <div class="dashboard-metric-label">Conversations</div>
+            </div>
+        </div>
+
+        <div class="row g-5 mb-5">
+            <div class="col-12 col-xl-8">
+                <div class="card h-100">
+                    <div class="card-body">
+                        <div class="d-flex align-items-start mb-5">
+                            <div class="flex-grow-1">
+                                <h5 class="card-title">Sentribee OA Operating Summary</h5>
+                                <h5 class="card-subtitle">Merchant onboarding, customer service bot activity, and model usage.</h5>
+                            </div>
+                            <a asp-page="/Operations/Crm/Merchants" class="btn btn-outline-primary btn-sm">View Merchants</a>
+                        </div>
+                        <div class="row g-4">
+                            <div class="col-12 col-md-4">
+                                <div class="border rounded p-3 h-100">
+                                    <div class="fw-semibold">@Model.CrmSummary.IndustryCount industries</div>
+                                    <div class="text-body-secondary fs-8">Configured onboarding categories</div>
+                                </div>
+                            </div>
+                            <div class="col-12 col-md-4">
+                                <div class="border rounded p-3 h-100">
+                                    <div class="fw-semibold">@Model.CrmSummary.TokenCount tokens</div>
+                                    <div class="text-body-secondary fs-8">@Model.CrmSummary.UsageMessageCount messages, @Model.CrmSummary.UsageImageCount images</div>
+                                </div>
+                            </div>
+                            <div class="col-12 col-md-4">
+                                <div class="border rounded p-3 h-100">
+                                    <div class="fw-semibold">US$@Model.CrmSummary.EstimatedCostUsd.ToString("0.0000")</div>
+                                    <div class="text-body-secondary fs-8">Estimated OpenAI model cost</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-12 col-xl-4">
+                <div class="card h-100">
+                    <div class="card-body">
+                        <h5 class="card-title">Public Chat Test URL</h5>
+                        <h5 class="card-subtitle mb-4">Customer support bots are tested through corp id based chat paths.</h5>
+                        <code>https://chat.sentribee.ai/corpid</code>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="card">
+            <div class="card-body">
+                <div class="d-flex align-items-start mb-5">
+                    <div class="flex-grow-1">
+                        <h5 class="card-title">Sentribee OA Project Requirements</h5>
+                        <h5 class="card-subtitle">Operational scope for oa.sentribee.ai.</h5>
+                    </div>
+                </div>
+                <div class="requirement-grid">
+                    <partial name="_RequirementGroup" model='("Merchant Management", RulesByDimension("Merchant Management"))' />
+                    <partial name="_RequirementGroup" model='("Bot Configuration", RulesByDimension("Bot Configuration"))' />
+                    <partial name="_RequirementGroup" model='("Knowledge Base", RulesByDimension("Knowledge Base"))' />
+                    <partial name="_RequirementGroup" model='("Usage Governance", RulesByDimension("Usage Governance"))' />
+                </div>
+            </div>
+        </div>
+    }
+    else if (Model.IsSpendBeeProject)
+    {
+        <div class="dashboard-metric-grid mb-5">
+            <div class="card dashboard-metric-card">
+                <div class="d-flex align-items-start">
+                    <div class="dashboard-metric-value text-primary">@Model.SpendBeeSummary.UserCount</div>
+                    <div class="badge bg-success rounded-pill text-success-emphasis d-inline-flex align-items-center" style="--bs-bg-opacity: .1">
+                        @Model.SpendBeeSummary.ActiveUserCount active
+                    </div>
+                </div>
+                <div class="dashboard-metric-label">SpendBee Users</div>
+            </div>
+            <div class="card dashboard-metric-card">
+                <div class="d-flex align-items-start">
+                    <div class="dashboard-metric-value text-success">@Model.SpendBeeSummary.DeviceCount</div>
+                    <div class="badge bg-primary rounded-pill text-primary-emphasis d-inline-flex align-items-center" style="--bs-bg-opacity: .1">
+                        @Model.SpendBeeSummary.RecentDeviceCount recent
+                    </div>
+                </div>
+                <div class="dashboard-metric-label">App Devices</div>
+            </div>
+            <div class="card dashboard-metric-card">
+                <div class="d-flex align-items-start">
+                    <div class="dashboard-metric-value text-warning">@Model.SpendBeeSummary.ReceiptCount</div>
+                    <div class="badge bg-danger rounded-pill text-danger-emphasis d-inline-flex align-items-center" style="--bs-bg-opacity: .1">
+                        @Model.SpendBeeSummary.FailedReceiptCount failed
+                    </div>
+                </div>
+                <div class="dashboard-metric-label">Receipts</div>
+            </div>
+            <div class="card dashboard-metric-card">
+                <div class="d-flex align-items-start">
+                    <div class="dashboard-metric-value text-danger">@Model.SpendBeeSummary.MerchantPhotoCount</div>
+                    <div class="badge bg-success rounded-pill text-success-emphasis d-inline-flex align-items-center" style="--bs-bg-opacity: .1">
+                        @Model.SpendBeeSummary.ReadyMerchantPhotoCount ready
+                    </div>
+                </div>
+                <div class="dashboard-metric-label">User Photos</div>
+            </div>
+        </div>
+
+        <div class="row g-5 mb-5">
+            <div class="col-12 col-xl-8">
+                <div class="card h-100">
+                    <div class="card-body">
+                        <div class="d-flex align-items-start mb-5">
+                            <div class="flex-grow-1">
+                                <h5 class="card-title">SpendBee Operating Summary</h5>
+                                <h5 class="card-subtitle">Receipt recognition, merchant coverage, app users, and photo processing.</h5>
+                            </div>
+                            <a asp-page="/Operations/SpendBee/Receipts" class="btn btn-outline-primary btn-sm">View Receipts</a>
+                        </div>
+                        <div class="row g-4">
+                            <div class="col-12 col-md-4">
+                                <div class="border rounded p-3 h-100">
+                                    <div class="fw-semibold">@Model.SpendBeeSummary.CompletedReceiptCount completed receipts</div>
+                                    <div class="text-body-secondary fs-8">@Model.SpendBeeSummary.ReceiptImageCount images, @Model.SpendBeeSummary.ReceiptLineItemCount line items</div>
+                                </div>
+                            </div>
+                            <div class="col-12 col-md-4">
+                                <div class="border rounded p-3 h-100">
+                                    <div class="fw-semibold">@Model.SpendBeeSummary.MerchantCount merchants</div>
+                                    <div class="text-body-secondary fs-8">@Model.SpendBeeSummary.SyncedMerchantCount synced with place data</div>
+                                </div>
+                            </div>
+                            <div class="col-12 col-md-4">
+                                <div class="border rounded p-3 h-100">
+                                    <div class="fw-semibold">$@Model.SpendBeeSummary.ReceiptTotal.ToString("0.00")</div>
+                                    <div class="text-body-secondary fs-8">Recognized receipt total</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-12 col-xl-4">
+                <div class="card h-100">
+                    <div class="card-body">
+                        <h5 class="card-title">Processing Health</h5>
+                        <h5 class="card-subtitle mb-4">Items that may need operation follow-up.</h5>
+                        <div class="d-flex flex-column gap-3">
+                            <div class="d-flex justify-content-between align-items-center border-bottom pb-3">
+                                <span class="text-body-secondary">Receipt recognition failed</span>
+                                <strong>@Model.SpendBeeSummary.FailedReceiptCount</strong>
+                            </div>
+                            <div class="d-flex justify-content-between align-items-center border-bottom pb-3">
+                                <span class="text-body-secondary">Photo processing failed</span>
+                                <strong>@Model.SpendBeeSummary.FailedMerchantPhotoCount</strong>
+                            </div>
+                            <div class="d-flex justify-content-between align-items-center">
+                                <span class="text-body-secondary">Devices active in 30 days</span>
+                                <strong>@Model.SpendBeeSummary.RecentDeviceCount</strong>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="card">
+            <div class="card-body">
+                <div class="d-flex align-items-start mb-5">
+                    <div class="flex-grow-1">
+                        <h5 class="card-title">SpendBee Operations</h5>
+                        <h5 class="card-subtitle">Project-specific management areas for the consumer app.</h5>
+                    </div>
+                </div>
+                <div class="requirement-grid">
+                    <a asp-page="/Operations/SpendBee/Users" class="border rounded p-3 text-decoration-none text-body h-100">
+                        <div class="fw-semibold">App Users</div>
+                        <div class="text-body-secondary fs-8">Registered customers and profile details</div>
+                    </a>
+                    <a asp-page="/Operations/SpendBee/Devices" class="border rounded p-3 text-decoration-none text-body h-100">
+                        <div class="fw-semibold">Active Devices</div>
+                        <div class="text-body-secondary fs-8">Login devices, app versions, and push tokens</div>
+                    </a>
+                    <a asp-page="/Operations/SpendBee/Merchants" class="border rounded p-3 text-decoration-none text-body h-100">
+                        <div class="fw-semibold">Merchants</div>
+                        <div class="text-body-secondary fs-8">Restaurant and merchant coverage</div>
+                    </a>
+                    <a asp-page="/Operations/SpendBee/Photos" class="border rounded p-3 text-decoration-none text-body h-100">
+                        <div class="fw-semibold">User Photos</div>
+                        <div class="text-body-secondary fs-8">Uploaded merchant photos and processing state</div>
+                    </a>
+                </div>
+            </div>
+        </div>
+    }
+    else
+    {
+        <div class="dashboard-top-grid mb-5">
+            <div class="dashboard-metric-grid">
+                <div class="card dashboard-metric-card">
+                    <div class="d-flex align-items-start">
+                        <div class="dashboard-metric-value text-primary">@Model.DevicePage.TotalCount</div>
+                        <div class="badge bg-success rounded-pill text-success-emphasis d-inline-flex align-items-center" style="--bs-bg-opacity: .1">
+                            @Model.OnlineDeviceCount online
+                        </div>
+                    </div>
+                    <div class="dashboard-metric-label">Edge Devices</div>
+                </div>
+                <div class="card dashboard-metric-card">
+                    <div class="d-flex align-items-start">
+                        <div class="dashboard-metric-value text-success">@Model.EventPage.TotalCount</div>
+                        <div class="badge bg-danger rounded-pill text-danger-emphasis d-inline-flex align-items-center" style="--bs-bg-opacity: .1">
+                            @Model.ConfirmedEventCount real risk
+                        </div>
+                    </div>
+                    <div class="dashboard-metric-label">Events</div>
+                </div>
+                <div class="card dashboard-metric-card">
+                    <div class="d-flex align-items-start">
+                        <div class="dashboard-metric-value text-warning">@Model.Yolo.Versions.Count</div>
+                        <div class="badge bg-success rounded-pill text-success-emphasis d-inline-flex align-items-center" style="--bs-bg-opacity: .1">
+                            @(Model.Yolo.CurrentVersion?.VersionName ?? "-")
+                        </div>
+                    </div>
+                    <div class="dashboard-metric-label">Models</div>
+                </div>
+                <div class="card dashboard-metric-card">
+                    <div class="d-flex align-items-start">
+                        <div class="dashboard-metric-value text-danger">@Model.CodeVersionCount</div>
+                        <div class="badge bg-primary rounded-pill text-primary-emphasis d-inline-flex align-items-center" style="--bs-bg-opacity: .1">
+                            @Model.CurrentCodeVersion - @Model.BoundInstanceCount instance(s)
+                        </div>
+                    </div>
+                    <div class="dashboard-metric-label">Code Versions</div>
+                </div>
+            </div>
+            <partial name="_WeatherForecastPanel" model="Model.Weather" />
+        </div>
+
+        <div class="card mb-5">
+            <div class="card-body">
+                <div class="d-flex align-items-start mb-5">
+                    <div class="flex-grow-1">
+                        <h5 class="card-title">Current Project Requirements</h5>
+                        <h5 class="card-subtitle">Current running AI code version rules.</h5>
+                    </div>
+                    <a asp-page="/Operations/Models/EdgeAi" class="btn btn-outline-primary btn-sm">Manage Rules</a>
+                </div>
+                <div class="requirement-grid">
+                    <partial name="_RequirementGroup" model='("Environment Recognition", Model.Requirements.EnvironmentRecognition)' />
+                    <partial name="_RequirementGroup" model='("Recognition Logic", Model.Requirements.LogicRequirements)' />
+                    <partial name="_RequirementGroup" model='("Event Recognition", Model.Requirements.EventRecognition)' />
+                    <partial name="_RequirementGroup" model='("Response Method", Model.Requirements.ResponseMethods)' />
+                </div>
+            </div>
+        </div>
+
+        <div class="row g-5">
+            <div class="col-12">
+                <div class="card">
+                    <div class="card-body">
+                        <div class="d-flex align-items-start mb-5">
+                            <div class="flex-grow-1">
+                                <h5 class="card-title">Recent Events</h5>
+                                <h5 class="card-subtitle">Latest safety and device events</h5>
+                            </div>
+                            <div class="d-flex gap-1 me-n3">
+                                <a href="#" class="icon material-symbols-rounded">more_vert</a>
+                            </div>
+                        </div>
+                        <div class="table-responsive mobile-card-table-wrap">
+                            <table class="table align-middle mb-0 mobile-card-table">
+                                <thead><tr><th>Event</th><th>Device</th><th>Status</th></tr></thead>
+                                <tbody>
+                                    @if (Model.EventPage.Items.Count == 0)
+                                    {
+                                        <tr><td colspan="3" class="text-body-secondary">No recent events.</td></tr>
+                                    }
+                                    else
+                                    {
+                                        @foreach (var item in Model.EventPage.Items)
+                                        {
+                                            <tr>
+                                                <td data-label="Event">
+                                                    <div class="fw-medium">@item.Title</div>
+                                                    <div class="text-body-secondary fs-8">@SentribeeConsole.Web.Application.Services.ProjectTimeZone.Format(item.EventTimeUtc, Model.Project.TimeZoneId)</div>
+                                                </td>
+                                                <td data-label="Device">@item.EdgeDeviceName</td>
+                                                <td data-label="Status"><span class="badge event-status event-status-@item.Status.ToLowerInvariant().Replace(" ", "-")">@item.Status</span></td>
+                                            </tr>
+                                        }
+                                    }
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    }
+</div>
+
+@functions {
+    private IReadOnlyList<SentribeeConsole.Web.Domain.Entities.ProjectRule> RulesByDimension(string dimension)
+    {
+        return Model.Project.Rules
+            .Where(rule => string.Equals(rule.Dimension, dimension, StringComparison.OrdinalIgnoreCase))
+            .Where(rule => string.Equals(rule.ChangeType, "Active", StringComparison.OrdinalIgnoreCase) ||
+                string.Equals(rule.ChangeType, "Added", StringComparison.OrdinalIgnoreCase))
+            .ToList();
+    }
+}

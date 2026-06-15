@@ -1,0 +1,20 @@
+﻿<Project Sdk="Microsoft.NET.Sdk.Web">
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <UserSecretsId>d4f16d91-fafc-44dd-a1f5-5da9a34377a2</UserSecretsId>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="MySqlConnector" Version="2.4.0" />
+    <PackageReference Include="QRCoder" Version="1.6.0" />
+    <PackageReference Include="Tencent.QCloud.Cos.Sdk" Version="5.4.51" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Content Include="Tools/**/*.py" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
+  </ItemGroup>
+
+</Project>

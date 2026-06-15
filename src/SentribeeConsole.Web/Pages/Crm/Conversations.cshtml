@@ -1,0 +1,82 @@
+@page "/oa/conversations"
+@model SentribeeConsole.Web.Pages.Crm.ConversationsModel
+@using SentribeeConsole.Web.Application.Services
+@using SentribeeConsole.Web.Domain.Entities
+@{
+    Layout = "_CrmLayout";
+}
+
+<div class="row g-5">
+    <div class="col-12 col-xl-5">
+        <div class="card">
+            <div class="card-body">
+                <h3 class="card-title fs-6">Conversation history</h3>
+                <p class="card-subtitle text-body-secondary">Customer sessions from public chat.</p>
+                <div class="crm-conversation-list mt-4">
+                    @if (Model.Conversations.Items.Count == 0)
+                    {
+                        <div class="text-body-secondary">No conversations yet.</div>
+                    }
+                    else
+                    {
+                        @foreach (var item in Model.Conversations.Items)
+                        {
+                            <a class="crm-conversation-item @(item.Id == Model.SelectedConversationId ? "active" : null)"
+                               asp-page="/Crm/Conversations"
+                               asp-route-conversationId="@item.Id">
+                                <div class="fw-semibold">@(item.VisitorLabel ?? $"Visitor {item.Id}")</div>
+                                <div class="text-body-secondary fs-8">@item.MessageCount messages, @item.ImageMessageCount images</div>
+                                <div class="text-body-secondary fs-8">@ProjectTimeZone.Format(item.LastMessageAtUtc ?? item.StartedAtUtc, Model.Merchant.TimeZoneId)</div>
+                            </a>
+                        }
+                    }
+                </div>
+                @await Html.PartialAsync("_Pagination", new PagedResult<object>
+                {
+                    Items = Model.Conversations.Items.Cast<object>().ToList(),
+                    PageNumber = Model.Conversations.PageNumber,
+                    PageSize = Model.Conversations.PageSize,
+                    TotalCount = Model.Conversations.TotalCount
+                })
+            </div>
+        </div>
+    </div>
+    <div class="col-12 col-xl-7">
+        <div class="card">
+            <div class="card-body">
+                <h3 class="card-title fs-6">Messages</h3>
+                @if (Model.SelectedConversationId is null)
+                {
+                    <p class="card-subtitle text-body-secondary">Select a conversation to inspect the context.</p>
+                }
+                else if (Model.Messages.Count == 0)
+                {
+                    <p class="card-subtitle text-body-secondary">No messages found for this conversation.</p>
+                }
+                else
+                {
+                    <div class="crm-message-list mt-4">
+                        @foreach (var message in Model.Messages)
+                        {
+                            <div class="crm-message-row crm-message-@message.SenderRole.ToLowerInvariant()">
+                                <div class="crm-message-meta">@message.SenderRole &middot; @ProjectTimeZone.Format(message.CreatedAtUtc, Model.Merchant.TimeZoneId)</div>
+                                @if (!string.IsNullOrWhiteSpace(message.ImageUrl))
+                                {
+                                    <img src="/api/crm/conversation-messages/@message.Id/image" alt="" />
+                                }
+                                @if (!string.IsNullOrWhiteSpace(message.Body))
+                                {
+                                    <div class="crm-message-body">@message.Body</div>
+                                }
+                                @if (!string.IsNullOrWhiteSpace(message.ModelName))
+                                {
+                                    <div class="crm-message-meta">@message.ModelName, @(message.PromptTokens + message.CompletionTokens) tokens</div>
+                                }
+                            </div>
+                        }
+                    </div>
+                }
+            </div>
+        </div>
+    </div>
+</div>

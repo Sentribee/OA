@@ -1,0 +1,211 @@
+@page "/oa/offices"
+@model SentribeeConsole.Web.Pages.Crm.OfficesModel
+@{
+    Layout = "_CrmLayout";
+}
+
+@if (!string.IsNullOrWhiteSpace(Model.StatusMessage))
+{
+    <div class="alert alert-success">@Model.StatusMessage</div>
+}
+
+<div class="card mb-5">
+    <div class="card-body">
+        <div class="d-flex align-items-start mb-4">
+            <div class="flex-grow-1">
+                <h3 class="card-title fs-6">@(Model.Input.Id > 0 ? "Edit office address" : "Add office address")</h3>
+                <p class="card-subtitle text-body-secondary">Manage all workplace addresses used by employees and attendance.</p>
+            </div>
+            @if (Model.Input.Id > 0)
+            {
+                <a asp-page="/Crm/Offices" class="btn btn-outline-secondary btn-sm">New Office</a>
+            }
+        </div>
+        <form method="post" asp-page-handler="Save">
+            <input type="hidden" asp-for="Input.Id" />
+            <input type="hidden" asp-for="Input.GooglePlaceId" />
+            <input type="hidden" asp-for="Input.FormattedAddress" />
+            <input type="hidden" asp-for="Input.Latitude" />
+            <input type="hidden" asp-for="Input.Longitude" />
+            <div class="row g-4">
+                <div class="col-12 col-md-4">
+                    <label class="form-label" asp-for="Input.LocationName">Location name</label>
+                    <input asp-for="Input.LocationName" class="form-control" placeholder="Head office, Queen St branch..." />
+                    <span asp-validation-for="Input.LocationName" class="text-danger fs-8"></span>
+                </div>
+                <div class="col-12 col-md-4">
+                    <label class="form-label" asp-for="Input.Phone">Phone</label>
+                    <input asp-for="Input.Phone" class="form-control" />
+                </div>
+                <div class="col-12 col-md-4">
+                    <label class="form-label" asp-for="Input.Status">Status</label>
+                    <select asp-for="Input.Status" class="form-select">
+                        <option value="Active">Active</option>
+                        <option value="Inactive">Inactive</option>
+                    </select>
+                </div>
+                <div class="col-12">
+                    <label class="form-label" for="office-address-search">Search address</label>
+                    <input id="office-address-search" type="text" class="form-control" autocomplete="off" value="@(!string.IsNullOrWhiteSpace(Model.Input.FormattedAddress) ? Model.Input.FormattedAddress : Model.Input.AddressLine1)" placeholder="Start typing a New Zealand address" />
+                    <div class="text-body-secondary fs-8 mt-1">Select a Google Maps result to save the coordinates.</div>
+                </div>
+                <div class="col-12">
+                    <label class="form-label" asp-for="Input.AddressLine1">Address line 1</label>
+                    <input asp-for="Input.AddressLine1" class="form-control" />
+                    <span asp-validation-for="Input.AddressLine1" class="text-danger fs-8"></span>
+                </div>
+                <div class="col-12">
+                    <label class="form-label" asp-for="Input.AddressLine2">Address line 2</label>
+                    <input asp-for="Input.AddressLine2" class="form-control" />
+                </div>
+                <div class="col-12 col-md-3">
+                    <label class="form-label" asp-for="Input.Suburb">Suburb</label>
+                    <input asp-for="Input.Suburb" class="form-control" />
+                </div>
+                <div class="col-12 col-md-3">
+                    <label class="form-label" asp-for="Input.City">City</label>
+                    <input asp-for="Input.City" class="form-control" />
+                </div>
+                <div class="col-12 col-md-3">
+                    <label class="form-label" asp-for="Input.Region">Region</label>
+                    <input asp-for="Input.Region" class="form-control" />
+                </div>
+                <div class="col-12 col-md-3">
+                    <label class="form-label" asp-for="Input.Postcode">Postcode</label>
+                    <input asp-for="Input.Postcode" class="form-control" />
+                </div>
+                <div class="col-12 col-md-4">
+                    <label class="form-label" asp-for="Input.Country">Country</label>
+                    <input asp-for="Input.Country" class="form-control" />
+                </div>
+                <div class="col-12 col-md-4 d-flex align-items-end">
+                    <div class="form-check">
+                        <input asp-for="Input.IsPrimary" class="form-check-input" />
+                        <label class="form-check-label" asp-for="Input.IsPrimary">Primary office</label>
+                    </div>
+                </div>
+                <div class="col-12">
+                    <label class="form-label" asp-for="Input.Notes">Notes</label>
+                    <textarea asp-for="Input.Notes" rows="3" class="form-control"></textarea>
+                </div>
+            </div>
+            <div class="d-flex justify-content-end mt-5">
+                <button type="submit" class="btn btn-primary">Save Office</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<div class="card">
+    <div class="card-body">
+        <h3 class="card-title fs-6">Office list</h3>
+        <div class="table-responsive mobile-card-table-wrap mt-4">
+            <table class="table align-middle mobile-card-table">
+                <thead>
+                    <tr>
+                        <th>Office</th>
+                        <th>Address</th>
+                        <th>Phone</th>
+                        <th>Status</th>
+                        <th></th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @if (Model.Offices.Count == 0)
+                    {
+                        <tr><td colspan="5" class="text-body-secondary">No office addresses yet.</td></tr>
+                    }
+                    else
+                    {
+                        @foreach (var item in Model.Offices)
+                        {
+                            <tr>
+                                <td data-label="Office">
+                                    <div class="fw-semibold">@item.LocationName</div>
+                                    @if (item.IsPrimary)
+                                    {
+                                        <span class="badge bg-primary">Primary</span>
+                                    }
+                                </td>
+                                <td data-label="Address">
+                                    <div>@(!string.IsNullOrWhiteSpace(item.FormattedAddress) ? item.FormattedAddress : item.AddressLine1)</div>
+                                    <div class="text-body-secondary fs-8">@item.AddressLine2</div>
+                                    <div class="text-body-secondary fs-8">@string.Join(", ", new[] { item.Suburb, item.City, item.Region, item.Postcode, item.Country }.Where(value => !string.IsNullOrWhiteSpace(value)))</div>
+                                    @if (item.Latitude.HasValue && item.Longitude.HasValue)
+                                    {
+                                        <div class="text-body-secondary fs-8">@item.Latitude.Value.ToString("0.0000000"), @item.Longitude.Value.ToString("0.0000000")</div>
+                                    }
+                                </td>
+                                <td data-label="Phone">@item.Phone</td>
+                                <td data-label="Status"><span class="badge bg-light text-body">@item.Status</span></td>
+                                <td class="text-end">
+                                    <a asp-page="/Crm/Offices" asp-route-officeId="@item.Id" class="btn btn-outline-primary btn-sm">Edit</a>
+                                </td>
+                            </tr>
+                        }
+                    }
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+    <script>
+        window.initOaOfficeAutocomplete = function () {
+            const search = document.getElementById('office-address-search');
+            if (!search || !window.google?.maps?.places) {
+                return;
+            }
+
+            const fields = {
+                placeId: document.getElementById('Input_GooglePlaceId'),
+                formatted: document.getElementById('Input_FormattedAddress'),
+                line1: document.getElementById('Input_AddressLine1'),
+                suburb: document.getElementById('Input_Suburb'),
+                city: document.getElementById('Input_City'),
+                region: document.getElementById('Input_Region'),
+                postcode: document.getElementById('Input_Postcode'),
+                country: document.getElementById('Input_Country'),
+                latitude: document.getElementById('Input_Latitude'),
+                longitude: document.getElementById('Input_Longitude')
+            };
+
+            const autocomplete = new google.maps.places.Autocomplete(search, {
+                componentRestrictions: { country: ['nz'] },
+                fields: ['place_id', 'formatted_address', 'address_components', 'geometry', 'name']
+            });
+
+            const part = (components, type, useShortName = false) => {
+                const component = components.find(item => item.types.includes(type));
+                return component ? (useShortName ? component.short_name : component.long_name) : '';
+            };
+
+            autocomplete.addListener('place_changed', () => {
+                const place = autocomplete.getPlace();
+                const components = place.address_components || [];
+                const streetNumber = part(components, 'street_number');
+                const route = part(components, 'route');
+                const line1 = [streetNumber, route].filter(Boolean).join(' ') || place.name || place.formatted_address || search.value;
+
+                fields.placeId.value = place.place_id || '';
+                fields.formatted.value = place.formatted_address || search.value;
+                fields.line1.value = line1;
+                fields.suburb.value = part(components, 'sublocality') || part(components, 'sublocality_level_1');
+                fields.city.value = part(components, 'locality') || part(components, 'postal_town') || part(components, 'administrative_area_level_2');
+                fields.region.value = part(components, 'administrative_area_level_1');
+                fields.postcode.value = part(components, 'postal_code');
+                fields.country.value = part(components, 'country') || 'New Zealand';
+
+                const location = place.geometry?.location;
+                fields.latitude.value = location ? location.lat().toFixed(7) : '';
+                fields.longitude.value = location ? location.lng().toFixed(7) : '';
+            });
+        };
+    </script>
+    @if (!string.IsNullOrWhiteSpace(Model.GoogleMapsApiKey))
+    {
+        <script async defer src="https://maps.googleapis.com/maps/api/js?key=@Model.GoogleMapsApiKey&libraries=places&callback=initOaOfficeAutocomplete"></script>
+    }
+}

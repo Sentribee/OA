@@ -1,0 +1,74 @@
+@using SentribeeConsole.Web.Pages.Crm
+@{
+    var merchant = ViewData["CrmMerchant"] as CrmMerchantSession;
+    var activeMenu = ViewData["ActiveMenu"] as string ?? "Dashboard";
+}
+<!doctype html>
+<html lang="en" data-bs-theme="light" data-theme-color="purple">
+<head>
+    <meta charset="utf-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>@ViewData["Title"] - Sentribee OA</title>
+    <link rel="icon" type="image/x-icon" href="~/favicon.ico" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Google+Sans:wght@400;500;600;700&display=swap" rel="stylesheet" />
+    <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" rel="stylesheet" />
+    <link rel="stylesheet" href="~/theme/vendor-DDXwb3B2.css" asp-append-version="true" />
+    <link rel="stylesheet" href="~/css/site.css" asp-append-version="true" />
+</head>
+<body class="crm-shell">
+    <aside class="crm-sidebar">
+        <a asp-page="/Crm/Dashboard" class="crm-brand">
+            <img src="~/images/sentribee-mark.png" alt="" />
+            <span>Sentribee OA</span>
+        </a>
+        <div class="crm-merchant-chip">
+            <div class="fw-semibold">@merchant?.BusinessName</div>
+            <div class="text-body-secondary fs-8">chat.sentribee.ai/@merchant?.CorpId</div>
+        </div>
+        <nav class="crm-nav">
+            <div class="crm-nav-section">工作台</div>
+            <a asp-page="/Crm/Dashboard" class="@(activeMenu == "Dashboard" ? "active" : null)"><i class="material-symbols-rounded">dashboard</i><span>Dashboard</span></a>
+            <a asp-page="/Crm/Profile" class="@(activeMenu == "MyProfile" ? "active" : null)"><i class="material-symbols-rounded">account_circle</i><span>My Profile</span></a>
+            <div class="crm-nav-section">客服增长</div>
+            <a asp-page="/Crm/Bot" class="@(activeMenu == "Bot" ? "active" : null)"><i class="material-symbols-rounded">smart_toy</i><span>Bot</span></a>
+            <a asp-page="/Crm/Knowledge" class="@(activeMenu == "Knowledge" ? "active" : null)"><i class="material-symbols-rounded">library_books</i><span>Knowledge</span></a>
+            <a asp-page="/Crm/Customers" class="@(activeMenu == "Customers" ? "active" : null)"><i class="material-symbols-rounded">contacts</i><span>Customers</span></a>
+            <a asp-page="/Crm/Conversations" class="@(activeMenu == "Conversations" ? "active" : null)"><i class="material-symbols-rounded">forum</i><span>Conversations</span></a>
+            <a asp-page="/Crm/Profiles" class="@(activeMenu == "Profiles" ? "active" : null)"><i class="material-symbols-rounded">person_search</i><span>Profiles</span></a>
+            <div class="crm-nav-section">组织人事</div>
+            <a asp-page="/Crm/Employees" class="@(activeMenu == "Employees" ? "active" : null)"><i class="material-symbols-rounded">badge</i><span>Employees</span></a>
+            <a asp-page="/Crm/Roles" class="@(activeMenu == "Roles" ? "active" : null)"><i class="material-symbols-rounded">admin_panel_settings</i><span>Roles</span></a>
+            <a asp-page="/Crm/Attendance" class="@(activeMenu == "Attendance" ? "active" : null)"><i class="material-symbols-rounded">schedule</i><span>Attendance</span></a>
+            <a asp-page="/Crm/Leave" class="@(activeMenu == "Leave" ? "active" : null)"><i class="material-symbols-rounded">event_busy</i><span>Leave</span></a>
+            <a asp-page="/Crm/Payroll" class="@(activeMenu == "Payroll" ? "active" : null)"><i class="material-symbols-rounded">payments</i><span>Payroll</span></a>
+            <a asp-page="/Crm/Offices" class="@(activeMenu == "Offices" ? "active" : null)"><i class="material-symbols-rounded">domain</i><span>Offices</span></a>
+            <div class="crm-nav-section">流程审批</div>
+            <a asp-page="/Crm/Workflows" class="@(activeMenu == "Workflows" ? "active" : null)"><i class="material-symbols-rounded">account_tree</i><span>Workflows</span></a>
+            <a asp-page="/Crm/ProfileRequests" class="@(activeMenu == "ProfileRequests" ? "active" : null)"><i class="material-symbols-rounded">manage_accounts</i><span>Profile Requests</span></a>
+            <div class="crm-nav-section">系统</div>
+            <a asp-page="/Crm/Context" class="@(activeMenu == "Context" ? "active" : null)"><i class="material-symbols-rounded">tune</i><span>Context</span></a>
+        </nav>
+        <form method="post" asp-page="/Crm/Logout" class="mt-auto">
+            <button type="submit" class="btn btn-outline-secondary w-100"><i class="material-symbols-rounded">logout</i> Sign out</button>
+        </form>
+    </aside>
+    <main class="crm-main">
+        <header class="crm-header">
+            <div>
+                <h1>@ViewData["PageTitle"]</h1>
+                <div class="text-body-secondary fs-8">@merchant?.PlanName plan &middot; @merchant?.Status</div>
+            </div>
+            <a class="btn btn-outline-primary btn-sm" href="https://chat.sentribee.ai/@merchant?.CorpId" target="_blank" rel="noopener">
+                <i class="material-symbols-rounded">open_in_new</i> Test Chat
+            </a>
+        </header>
+        @RenderBody()
+    </main>
+    <script type="module" src="~/theme/vendor-DWdXmVBv.js" asp-append-version="true"></script>
+    <script src="~/js/site.js" asp-append-version="true"></script>
+    @await RenderSectionAsync("Scripts", required: false)
+</body>
+</html>

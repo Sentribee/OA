@@ -1,0 +1,38 @@
+<div class="login-network" aria-hidden="true">
+    <svg viewBox="0 0 920 520" fill="none">
+        <defs>
+            <filter id="login-node-glow">
+                <feGaussianBlur stdDeviation="6" result="blur" />
+            </filter>
+        </defs>
+        @{
+            string[] lines =
+            [
+                "M20 300 L250 210 L455 235 L650 94 L855 150",
+                "M64 392 L258 312 L455 235 L645 292 L850 242",
+                "M210 470 L365 388 L528 420 L690 324 L890 405",
+                "M375 115 L455 235 L528 420 L730 478",
+                "M250 210 L365 388 L645 292 L855 150"
+            ];
+        }
+        @for (var index = 0; index < lines.Length; index++)
+        {
+            <path d="@lines[index]" class="network-line" />
+            <path d="@lines[index]" class="network-flow network-flow-@(index + 1)" />
+        }
+        @{
+            (int x, int y)[] nodes =
+            [
+                (250, 210), (455, 235), (650, 94), (645, 292),
+                (528, 420), (690, 324), (365, 388), (855, 150)
+            ];
+        }
+        @for (var index = 0; index < nodes.Length; index++)
+        {
+            <g class="network-node network-node-@((index % 4) + 1)">
+                <circle cx="@nodes[index].x" cy="@nodes[index].y" r="9" fill="#a855f7" opacity=".3" filter="url(#login-node-glow)" />
+                <circle cx="@nodes[index].x" cy="@nodes[index].y" r="2.8" fill="#ca8cff" />
+            </g>
+        }
+    </svg>
+</div>

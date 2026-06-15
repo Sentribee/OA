@@ -1,0 +1,244 @@
+@model IReadOnlyList<SentribeeConsole.Web.Domain.Entities.EdgeEvent>
+@{
+    var timeZoneId = ViewData["ProjectTimeZoneId"] as string;
+    var canEditEvents = ViewData["CanEditEvents"] as bool? ?? false;
+}
+
+<div class="card">
+    <div class="card-body">
+        <div class="d-flex align-items-start mb-5">
+            <div class="flex-grow-1">
+                <h3 class="card-title fs-5">Events</h3>
+                <p class="card-subtitle">Real risk, pending review, pending learning and trained events.</p>
+            </div>
+            <span class="badge bg-primary text-primary-emphasis" style="--bs-bg-opacity:.12">@Model.Count events</span>
+        </div>
+        @if (Model.Count == 0)
+        {
+            <div class="rounded border p-5 text-body-secondary">No events have been reported yet.</div>
+        }
+        else
+        {
+            <div class="table-responsive mobile-card-table-wrap">
+                <table class="table align-middle mobile-card-table">
+                    <thead>
+                        <tr>
+                            <th>Event</th>
+                            <th>Edge Device</th>
+                            <th>Image</th>
+                            <th>Time</th>
+                            <th>Status</th>
+                            <th>Learning</th>
+                            <th></th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var item in Model)
+                        {
+                            var statusClass = item.Status.ToLowerInvariant().Replace(" ", "-");
+                            var learningClass = item.LearningStatus.ToLowerInvariant().Replace(" ", "-");
+                            var statusIcon = item.Status switch
+                            {
+                                "Invalid Event" => "block",
+                                "Severe Danger" => "warning",
+                                "Ordinary Risk" => "error",
+                                "No Risk" => "verified",
+                                "Real Risk" => "error",
+                                "Pending Review" => "pending",
+                                _ => "info"
+                            };
+                            <tr data-event-row="@item.Id">
+                                <td data-label="Event">
+                                    <div class="d-flex align-items-center gap-2">
+                                        <span class="material-symbols-rounded event-risk-icon event-risk-icon-@statusClass" aria-hidden="true">@statusIcon</span>
+                                        <div class="fw-medium">@item.Title</div>
+                                    </div>
+                                    <div class="text-body-secondary fs-8">Event ID <code>@item.Id</code></div>
+                                    <div class="text-body-secondary fs-8">@item.Description</div>
+                                </td>
+                                <td data-label="Edge Device">
+                                    <a asp-page="/Operations/EdgeDevices/Details" asp-route-id="@item.EdgeDeviceId">@item.EdgeDeviceName</a>
+                                    <div class="text-body-secondary fs-8"><code>@item.EdgeDeviceCode</code></div>
+                                </td>
+                                <td data-label="Image">
+                                    @if (string.IsNullOrWhiteSpace(item.ImageUrl))
+                                    {
+                                        <span class="text-body-secondary fs-8">No image</span>
+                                    }
+                                    else
+                                    {
+                                        var protectedImageUrl = $"/api/events/{item.Id}/image";
+                                        @if (!string.IsNullOrWhiteSpace(item.VideoUrl))
+                                        {
+                                            <button type="button"
+                                                    class="btn btn-link p-0 event-video-btn position-relative"
+                                                    data-bs-toggle="modal"
+                                                    data-bs-target="#event-video-modal"
+                                                    data-event-title="@item.Title"
+                                                    data-video-url="/api/events/@item.Id/video">
+                                                <img src="@protectedImageUrl" alt="" class="event-thumb" />
+                                                <span class="event-video-play material-symbols-rounded" aria-hidden="true">play_circle</span>
+                                            </button>
+                                        }
+                                        else
+                                        {
+                                            <a href="@protectedImageUrl" target="_blank" rel="noreferrer">
+                                                <img src="@protectedImageUrl" alt="" class="event-thumb" />
+                                            </a>
+                                        }
+                                    }
+                                </td>
+                                <td data-label="Time">@SentribeeConsole.Web.Application.Services.ProjectTimeZone.Format(item.EventTimeUtc, timeZoneId)</td>
+                                <td data-label="Status">
+                                    <span class="badge event-status event-status-@statusClass">@item.Status</span>
+                                </td>
+                                <td data-label="Learning">
+                                    <span class="badge event-learning-status event-learning-status-@learningClass" data-learning-badge="event-@item.Id">@item.LearningStatus</span>
+                                </td>
+                                <td class="text-end mobile-card-actions" data-label="Actions">
+                                    <a class="btn btn-event-detail btn-sm me-2"
+                                       asp-page="/Operations/Events/Details"
+                                       asp-route-id="@item.Id">
+                                        Details
+                                    </a>
+                                    @if (canEditEvents && item.Status.Equals("Pending Review", StringComparison.OrdinalIgnoreCase))
+                                    {
+                                        <button type="button"
+                                                class="btn btn-danger btn-sm event-mark-real-risk-btn me-2"
+                                                data-event-id="@item.Id">
+                                            Mark as Real Risk
+                                        </button>
+                                    }
+                                    @if (!string.IsNullOrWhiteSpace(item.ImageUrl))
+                                    {
+                                        var annotationReadOnly = !canEditEvents || item.LearningStatus.Equals("Trained", StringComparison.OrdinalIgnoreCase);
+                                        <button type="button"
+                                                class="btn btn-outline-primary btn-sm event-annotate-btn"
+                                                data-bs-toggle="modal"
+                                                data-bs-target="#event-annotation-modal"
+                                                data-event-id="@item.Id"
+                                                data-event-title="@item.Title"
+                                                data-image-url="/api/events/@item.Id/image"
+                                                data-event-status="@item.Status"
+                                                data-learning-status="@item.LearningStatus"
+                                                data-read-only="@annotationReadOnly.ToString().ToLowerInvariant()"
+                                                data-annotation='@item.AnnotationJson'>
+                                            @(annotationReadOnly ? "View Label" : "Annotate")
+                                        </button>
+                                    }
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        }
+    </div>
+</div>
+
+<div class="modal fade" id="event-detail-modal" tabindex="-1" aria-labelledby="event-detail-title" aria-hidden="true">
+    <div class="modal-dialog modal-xl modal-dialog-centered modal-dialog-scrollable">
+        <div class="modal-content">
+            <div class="modal-header">
+                <div>
+                    <h5 class="modal-title" id="event-detail-title">Event Analysis</h5>
+                    <div id="event-detail-subtitle" class="text-body-secondary fs-8"></div>
+                </div>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <div id="event-detail-loading" class="rounded border p-4 text-body-secondary">Loading event analysis...</div>
+                <div id="event-detail-content" class="d-none">
+                    <div class="row g-4">
+                        <div class="col-lg-7">
+                            <div class="event-detail-scene rounded border">
+                                <canvas id="event-detail-scene-canvas"></canvas>
+                            </div>
+                            <div class="d-flex flex-wrap gap-2 mt-3" id="event-detail-scene-legend"></div>
+                        </div>
+                        <div class="col-lg-5">
+                            <div class="event-detail-stat-grid" id="event-detail-stats"></div>
+                            <div class="rounded border p-3 mt-4">
+                                <div class="text-body-secondary fs-8 mb-2">Analysis Summary</div>
+                                <div id="event-detail-summary" class="text-body-emphasis"></div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="mt-5">
+                        <div class="d-flex align-items-center justify-content-between mb-3">
+                            <div>
+                                <h6 class="mb-1">Person PPE Slices</h6>
+                                <div class="text-body-secondary fs-8">Each person is encoded separately, sliced, and reviewed for PPE boxes.</div>
+                            </div>
+                            <span id="event-detail-subject-count" class="badge bg-primary text-primary-emphasis" style="--bs-bg-opacity:.12"></span>
+                        </div>
+                        <div id="event-detail-subjects" class="event-detail-subject-grid"></div>
+                    </div>
+                    <div class="mt-5">
+                        <h6 class="mb-1">Annotation Operation Log</h6>
+                        <div class="text-body-secondary fs-8 mb-3">Recent event and person slice annotation saves.</div>
+                        <div id="event-detail-annotation-logs" class="annotation-operation-list"></div>
+                    </div>
+                </div>
+                <div id="event-detail-error" class="d-none rounded border border-danger-subtle p-4 text-danger"></div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="event-video-modal" tabindex="-1" aria-labelledby="event-video-title" aria-hidden="true">
+    <div class="modal-dialog modal-xl modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="event-video-title">Event Video</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <video id="event-video-player" class="event-video-player" controls playsinline></video>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="event-annotation-modal" tabindex="-1" aria-labelledby="event-annotation-title" aria-hidden="true">
+    <div class="modal-dialog modal-xl modal-dialog-centered modal-dialog-scrollable">
+        <div class="modal-content">
+            <div class="modal-header">
+                <div>
+                    <h5 class="modal-title" id="event-annotation-title">Event Image Annotation</h5>
+                    <div id="event-annotation-subtitle" class="text-body-secondary fs-8"></div>
+                </div>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <div class="row g-4">
+                    <div class="col-lg-8">
+                        <div class="annotation-canvas-wrap rounded border">
+                            <canvas id="event-annotation-canvas"></canvas>
+                        </div>
+                        <div id="event-annotation-help" class="form-text">Drag on the image to draw a box. Click and drag an existing box to move it. Select a row to change its class or delete it.</div>
+                    </div>
+                    <div class="col-lg-4">
+                        <h6 class="text-body-emphasis">Boxes</h6>
+                        <div id="event-annotation-classes" class="annotation-class-hint rounded border p-2 mb-3"></div>
+                        <div id="event-annotation-boxes" class="d-flex flex-column gap-2 mb-4"></div>
+                        <div class="rounded border p-3">
+                            <div class="text-body-secondary fs-8 mb-2">AI Label Preview</div>
+                            <pre id="event-annotation-yolo" class="annotation-yolo-preview mb-0"></pre>
+                        </div>
+                        <div class="annotation-operation-log rounded border p-3 mt-3">
+                            <div class="text-body-secondary fs-8 mb-2">Operation Log</div>
+                            <div id="event-annotation-log" class="annotation-operation-log-body text-body-secondary fs-8">No save recorded in this dialog yet.</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" id="event-annotation-clear" class="btn btn-outline-danger me-auto">Clear Boxes</button>
+                <button type="button" class="btn btn-outline-primary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" id="event-annotation-save-learning" class="btn btn-success">Save as Pending Learning</button>
+                <button type="button" id="event-annotation-save" class="btn btn-primary">Save AI Label</button>
+            </div>
+        </div>
+    </div>
+</div>

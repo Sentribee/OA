@@ -1,0 +1,49 @@
+@page "/login"
+@model SentribeeConsole.Web.Pages.Account.LoginModel
+@{
+    Layout = "_AuthLayout";
+    ViewData["Title"] = "Sign In";
+}
+
+<div id="login-feedback"
+     class="login-toast @(string.IsNullOrEmpty(Model.AlertMessage) ? null : "is-visible") @(ViewData.ModelState.IsValid ? "is-success" : null)"
+     role="alert"
+     aria-live="assertive">
+    <i class="material-symbols-rounded">@(ViewData.ModelState.IsValid ? "check_circle" : "error")</i>
+    <span>@Model.AlertMessage</span>
+</div>
+
+<div id="global-loading" class="global-loading" aria-hidden="true" aria-label="Signing in">
+    <div class="loading-spinner" aria-hidden="true"></div>
+    <div class="loading-label">Signing in...</div>
+</div>
+
+<section class="card login-card mw-400 w-100 p-7 p-md-8">
+    <div class="d-flex align-items-center gap-3 mb-7">
+        <img class="brand-logo" src="~/images/sentribee-mark.png" alt="SentriBee" width="44" height="44" />
+        <div>
+            <h1 class="login-brand-name fs-5 mb-0">SentriBee</h1>
+            <div class="text-body-secondary fs-7">Windows Management Console</div>
+        </div>
+    </div>
+    <h2 class="fs-6 text-body-emphasis">Welcome back</h2>
+    <div class="text-body-secondary mb-5">Sign in to access the safety operations console</div>
+
+    <form id="login-form" method="post" class="mb-5" novalidate>
+        <input asp-for="ReturnUrl" type="hidden" />
+        <div class="form-icon mb-3">
+            <i class="material-symbols-rounded">mail</i>
+            <input asp-for="Email" class="form-control" placeholder="Email" autocomplete="email" inputmode="email" />
+        </div>
+        <div class="form-icon mb-5">
+            <i class="material-symbols-rounded">lock</i>
+            <input asp-for="Password" type="password" class="form-control" placeholder="Password" autocomplete="current-password" />
+        </div>
+        <button id="login-submit" type="submit" class="btn btn-primary w-100">Sign In</button>
+    </form>
+
+    <div class="demo-note rounded-4 p-4 fs-7">
+        <div class="fw-medium text-body-emphasis mb-1">Administrator Access</div>
+        Use your SentriBee email and password to continue.
+    </div>
+</section>

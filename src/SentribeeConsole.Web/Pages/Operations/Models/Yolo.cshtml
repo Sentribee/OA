@@ -1,0 +1,617 @@
+@page "/models/yolo"
+@model SentribeeConsole.Web.Pages.Operations.Models.YoloModel
+@using Microsoft.AspNetCore.WebUtilities
+@{
+    Layout = "_AdminLayout";
+    ViewData["Title"] = "Models";
+    ViewData["PageTitle"] = "Models";
+    ViewData["ActiveMenu"] = "YoloModels";
+    ViewData["ProjectTimeZoneId"] = Model.Dashboard.Project.TimeZoneId;
+    var current = Model.Dashboard.CurrentVersion;
+    var hasScheduledRun = Model.Dashboard.Schedule?.NextTrainingAtUtc is not null;
+    var canScheduleTonight = Model.Dashboard.PendingLearningCount > 100 && !hasScheduledRun;
+    var isSubjectTab = string.Equals(Model.ModelTab, "subjects", StringComparison.OrdinalIgnoreCase);
+}
+@functions {
+    private string BuildModelTabUrl(string tab)
+    {
+        var request = ViewContext.HttpContext.Request;
+        var query = request.Query
+            .Where(pair => !string.Equals(pair.Key, "modelTab", StringComparison.OrdinalIgnoreCase)
+                && !string.Equals(pair.Key, "pageNumber", StringComparison.OrdinalIgnoreCase))
+            .ToDictionary(pair => pair.Key, pair => (string?)pair.Value.ToString(), StringComparer.OrdinalIgnoreCase);
+        query["modelTab"] = tab;
+        return QueryHelpers.AddQueryString(request.Path.ToString(), query);
+    }
+
+    private string BuildModelPageUrl(string tab, string pageParameter, int pageNumber)
+    {
+        var request = ViewContext.HttpContext.Request;
+        var query = request.Query
+            .Where(pair => !string.Equals(pair.Key, pageParameter, StringComparison.OrdinalIgnoreCase)
+                && !string.Equals(pair.Key, "pageNumber", StringComparison.OrdinalIgnoreCase)
+                && !string.Equals(pair.Key, "modelTab", StringComparison.OrdinalIgnoreCase))
+            .ToDictionary(pair => pair.Key, pair => (string?)pair.Value.ToString(), StringComparer.OrdinalIgnoreCase);
+        query["modelTab"] = tab;
+        query[pageParameter] = Math.Max(1, pageNumber).ToString(System.Globalization.CultureInfo.InvariantCulture);
+        return QueryHelpers.AddQueryString(request.Path.ToString(), query);
+    }
+}
+
+<div id="yolo-feedback"
+     class="admin-toast @(string.IsNullOrEmpty(Model.StatusMessage) ? null : "is-visible") @(Model.StatusIsError ? "is-error" : null)"
+     role="status"
+     aria-live="polite">
+    <i class="material-symbols-rounded">@(Model.StatusIsError ? "error" : "check_circle")</i>
+    <span>@Model.StatusMessage</span>
+</div>
+
+<div class="admin-page-width">
+    <ul class="nav nav-tabs model-view-tabs mb-5">
+        <li class="nav-item">
+            <a class="nav-link @(!isSubjectTab ? "active" : null)" href="@BuildModelTabUrl("panorama")">
+                Panorama Model
+            </a>
+        </li>
+        <li class="nav-item">
+            <a class="nav-link @(isSubjectTab ? "active" : null)" href="@BuildModelTabUrl("subjects")">
+                Person Slice PPE Model
+            </a>
+        </li>
+    </ul>
+
+    @if (!isSubjectTab)
+    {
+    <div class="row g-5">
+        <div class="col-xl-5">
+            <div class="card mb-5">
+                <div class="card-body">
+                    <h3 class="card-title fs-5">Panorama Model</h3>
+                    <p class="card-subtitle mb-4">Full-scene model for panorama event boxes.</p>
+                    @if (current is null)
+                    {
+                        <div class="rounded border p-5 text-body-secondary">No current model has been selected.</div>
+                    }
+                    else
+                    {
+                        <div class="model-current-card rounded border p-5">
+                            <div class="d-flex align-items-center mb-4">
+                                <i class="material-symbols-rounded text-primary fs-2 me-3">model_training</i>
+                                <div>
+                                    <div class="text-body-emphasis fw-semibold">@current.VersionName</div>
+                                    <div class="text-body-secondary fs-8">@current.Status</div>
+                                </div>
+                            </div>
+                            <div class="text-body-secondary">@current.Notes</div>
+                            @if (!string.IsNullOrWhiteSpace(current.ModelFileUrl))
+                            {
+                                <div class="mt-3 fs-8">
+                                    Model file:
+                                    <a href="@current.ModelFileUrl" target="_blank" rel="noreferrer">@current.ModelFileUrl</a>
+                                </div>
+                            }
+                            <div class="mt-4 fs-8">Trained: @SentribeeConsole.Web.Application.Services.ProjectTimeZone.Format(current.TrainedAtUtc, Model.Dashboard.Project.TimeZoneId, fallback: "Pending")</div>
+                        </div>
+                    }
+                    <div class="model-path-box rounded border p-3 mt-4">
+                        <div class="text-body-secondary fs-8 mb-1">Training directory</div>
+                        <code>@Model.Dashboard.ModelYamlPath</code>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card mb-5">
+                <div class="card-body">
+                    <div class="d-flex flex-wrap align-items-start gap-3 mb-4">
+                        <i class="material-symbols-rounded text-primary fs-3">data_object</i>
+                        <div class="flex-grow-1">
+                            <h3 class="card-title fs-5 mb-1">YAML Class List</h3>
+                            <p class="card-subtitle mb-0">Classes added here are locked after creation and synced before the next training run.</p>
+                        </div>
+                    </div>
+                    <form method="post" asp-page-handler="AddClass" class="row g-3 align-items-end mb-4" data-global-loading data-loading-label="Adding class..." data-confirm="This class cannot be edited or deleted after it is added. Continue?">
+                        <div class="col-sm-8">
+                            <label asp-for="ClassInput.Name" class="form-label"></label>
+                            <input asp-for="ClassInput.Name" class="form-control" placeholder="helmet, safety_vest, no_gloves..." />
+                            <span asp-validation-for="ClassInput.Name" class="text-danger fs-8"></span>
+                        </div>
+                        <div class="col-sm-4 d-grid">
+                            <button type="submit" class="btn btn-primary">
+                                <i class="material-symbols-rounded fs-6 me-2">add</i>Add Class
+                            </button>
+                        </div>
+                    </form>
+                    @if (Model.Dashboard.ModelClasses.Count == 0)
+                    {
+                        <div class="rounded border p-4 text-body-secondary">No YAML classes were found.</div>
+                    }
+                    else
+                    {
+                        <div class="table-responsive mobile-card-table-wrap">
+                            <table class="table table-sm align-middle mb-0 mobile-card-table">
+                                <thead>
+                                    <tr>
+                                        <th style="width:5rem">ID</th>
+                                        <th>Recognition Class</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    @foreach (var item in Model.Dashboard.ModelClasses)
+                                    {
+                                        <tr>
+                                            <td data-label="ID"><code>@item.Index</code></td>
+                                            <td data-label="Recognition Class">@item.Name</td>
+                                        </tr>
+                                    }
+                                </tbody>
+                            </table>
+                        </div>
+                    }
+                </div>
+            </div>
+
+            <div class="card">
+                <div class="card-body">
+                    <h3 class="card-title fs-5">Cloud Trained Versions</h3>
+                    <p class="card-subtitle mb-6">Rollback can switch any trained version back to current.</p>
+                    @if (Model.Dashboard.Versions.Count == 0)
+                    {
+                        <div class="rounded border p-5 text-body-secondary">No model versions yet.</div>
+                    }
+                    else
+                    {
+                        <div class="d-flex flex-column gap-3">
+                            @foreach (var version in Model.Dashboard.Versions)
+                            {
+                                <div class="model-version rounded border p-4 d-flex align-items-center gap-3 model-version-row">
+                                    <div class="flex-grow-1">
+                                        <div class="fw-medium text-body-emphasis">@version.VersionName</div>
+                                        <div class="text-body-secondary fs-8">@version.Status - @(version.TrainedAtUtc.HasValue ? SentribeeConsole.Web.Application.Services.ProjectTimeZone.Format(version.TrainedAtUtc, Model.Dashboard.Project.TimeZoneId) : SentribeeConsole.Web.Application.Services.ProjectTimeZone.Format(version.CreatedAtUtc, Model.Dashboard.Project.TimeZoneId))</div>
+                                        <div class="text-body-secondary fs-8">@version.Notes</div>
+                                        @if (!string.IsNullOrWhiteSpace(version.ModelFileUrl))
+                                        {
+                                            <div class="text-body-secondary fs-8">Model: @version.ModelFileUrl</div>
+                                        }
+                                    </div>
+                                    @if (version.IsCurrent)
+                                    {
+                                        <span class="badge bg-primary text-primary-emphasis" style="--bs-bg-opacity:.12">Current</span>
+                                    }
+                                    else
+                                    {
+                                        <form method="post" asp-page-handler="Rollback" data-global-loading data-loading-label="Restoring model..." data-confirm="Rollback to this AI model version?">
+                                            <input type="hidden" name="versionId" value="@version.Id" />
+                                            <button type="submit" class="btn btn-outline-primary btn-sm">Rollback</button>
+                                        </form>
+                                    }
+                                </div>
+                            }
+                        </div>
+                    }
+                </div>
+            </div>
+        </div>
+
+        <div class="col-xl-7">
+            <div class="card h-100">
+                <div class="card-body">
+                    <div class="d-flex flex-wrap align-items-start justify-content-between gap-3 mb-4">
+                        <div>
+                            <h3 class="card-title fs-5 mb-1">Waiting Panorama Training</h3>
+                            <p class="card-subtitle mb-0">Pending learning events are queued as panorama model material.</p>
+                        </div>
+                        <div class="d-flex flex-wrap align-items-center gap-2">
+                            <button type="button" class="btn btn-outline-primary btn-sm pending-review-open" data-review-model-kind="panorama">
+                                <i class="material-symbols-rounded fs-6 me-1">fact_check</i>Review Pending
+                            </button>
+                            <button type="button" class="btn btn-outline-secondary btn-sm annotation-mistake-stats-open">
+                                <i class="material-symbols-rounded fs-6 me-1">monitoring</i>Mistake Stats
+                            </button>
+                            <span class="badge bg-primary text-primary-emphasis" style="--bs-bg-opacity:.12">@Model.Dashboard.PendingLearningCount waiting</span>
+                        </div>
+                    </div>
+
+                    <div class="training-run-control rounded border p-4 mb-5">
+                        <div class="d-flex flex-wrap align-items-center justify-content-between gap-3">
+                            <div>
+                                <div class="fw-medium text-body-emphasis">Training Schedule</div>
+                                <div class="text-body-secondary fs-8">
+                                    @if (hasScheduledRun)
+                                    {
+                                        <span>Next run: @SentribeeConsole.Web.Application.Services.ProjectTimeZone.Format(Model.Dashboard.Schedule?.NextTrainingAtUtc, Model.Dashboard.Project.TimeZoneId)</span>
+                                    }
+                                    else
+                                    {
+                                        <span>Tonight run becomes available after more than 100 waiting events.</span>
+                                    }
+                                </div>
+                            </div>
+                            @if (hasScheduledRun)
+                            {
+                                <form method="post" asp-page-handler="CancelSchedule" data-global-loading data-loading-label="Cancelling training schedule..." data-confirm="Cancel tonight training schedule?">
+                                    <button type="submit" class="btn btn-outline-danger btn-icon" title="Cancel training schedule">
+                                        <i class="material-symbols-rounded">close</i>
+                                    </button>
+                                </form>
+                            }
+                            else
+                            {
+                                <form method="post" asp-page-handler="ScheduleTonight" data-global-loading data-loading-label="Staging panorama training data..." data-confirm="Start staging pending panorama images and YOLO labels for training? Pending Learning saves will be disabled until training finishes.">
+                                    <button type="submit" class="btn btn-primary px-5" disabled="@(!canScheduleTonight)">
+                                        <i class="material-symbols-rounded fs-6 me-2">nightlight</i>Run Tonight
+                                    </button>
+                                </form>
+                            }
+                        </div>
+                    </div>
+
+                    <form method="get" class="row g-3 align-items-end mb-5">
+                        <input type="hidden" name="modelTab" value="panorama" />
+                        <input type="hidden" name="scenePageNumber" value="1" />
+                        <div class="col-md-4">
+                            <label class="form-label">Edge Device</label>
+                            <select class="form-select" asp-for="DeviceId">
+                                <option value="">All devices</option>
+                                @foreach (var device in Model.Devices)
+                                {
+                                    <option value="@device.Id">@device.Name</option>
+                                }
+                            </select>
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label">Type</label>
+                            <input class="form-control" asp-for="Type" placeholder="PPE, helmet..." />
+                        </div>
+                        <div class="col-md-2">
+                            <label class="form-label">From</label>
+                            <input class="form-control" asp-for="DateFrom" type="date" />
+                        </div>
+                        <div class="col-md-2">
+                            <label class="form-label">To</label>
+                            <input class="form-control" asp-for="DateTo" type="date" />
+                        </div>
+                        <div class="col-md-1 d-grid">
+                            <button class="btn btn-primary" type="submit">Filter</button>
+                        </div>
+                    </form>
+
+                    @if (Model.Dashboard.PendingTrainingEvents.Items.Count == 0)
+                    {
+                        <div class="rounded border p-5 text-body-secondary">No pending learning events are waiting for panorama training.</div>
+                    }
+                    else
+                    {
+                        <div class="d-flex flex-column gap-3">
+                            @foreach (var item in Model.Dashboard.PendingTrainingEvents.Items)
+                            {
+                                <div class="rounded border p-3 d-flex gap-3 align-items-start training-event-row">
+                                    @if (!string.IsNullOrWhiteSpace(item.ImageUrl))
+                                    {
+                                        <img src="/api/events/@item.Id/image" alt="" class="event-thumb" />
+                                    }
+                                    <div class="flex-grow-1">
+                                        <div class="fw-medium text-body-emphasis">@item.Title</div>
+                                        <div class="text-body-secondary fs-8">@item.EdgeDeviceName - @SentribeeConsole.Web.Application.Services.ProjectTimeZone.Format(item.EventTimeUtc, Model.Dashboard.Project.TimeZoneId)</div>
+                                        <div class="text-body-secondary fs-8">@item.Description</div>
+                                    </div>
+                                    <button type="button"
+                                            class="btn btn-outline-primary btn-sm pending-review-open"
+                                            data-review-model-kind="panorama"
+                                            data-review-start-id="@item.Id">
+                                        Review
+                                    </button>
+                                    <span class="badge event-status event-status-pending-learning">Pending Learning</span>
+                                </div>
+                            }
+                        </div>
+                        var scenePage = Model.Dashboard.PendingTrainingEvents;
+                        if (scenePage.TotalPages > 1)
+                        {
+                            var currentScenePage = Math.Clamp(scenePage.PageNumber, 1, scenePage.TotalPages);
+                            var startScenePage = Math.Max(1, currentScenePage - 5);
+                            var endScenePage = Math.Min(scenePage.TotalPages, startScenePage + 9);
+                            startScenePage = Math.Max(1, endScenePage - 9);
+                            <nav class="pagination-shell d-flex flex-wrap align-items-center justify-content-between gap-3 mt-4" aria-label="Panorama model pagination">
+                                <div class="pagination-summary text-body-secondary fs-8">
+                                    Page @currentScenePage of @scenePage.TotalPages &middot; @scenePage.TotalCount total &middot; @scenePage.PageSize per page
+                                </div>
+                                <ul class="pagination pagination-desktop pagination-sm mb-0 flex-wrap">
+                                    <li class="page-item @(scenePage.HasPreviousPage ? null : "disabled")">
+                                        <a class="page-link" href="@BuildModelPageUrl("panorama", "scenePageNumber", 1)">First</a>
+                                    </li>
+                                    <li class="page-item @(scenePage.HasPreviousPage ? null : "disabled")">
+                                        <a class="page-link" href="@BuildModelPageUrl("panorama", "scenePageNumber", currentScenePage - 1)">Previous</a>
+                                    </li>
+                                    @for (var pageIndex = startScenePage; pageIndex <= endScenePage; pageIndex++)
+                                    {
+                                        <li class="page-item @(pageIndex == currentScenePage ? "active" : null)">
+                                            <a class="page-link" href="@BuildModelPageUrl("panorama", "scenePageNumber", pageIndex)">@pageIndex</a>
+                                        </li>
+                                    }
+                                    <li class="page-item @(scenePage.HasNextPage ? null : "disabled")">
+                                        <a class="page-link" href="@BuildModelPageUrl("panorama", "scenePageNumber", currentScenePage + 1)">Next</a>
+                                    </li>
+                                    <li class="page-item @(scenePage.HasNextPage ? null : "disabled")">
+                                        <a class="page-link" href="@BuildModelPageUrl("panorama", "scenePageNumber", scenePage.TotalPages)">Last</a>
+                                    </li>
+                                </ul>
+                            </nav>
+                        }
+                    }
+                </div>
+            </div>
+        </div>
+    </div>
+    }
+    else
+    {
+    <div class="row g-5">
+        <div class="col-xl-5">
+            <div class="card mb-5">
+                <div class="card-body">
+                    <h3 class="card-title fs-5">Person Slice PPE Model</h3>
+                    <p class="card-subtitle mb-4">Separate PPE model trained from cropped person slices.</p>
+                    <div class="model-current-card rounded border p-5">
+                        <div class="d-flex align-items-center mb-4">
+                            <i class="material-symbols-rounded text-primary fs-2 me-3">personal_injury</i>
+                            <div>
+                                <div class="text-body-emphasis fw-semibold">Person Crop PPE</div>
+                                <div class="text-body-secondary fs-8">@Model.Dashboard.PendingSubjectLearningCount waiting slices</div>
+                            </div>
+                        </div>
+                        <div class="model-path-box rounded border p-3">
+                            <div class="text-body-secondary fs-8 mb-1">Training directory</div>
+                            <code>@Model.Dashboard.PersonPpeModelYamlPath</code>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card">
+                <div class="card-body">
+                    <div class="d-flex flex-wrap align-items-start gap-3 mb-4">
+                        <i class="material-symbols-rounded text-primary fs-3">data_object</i>
+                        <div class="flex-grow-1">
+                            <h3 class="card-title fs-5 mb-1">PPE YAML Class List</h3>
+                            <p class="card-subtitle mb-0">Classes loaded from the person slice PPE data.yaml.</p>
+                        </div>
+                    </div>
+                    @if (Model.Dashboard.PersonPpeModelClasses.Count == 0)
+                    {
+                        <div class="rounded border p-4 text-body-secondary">No PPE YAML classes were found.</div>
+                    }
+                    else
+                    {
+                        <div class="table-responsive mobile-card-table-wrap">
+                            <table class="table table-sm align-middle mb-0 mobile-card-table">
+                                <thead>
+                                    <tr>
+                                        <th style="width:5rem">ID</th>
+                                        <th>PPE Class</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    @foreach (var item in Model.Dashboard.PersonPpeModelClasses)
+                                    {
+                                        <tr>
+                                            <td data-label="ID"><code>@item.Index</code></td>
+                                            <td data-label="PPE Class">@item.Name</td>
+                                        </tr>
+                                    }
+                                </tbody>
+                            </table>
+                        </div>
+                    }
+                </div>
+            </div>
+        </div>
+
+        <div class="col-xl-7">
+            <div class="card h-100">
+                <div class="card-body">
+                    <div class="d-flex flex-wrap align-items-start justify-content-between gap-3 mb-4">
+                        <div>
+                            <h3 class="card-title fs-5 mb-1">Waiting Person Slice PPE Training</h3>
+                            <p class="card-subtitle mb-0">Pending learning person slices are queued separately from panorama events.</p>
+                        </div>
+                        <div class="d-flex flex-wrap align-items-center gap-2">
+                            <button type="button" class="btn btn-outline-primary btn-sm pending-review-open" data-review-model-kind="personSlicePpe">
+                                <i class="material-symbols-rounded fs-6 me-1">fact_check</i>Review Pending
+                            </button>
+                            <button type="button" class="btn btn-outline-secondary btn-sm annotation-mistake-stats-open">
+                                <i class="material-symbols-rounded fs-6 me-1">monitoring</i>Mistake Stats
+                            </button>
+                            <span class="badge bg-primary text-primary-emphasis" style="--bs-bg-opacity:.12">@Model.Dashboard.PendingSubjectLearningCount waiting</span>
+                        </div>
+                    </div>
+
+                    <div class="training-run-control rounded border p-4 mb-5">
+                        <div class="d-flex flex-wrap align-items-center justify-content-between gap-3">
+                            <div>
+                                <div class="fw-medium text-body-emphasis">Training Schedule</div>
+                                <div class="text-body-secondary fs-8">Training starts at 19:00, or immediately after staging if requested after 19:00.</div>
+                            </div>
+                            <form method="post" asp-page-handler="SchedulePersonSlicePpeTonight" data-global-loading data-loading-label="Staging person slice PPE training data..." data-confirm="Start staging pending person slice PPE images and YOLO labels for training? Pending Learning saves will be disabled until training finishes.">
+                                <button type="submit" class="btn btn-primary px-5" disabled="@(Model.Dashboard.PendingSubjectLearningCount <= 0)">
+                                    <i class="material-symbols-rounded fs-6 me-2">nightlight</i>Run Tonight
+                                </button>
+                            </form>
+                        </div>
+                    </div>
+
+                    <form method="get" class="row g-3 align-items-end mb-5">
+                        <input type="hidden" name="modelTab" value="subjects" />
+                        <input type="hidden" name="subjectPageNumber" value="1" />
+                        <div class="col-md-4">
+                            <label class="form-label">Edge Device</label>
+                            <select class="form-select" asp-for="DeviceId">
+                                <option value="">All devices</option>
+                                @foreach (var device in Model.Devices)
+                                {
+                                    <option value="@device.Id">@device.Name</option>
+                                }
+                            </select>
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label">Type</label>
+                            <input class="form-control" asp-for="Type" placeholder="PPE, helmet..." />
+                        </div>
+                        <div class="col-md-2">
+                            <label class="form-label">From</label>
+                            <input class="form-control" asp-for="DateFrom" type="date" />
+                        </div>
+                        <div class="col-md-2">
+                            <label class="form-label">To</label>
+                            <input class="form-control" asp-for="DateTo" type="date" />
+                        </div>
+                        <div class="col-md-1 d-grid">
+                            <button class="btn btn-primary" type="submit">Filter</button>
+                        </div>
+                    </form>
+
+                    @if (Model.Dashboard.PendingTrainingSubjects.Items.Count == 0)
+                    {
+                        <div class="rounded border p-5 text-body-secondary">No pending learning person slices are waiting for PPE training.</div>
+                    }
+                    else
+                    {
+                        <div class="d-flex flex-column gap-3">
+                            @foreach (var subject in Model.Dashboard.PendingTrainingSubjects.Items)
+                            {
+                                <div class="rounded border p-3 d-flex gap-3 align-items-start training-event-row">
+                                    <span class="event-subject-list-frame">
+                                        <img src="/api/edge-event-subjects/@subject.Id/image/crop" alt="" class="event-subject-list-thumb" />
+                                    </span>
+                                    <div class="flex-grow-1 min-w-0">
+                                        <div class="fw-medium text-body-emphasis">@(!string.IsNullOrWhiteSpace(subject.TrackingLabel) ? subject.TrackingLabel : subject.SubjectKey)</div>
+                                        <div class="text-body-secondary fs-8">@subject.EventTitle - @subject.EdgeDeviceName - @SentribeeConsole.Web.Application.Services.ProjectTimeZone.Format(subject.EventTimeUtc, Model.Dashboard.Project.TimeZoneId)</div>
+                                    @if (!string.IsNullOrWhiteSpace(subject.RiskReason))
+                                    {
+                                        <div class="text-body-secondary fs-8 event-subject-risk-text">@subject.RiskReason</div>
+                                    }
+                                </div>
+                                    <button type="button"
+                                            class="btn btn-outline-primary btn-sm pending-review-open"
+                                            data-review-model-kind="personSlicePpe"
+                                            data-review-start-id="@subject.Id">
+                                        Review
+                                    </button>
+                                    <span class="badge event-status event-status-pending-learning">Pending Learning</span>
+                                </div>
+                            }
+                        </div>
+                        var subjectPage = Model.Dashboard.PendingTrainingSubjects;
+                        if (subjectPage.TotalPages > 1)
+                        {
+                            var currentSubjectPage = Math.Clamp(subjectPage.PageNumber, 1, subjectPage.TotalPages);
+                            var startSubjectPage = Math.Max(1, currentSubjectPage - 5);
+                            var endSubjectPage = Math.Min(subjectPage.TotalPages, startSubjectPage + 9);
+                            startSubjectPage = Math.Max(1, endSubjectPage - 9);
+                            <nav class="pagination-shell d-flex flex-wrap align-items-center justify-content-between gap-3 mt-4" aria-label="Person slice model pagination">
+                                <div class="pagination-summary text-body-secondary fs-8">
+                                    Page @currentSubjectPage of @subjectPage.TotalPages &middot; @subjectPage.TotalCount total &middot; @subjectPage.PageSize per page
+                                </div>
+                                <ul class="pagination pagination-desktop pagination-sm mb-0 flex-wrap">
+                                    <li class="page-item @(subjectPage.HasPreviousPage ? null : "disabled")">
+                                        <a class="page-link" href="@BuildModelPageUrl("subjects", "subjectPageNumber", 1)">First</a>
+                                    </li>
+                                    <li class="page-item @(subjectPage.HasPreviousPage ? null : "disabled")">
+                                        <a class="page-link" href="@BuildModelPageUrl("subjects", "subjectPageNumber", currentSubjectPage - 1)">Previous</a>
+                                    </li>
+                                    @for (var pageIndex = startSubjectPage; pageIndex <= endSubjectPage; pageIndex++)
+                                    {
+                                        <li class="page-item @(pageIndex == currentSubjectPage ? "active" : null)">
+                                            <a class="page-link" href="@BuildModelPageUrl("subjects", "subjectPageNumber", pageIndex)">@pageIndex</a>
+                                        </li>
+                                    }
+                                    <li class="page-item @(subjectPage.HasNextPage ? null : "disabled")">
+                                        <a class="page-link" href="@BuildModelPageUrl("subjects", "subjectPageNumber", currentSubjectPage + 1)">Next</a>
+                                    </li>
+                                    <li class="page-item @(subjectPage.HasNextPage ? null : "disabled")">
+                                        <a class="page-link" href="@BuildModelPageUrl("subjects", "subjectPageNumber", subjectPage.TotalPages)">Last</a>
+                                    </li>
+                                </ul>
+                            </nav>
+                        }
+                    }
+                </div>
+            </div>
+        </div>
+    </div>
+    }
+</div>
+
+<div class="modal fade" id="pending-learning-review-modal" tabindex="-1" aria-labelledby="pending-learning-review-title" aria-hidden="true">
+    <div class="modal-dialog modal-xl modal-dialog-centered modal-dialog-scrollable">
+        <div class="modal-content">
+            <div class="modal-header">
+                <div>
+                    <h5 class="modal-title" id="pending-learning-review-title">Pending Learning Review</h5>
+                    <div id="pending-learning-review-subtitle" class="text-body-secondary fs-8"></div>
+                </div>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <div id="pending-learning-review-loading" class="rounded border p-4 text-body-secondary">Loading pending learning items...</div>
+                <div id="pending-learning-review-empty" class="d-none rounded border p-4 text-body-secondary">No pending learning items are waiting for review.</div>
+                <div id="pending-learning-review-content" class="d-none">
+                    <div class="row g-4">
+                        <div class="col-lg-8">
+                            <div class="pending-review-stage rounded border">
+                                <canvas id="pending-learning-review-canvas"></canvas>
+                            </div>
+                        </div>
+                        <div class="col-lg-4">
+                            <div class="rounded border p-3 mb-3">
+                                <div class="text-body-secondary fs-8 mb-1">Last Edited By</div>
+                                <div id="pending-learning-review-editor" class="text-body-emphasis"></div>
+                            </div>
+                            <div class="rounded border p-3">
+                                <div class="text-body-secondary fs-8 mb-2">Boxes</div>
+                                <div id="pending-learning-review-boxes" class="pending-review-box-list"></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div id="pending-learning-review-error" class="d-none rounded border border-danger-subtle p-4 text-danger"></div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" id="pending-learning-review-prev" class="btn btn-outline-primary">Previous</button>
+                <button type="button" id="pending-learning-review-cancel" class="btn btn-outline-danger">Cancel Pending Learning</button>
+                <button type="button" id="pending-learning-review-next" class="btn btn-primary">Next</button>
+                <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Close</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="annotation-mistake-stats-modal" tabindex="-1" aria-labelledby="annotation-mistake-stats-title" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable">
+        <div class="modal-content">
+            <div class="modal-header">
+                <div>
+                    <h5 class="modal-title" id="annotation-mistake-stats-title">Annotation Mistake Stats</h5>
+                    <div class="text-body-secondary fs-8">Daily mistake rate by editor.</div>
+                </div>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <div class="row g-3 align-items-end mb-4">
+                    <div class="col-sm-8">
+                        <label for="annotation-mistake-stats-date" class="form-label">Date</label>
+                        <input id="annotation-mistake-stats-date" type="date" class="form-control" value="@DateTime.Today.ToString("yyyy-MM-dd")" />
+                    </div>
+                    <div class="col-sm-4 d-grid">
+                        <button type="button" id="annotation-mistake-stats-refresh" class="btn btn-primary">Refresh</button>
+                    </div>
+                </div>
+                <div id="annotation-mistake-stats-body" class="table-responsive"></div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+    <script src="~/js/model-pending-review.js" asp-append-version="true"></script>
+}

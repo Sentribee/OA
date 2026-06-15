@@ -1,0 +1,65 @@
+@model (string Title, IReadOnlyList<SentribeeConsole.Web.Domain.Entities.ProjectRule> Rules)
+
+@{
+    var groupClass = Model.Title.Contains("Environment", StringComparison.OrdinalIgnoreCase)
+        ? "requirement-group-environment"
+        : Model.Title.Contains("Logic", StringComparison.OrdinalIgnoreCase)
+            ? "requirement-group-logic"
+            : Model.Title.Contains("Event", StringComparison.OrdinalIgnoreCase)
+                ? "requirement-group-event"
+                : "requirement-group-response";
+}
+
+<div class="requirement-group @groupClass rounded border p-3">
+    <div class="fw-medium text-body-emphasis mb-2">@Model.Title</div>
+    @if (Model.Rules.Count == 0)
+    {
+        <div class="text-body-secondary fs-8">-</div>
+    }
+    else
+    {
+        <div class="table-responsive">
+            <table class="table table-sm requirement-table mb-0 align-middle">
+                <tbody>
+                    @foreach (var rule in Model.Rules)
+                    {
+                        var canDelete = rule.EdgeAiCodeVersionId is not null &&
+                            !string.Equals(rule.ChangeType, "Active", StringComparison.OrdinalIgnoreCase);
+                        <tr>
+                            <td>
+                                @if (!string.Equals(rule.ChangeType, "Active", StringComparison.OrdinalIgnoreCase))
+                                {
+                                    <div class="fw-medium">@FormatChangeType(rule.ChangeType)</div>
+                                }
+                                <div class="text-body-secondary">@rule.RuleText</div>
+                            </td>
+                            @if (canDelete)
+                            {
+                                <td class="text-end requirement-action-cell">
+                                    <form method="post" asp-page-handler="DeleteRule" data-global-loading data-loading-label="Removing rule...">
+                                        <input type="hidden" name="ruleId" value="@rule.Id" />
+                                        <button type="submit" class="btn btn-link text-danger p-0" aria-label="Delete pending rule">
+                                            <i class="material-symbols-rounded fs-6">delete</i>
+                                        </button>
+                                    </form>
+                                </td>
+                            }
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    }
+</div>
+
+@functions {
+    private static string FormatChangeType(string changeType)
+    {
+        return changeType switch
+        {
+            "PendingAdded" => "Pending add",
+            "PendingRemoved" => "Pending remove",
+            _ => changeType
+        };
+    }
+}

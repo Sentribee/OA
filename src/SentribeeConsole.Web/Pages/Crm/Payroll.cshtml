@@ -1,0 +1,164 @@
+@page "/oa/payroll"
+@model SentribeeConsole.Web.Pages.Crm.PayrollModel
+@{
+    Layout = "_CrmLayout";
+}
+
+@if (!string.IsNullOrWhiteSpace(Model.StatusMessage))
+{
+    <div class="alert alert-success">@Model.StatusMessage</div>
+}
+
+<div class="card mb-5">
+    <div class="card-body">
+        <div class="d-flex flex-wrap align-items-end gap-4">
+            <div class="flex-grow-1">
+                <h3 class="card-title fs-6">Payroll month</h3>
+                <p class="card-subtitle text-body-secondary">This report estimates gross pay from standard monthly hours, approved leave and payroll deductions. Attendance is used for completeness checks.</p>
+            </div>
+            <form method="get" class="d-flex flex-wrap gap-3 align-items-end">
+                <div>
+                    <label class="form-label" for="year">Year</label>
+                    <input id="year" name="year" type="number" min="2000" max="2100" value="@Model.Year" class="form-control" />
+                </div>
+                <div>
+                    <label class="form-label" for="month">Month</label>
+                    <select id="month" name="month" class="form-select">
+                        @for (var i = 1; i <= 12; i++)
+                        {
+                            <option value="@i" selected="@(Model.Month == i)">@i.ToString("00")</option>
+                        }
+                    </select>
+                </div>
+                <button type="submit" class="btn btn-primary">Calculate</button>
+            </form>
+        </div>
+    </div>
+</div>
+
+<div class="dashboard-metric-grid mb-5">
+    <div class="card dashboard-metric-card">
+        <div class="dashboard-metric-value text-primary">@Model.WorkdayCount</div>
+        <div class="dashboard-metric-label">Weekdays</div>
+    </div>
+    <div class="card dashboard-metric-card">
+        <div class="dashboard-metric-value text-success">@Model.Totals.WorkedHours.ToString("0.##")</div>
+        <div class="dashboard-metric-label">Worked Hours</div>
+    </div>
+    <div class="card dashboard-metric-card">
+        <div class="dashboard-metric-value text-info">@Model.Totals.PaidLeaveHours.ToString("0.##")</div>
+        <div class="dashboard-metric-label">Paid Leave Hours</div>
+    </div>
+    <div class="card dashboard-metric-card">
+        <div class="dashboard-metric-value text-warning">@Model.Totals.DeductionHours.ToString("0.##")</div>
+        <div class="dashboard-metric-label">Deduction Hours</div>
+    </div>
+    <div class="card dashboard-metric-card">
+        <div class="dashboard-metric-value text-primary">@Model.Totals.PayableHours.ToString("0.##")</div>
+        <div class="dashboard-metric-label">Payable Hours</div>
+    </div>
+    <div class="card dashboard-metric-card">
+        <div class="dashboard-metric-value text-danger">$@Model.Totals.EstimatedGrossPay.ToString("0.00")</div>
+        <div class="dashboard-metric-label">Estimated Gross Pay</div>
+    </div>
+</div>
+
+<div class="card">
+    <div class="card-body">
+        <div class="d-flex align-items-start mb-4">
+            <div class="flex-grow-1">
+                <h3 class="card-title fs-6">@Model.PeriodStart.ToString("yyyy-MM-dd") to @Model.PeriodEnd.ToString("yyyy-MM-dd")</h3>
+                <p class="card-subtitle text-body-secondary">Salary estimates do not include PAYE, KiwiSaver, deductions or allowances.</p>
+            </div>
+            <div class="d-flex flex-wrap gap-2">
+                <a asp-page="/Crm/Attendance" class="btn btn-outline-secondary btn-sm">Attendance</a>
+                <a asp-page="/Crm/Leave" class="btn btn-outline-secondary btn-sm">Leave</a>
+            </div>
+        </div>
+        <div class="table-responsive mobile-card-table-wrap">
+            <table class="table align-middle mobile-card-table">
+                <thead>
+                    <tr>
+                        <th>Employee</th>
+                        <th>Pay setup</th>
+                        <th>Expected</th>
+                        <th>Attendance</th>
+                        <th>Leave</th>
+                        <th>Payroll adjustment</th>
+                        <th>Payable</th>
+                        <th>Rate</th>
+                        <th>Gross estimate</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @if (Model.Rows.Count == 0)
+                    {
+                        <tr><td colspan="9" class="text-body-secondary">No employees found for this month.</td></tr>
+                    }
+                    else
+                    {
+                        @foreach (var item in Model.Rows)
+                        {
+                            <tr>
+                                <td data-label="Employee">
+                                    <div class="fw-semibold">@item.RealName</div>
+                                    <div class="text-body-secondary fs-8">@item.JobTitle</div>
+                                </td>
+                                <td data-label="Pay setup">
+                                    <div>@item.PayType</div>
+                                    <div class="text-body-secondary fs-8">@item.StandardWeeklyHours.ToString("0.##") h/week</div>
+                                    <div class="text-body-secondary fs-8">Annual: @item.AnnualSalary?.ToString("0.00")</div>
+                                </td>
+                                <td data-label="Expected">@item.ExpectedHours.ToString("0.##") h</td>
+                                <td data-label="Attendance">
+                                    <div>@item.CompleteDays complete days</div>
+                                    <div class="text-body-secondary fs-8">@item.ClockDays clock days</div>
+                                    <div class="text-body-secondary fs-8">@item.LateDays late beyond grace</div>
+                                    <div class="text-body-secondary fs-8">@item.WorkedHours.ToString("0.##") h reference only</div>
+                                </td>
+                                <td data-label="Leave">
+                                    <div>Paid: @item.PaidLeaveHours.ToString("0.##") h</div>
+                                    <div class="text-body-secondary fs-8">Unpaid: @item.UnpaidLeaveHours.ToString("0.##") h</div>
+                                    <div class="text-body-secondary fs-8">Pending: @item.PendingLeaveHours.ToString("0.##") h</div>
+                                </td>
+                                <td data-label="Payroll adjustment">
+                                    <form method="post" asp-page-handler="SaveAdjustment" class="d-grid gap-2">
+                                        <input type="hidden" name="employeeId" value="@item.EmployeeId" />
+                                        <input type="hidden" name="year" value="@Model.Year" />
+                                        <input type="hidden" name="month" value="@Model.Month" />
+                                        <input name="deductionHours" value="@item.DeductionHours.ToString("0.##")" type="number" min="0" step="0.25" class="form-control form-control-sm" aria-label="Deduction hours" />
+                                        <input name="notes" value="@item.AdjustmentNotes" class="form-control form-control-sm" placeholder="Reason" aria-label="Deduction reason" />
+                                        <button type="submit" class="btn btn-outline-primary btn-sm">Save</button>
+                                    </form>
+                                </td>
+                                <td data-label="Payable">
+                                    <div>@item.PayableHours.ToString("0.##") h</div>
+                                    <div class="text-body-secondary fs-8">Deducted: @item.DeductionHours.ToString("0.##") h</div>
+                                </td>
+                                <td data-label="Rate">$@item.HourlyEquivalent.ToString("0.00")</td>
+                                <td data-label="Gross estimate" class="fw-semibold">$@item.EstimatedGrossPay.ToString("0.00")</td>
+                            </tr>
+                        }
+                    }
+                </tbody>
+                <tfoot>
+                    <tr>
+                        <th colspan="2">Totals</th>
+                        <th>@Model.Totals.ExpectedHours.ToString("0.##") h</th>
+                        <th>@Model.Totals.WorkedHours.ToString("0.##") h reference</th>
+                        <th>
+                            <div>@Model.Totals.PaidLeaveHours.ToString("0.##") h paid</div>
+                            <div class="text-body-secondary fs-8">@Model.Totals.UnpaidLeaveHours.ToString("0.##") h unpaid</div>
+                        </th>
+                        <th>@Model.Totals.DeductionHours.ToString("0.##") h deducted</th>
+                        <th>
+                            <div>@Model.Totals.PayableHours.ToString("0.##") h payable</div>
+                        </th>
+                        <th></th>
+                        <th>$@Model.Totals.EstimatedGrossPay.ToString("0.00")</th>
+                    </tr>
+                </tfoot>
+            </table>
+        </div>
+    </div>
+</div>

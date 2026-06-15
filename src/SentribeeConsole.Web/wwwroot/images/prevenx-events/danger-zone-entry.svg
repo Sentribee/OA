@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="960" height="540" viewBox="0 0 960 540">
+  <rect width="960" height="540" fill="#101827"/>
+  <polygon points="80,455 315,245 850,455" fill="#451a03" stroke="#f59e0b" stroke-width="5"/>
+  <path d="M95 455h755" stroke="#f59e0b" stroke-width="18" stroke-dasharray="36 24"/>
+  <circle cx="480" cy="210" r="38" fill="#f4c49b"/>
+  <path d="M430 276h100l34 142H398z" fill="#2563eb"/>
+  <path d="M445 172h70l22 38H423z" fill="#facc15"/>
+  <rect x="620" y="106" width="238" height="88" rx="16" fill="#402006" stroke="#f59e0b" stroke-width="3"/>
+  <text x="645" y="143" font-family="Arial" font-size="22" font-weight="700" fill="#fde68a">ZONE ALERT</text>
+  <text x="645" y="174" font-family="Arial" font-size="17" fill="#fff">Worker entered restricted area</text>
+</svg>

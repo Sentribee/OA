@@ -1,0 +1,82 @@
+@page "/oa/dashboard"
+@model SentribeeConsole.Web.Pages.Crm.DashboardModel
+@{
+    Layout = "_CrmLayout";
+}
+
+<div class="dashboard-metric-grid mb-5">
+    <div class="card dashboard-metric-card">
+        <div class="dashboard-metric-value text-primary">@Model.Dashboard.ChatbotCount</div>
+        <div class="dashboard-metric-label">Support Bots</div>
+    </div>
+    <div class="card dashboard-metric-card">
+        <div class="dashboard-metric-value text-success">@Model.Dashboard.KnowledgeDocumentCount</div>
+        <div class="dashboard-metric-label">Knowledge Files</div>
+    </div>
+    <div class="card dashboard-metric-card">
+        <div class="dashboard-metric-value text-warning">@Model.Dashboard.ConversationCount</div>
+        <div class="dashboard-metric-label">Conversations</div>
+    </div>
+    <div class="card dashboard-metric-card">
+        <div class="dashboard-metric-value text-info">@Model.Dashboard.CustomerProfileCount</div>
+        <div class="dashboard-metric-label">Profiles</div>
+    </div>
+    <div class="card dashboard-metric-card">
+        <div class="dashboard-metric-value text-primary">@Model.Dashboard.EmployeeCount</div>
+        <div class="dashboard-metric-label">Employees</div>
+    </div>
+    <div class="card dashboard-metric-card">
+        <div class="dashboard-metric-value text-success">@Model.Dashboard.TodayAttendanceCount</div>
+        <div class="dashboard-metric-label">Today's Clock-ins</div>
+    </div>
+    <div class="card dashboard-metric-card">
+        <div class="dashboard-metric-value text-warning">@Model.Dashboard.OfficeCount</div>
+        <div class="dashboard-metric-label">Office Addresses</div>
+    </div>
+    <div class="card dashboard-metric-card">
+        <div class="dashboard-metric-value text-danger">US$@Model.Dashboard.EstimatedCostUsd.ToString("0.0000")</div>
+        <div class="dashboard-metric-label">Estimated Cost</div>
+    </div>
+</div>
+
+<div class="row g-5">
+    <div class="col-12 col-xl-7">
+        <div class="card h-100">
+            <div class="card-body">
+                <h3 class="card-title fs-6">Public chat</h3>
+                <p class="card-subtitle text-body-secondary">Your support bot is available for testing at this path.</p>
+                <div class="crm-chat-link-panel mt-4">
+                    <div class="crm-chat-qr">
+                        <img src="@Url.Page("/Crm/Dashboard", "ChatQr")" alt="Chat QR code" />
+                    </div>
+                    <div class="crm-chat-link-detail">
+                        <code>@Model.PublicChatUrl</code>
+                        <div class="d-flex flex-wrap gap-2 mt-3">
+                            <a class="btn btn-primary btn-sm" href="@Model.PublicChatUrl" target="_blank" rel="noopener">Open</a>
+                            <a class="btn btn-outline-primary btn-sm" href="@Url.Page("/Crm/Dashboard", "ChatQr", new { download = true })">Download QR</a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-12 col-xl-5">
+        <div class="card h-100">
+            <div class="card-body">
+                <h3 class="card-title fs-6">Model usage</h3>
+                <p class="card-subtitle text-body-secondary">@Model.Dashboard.MessageCount messages and @Model.Dashboard.TokenCount model tokens recorded.</p>
+                <div class="d-flex flex-wrap gap-2 mt-4">
+                    <a asp-page="/Crm/Customers" class="btn btn-outline-primary btn-sm">View Customers</a>
+                    <a asp-page="/Crm/Conversations" class="btn btn-outline-primary btn-sm">View Conversations</a>
+                    <a asp-page="/Crm/Profiles" class="btn btn-outline-primary btn-sm">View Profiles</a>
+                    <a asp-page="/Crm/Employees" class="btn btn-outline-primary btn-sm">View Employees</a>
+                    <a asp-page="/Crm/Roles" class="btn btn-outline-primary btn-sm">Roles</a>
+                    <a asp-page="/Crm/Attendance" class="btn btn-outline-primary btn-sm">Clock In</a>
+                    <a asp-page="/Crm/Leave" class="btn btn-outline-primary btn-sm">Leave</a>
+                    <a asp-page="/Crm/Payroll" class="btn btn-outline-primary btn-sm">Payroll</a>
+                    <a asp-page="/Crm/Workflows" class="btn btn-outline-primary btn-sm">Workflows</a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>

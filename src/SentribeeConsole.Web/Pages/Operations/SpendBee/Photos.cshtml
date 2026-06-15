@@ -1,0 +1,210 @@
+@page
+@model SentribeeConsole.Web.Pages.Operations.SpendBee.PhotosModel
+@using SentribeeConsole.Web.Domain.Entities
+@using SentribeeConsole.Web.Application.Services
+@{
+    Layout = "_AdminLayout";
+}
+
+<div class="admin-page-width">
+    <div class="row g-3 mb-3">
+        <div class="col-6 col-lg-2">
+            <div class="card h-100">
+                <div class="card-body">
+                    <div class="text-body-secondary fs-8">Total</div>
+                    <div class="fs-4 fw-semibold">@Model.Summary.TotalCount</div>
+                </div>
+            </div>
+        </div>
+        <div class="col-6 col-lg-2">
+            <div class="card h-100">
+                <div class="card-body">
+                    <div class="text-body-secondary fs-8">Ready</div>
+                    <div class="fs-4 fw-semibold">@Model.Summary.ReadyCount</div>
+                </div>
+            </div>
+        </div>
+        <div class="col-6 col-lg-2">
+            <div class="card h-100">
+                <div class="card-body">
+                    <div class="text-body-secondary fs-8">Failed</div>
+                    <div class="fs-4 fw-semibold">@Model.Summary.FailedCount</div>
+                </div>
+            </div>
+        </div>
+        <div class="col-6 col-lg-2">
+            <div class="card h-100">
+                <div class="card-body">
+                    <div class="text-body-secondary fs-8">Merchants</div>
+                    <div class="fs-4 fw-semibold">@Model.Summary.MerchantCount</div>
+                </div>
+            </div>
+        </div>
+        <div class="col-6 col-lg-2">
+            <div class="card h-100">
+                <div class="card-body">
+                    <div class="text-body-secondary fs-8">Users</div>
+                    <div class="fs-4 fw-semibold">@Model.Summary.UserCount</div>
+                </div>
+            </div>
+        </div>
+        <div class="col-6 col-lg-2">
+            <div class="card h-100">
+                <div class="card-body">
+                    <div class="text-body-secondary fs-8">Duplicate hints</div>
+                    <div class="fs-4 fw-semibold">@Model.DuplicateGroups.Count</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    @if (Model.DuplicateGroups.Count > 0)
+    {
+        <div class="card mb-3">
+            <div class="card-body">
+                <h3 class="card-title fs-6">Duplicate hints</h3>
+                <div class="table-responsive">
+                    <table class="table align-middle mb-0">
+                        <thead>
+                        <tr>
+                            <th>Type</th>
+                            <th>Count</th>
+                            <th>Photo IDs</th>
+                            <th>Key</th>
+                        </tr>
+                        </thead>
+                        <tbody>
+                        @foreach (var group in Model.DuplicateGroups)
+                        {
+                            <tr>
+                                <td>@group.DuplicateType</td>
+                                <td>@group.PhotoCount</td>
+                                <td><code>@group.PhotoIds</code></td>
+                                <td class="text-break fs-8">@group.DuplicateKey</td>
+                            </tr>
+                        }
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    }
+
+    <div class="card">
+        <div class="card-body">
+            <div class="d-flex align-items-start justify-content-between gap-3 mb-4">
+                <div>
+                    <h3 class="card-title fs-6">Merchant photo gallery</h3>
+                    <p class="card-subtitle text-body-secondary mb-0">Only merchant gallery photos are shown here. Receipt images stay in receipt records and profile/avatar images are not mixed into this list.</p>
+                </div>
+                <span class="badge bg-primary-subtle text-primary">@Model.Photos.TotalCount shown by filter</span>
+            </div>
+
+            <form class="row g-2 align-items-end mb-4" method="get">
+                <div class="col-6 col-lg-2">
+                    <label class="form-label fs-8" for="status">Status</label>
+                    <input class="form-control form-control-sm" id="status" name="status" value="@Request.Query["status"]" placeholder="Ready" />
+                </div>
+                <div class="col-6 col-lg-2">
+                    <label class="form-label fs-8" for="merchantId">Merchant ID</label>
+                    <input class="form-control form-control-sm" id="merchantId" name="merchantId" value="@Request.Query["merchantId"]" inputmode="numeric" />
+                </div>
+                <div class="col-6 col-lg-2">
+                    <label class="form-label fs-8" for="appUserId">User ID</label>
+                    <input class="form-control form-control-sm" id="appUserId" name="appUserId" value="@Request.Query["appUserId"]" inputmode="numeric" />
+                </div>
+                <div class="col-6 col-lg-2">
+                    <label class="form-label fs-8" for="category">Category</label>
+                    <input class="form-control form-control-sm" id="category" name="category" value="@Request.Query["category"]" placeholder="group" />
+                </div>
+                <div class="col-12 col-lg-auto">
+                    <button class="btn btn-sm btn-primary" type="submit">Filter</button>
+                    <a class="btn btn-sm btn-outline-secondary" asp-page="/Operations/SpendBee/Photos">Reset</a>
+                </div>
+            </form>
+
+            <div class="spendbee-photo-grid">
+                @foreach (var item in Model.Photos.Items)
+                {
+                    <article class="spendbee-photo-card">
+                        <div class="spendbee-photo-preview">
+                            @if (string.Equals(item.Status, "Ready", StringComparison.OrdinalIgnoreCase))
+                            {
+                                <img src="/api/spendbee/v1/merchant-photos/@item.Id/image" alt="" loading="lazy" />
+                            }
+                            else
+                            {
+                                <div class="spendbee-photo-placeholder">@item.Status</div>
+                            }
+                        </div>
+                        <div class="spendbee-photo-body">
+                            <div class="d-flex justify-content-between gap-2">
+                                <div>
+                                    <div class="fw-semibold">Photo #@item.Id</div>
+                                    <div class="text-body-secondary fs-8">Upload #@item.UploadId</div>
+                                </div>
+                                <span class="badge bg-primary-subtle text-primary">@item.Status</span>
+                            </div>
+                            <div class="mt-2">
+                                <div class="fw-medium">@item.MerchantName</div>
+                                <div class="text-body-secondary fs-8">Merchant #@item.MerchantId</div>
+                                @if (!string.IsNullOrWhiteSpace(item.MerchantAddress))
+                                {
+                                    <div class="text-body-secondary fs-8">@item.MerchantAddress</div>
+                                }
+                            </div>
+                            <div class="mt-2">
+                                <div class="fw-medium">@item.DisplayName</div>
+                                <div class="text-body-secondary fs-8">User #@item.AppUserId @item.Gender</div>
+                                @if (!string.IsNullOrWhiteSpace(item.Email))
+                                {
+                                    <div class="text-body-secondary fs-8">@item.Email</div>
+                                }
+                            </div>
+                            <div class="d-flex flex-wrap gap-2 mt-3">
+                                <span class="badge bg-secondary-subtle text-secondary">@(!string.IsNullOrWhiteSpace(item.Category) ? item.Category : "uncategorized")</span>
+                                <span class="badge bg-secondary-subtle text-secondary">@item.LikeCount likes</span>
+                                <span class="badge bg-secondary-subtle text-secondary">@item.CommentCount comments</span>
+                            </div>
+                            @if (!string.IsNullOrWhiteSpace(item.Caption))
+                            {
+                                <div class="text-body-secondary fs-8 mt-2">@item.Caption</div>
+                            }
+                            @if (!string.IsNullOrWhiteSpace(item.ProcessingError))
+                            {
+                                <div class="alert alert-warning py-2 px-3 fs-8 mt-2 mb-0">@item.ProcessingError</div>
+                            }
+                            <div class="text-body-secondary fs-8 mt-3">
+                                Created @ProjectTimeZone.Format(item.CreatedAtUtc, Model.Project.TimeZoneId)
+                                @if (item.UpdatedAtUtc.HasValue)
+                                {
+                                    <span> / Updated @ProjectTimeZone.Format(item.UpdatedAtUtc.Value, Model.Project.TimeZoneId)</span>
+                                }
+                            </div>
+                            <div class="d-flex gap-2 mt-3">
+                                <a class="btn btn-sm btn-outline-primary" href="/api/spendbee/v1/merchant-photos/@item.Id/image" target="_blank" rel="noopener">Open image</a>
+                                @if (!string.IsNullOrWhiteSpace(item.OriginalImageUrl))
+                                {
+                                    <a class="btn btn-sm btn-outline-secondary" href="@item.OriginalImageUrl" target="_blank" rel="noopener">Original</a>
+                                }
+                            </div>
+                        </div>
+                    </article>
+                }
+            </div>
+
+            @if (Model.Photos.Items.Count == 0)
+            {
+                <div class="text-center text-body-secondary py-5">No uploaded photos match this filter.</div>
+            }
+
+            @await Html.PartialAsync("_Pagination", new PagedResult<object>
+            {
+                Items = Model.Photos.Items.Cast<object>().ToList(),
+                PageNumber = Model.Photos.PageNumber,
+                PageSize = Model.Photos.PageSize,
+                TotalCount = Model.Photos.TotalCount
+            })
+        </div>
+    </div>
+</div>

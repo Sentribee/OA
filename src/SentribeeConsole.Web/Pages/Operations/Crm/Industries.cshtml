@@ -1,0 +1,78 @@
+@page
+@model SentribeeConsole.Web.Pages.Operations.Crm.IndustriesModel
+@using SentribeeConsole.Web.Application.Services
+@using SentribeeConsole.Web.Domain.Entities
+@{
+    Layout = "_AdminLayout";
+}
+
+<div class="admin-page-width">
+    <div class="card">
+        <div class="card-body">
+            <div class="d-flex align-items-start justify-content-between gap-3 mb-4">
+                <div>
+                    <h3 class="card-title fs-6">Industry catalog</h3>
+                    <p class="card-subtitle text-body-secondary mb-0">Merchant categories used for Sentribee OA onboarding and reporting.</p>
+                </div>
+                <span class="badge bg-primary-subtle text-primary">@Model.Industries.TotalCount total</span>
+            </div>
+            <div class="table-responsive mobile-card-table-wrap">
+                <table class="table align-middle mobile-card-table">
+                    <thead>
+                    <tr>
+                        <th>Industry</th>
+                        <th>Merchants</th>
+                        <th>Sort</th>
+                        <th>Status</th>
+                        <th>Updated</th>
+                    </tr>
+                    </thead>
+                    <tbody>
+                    @if (Model.Industries.Items.Count == 0)
+                    {
+                        <tr><td colspan="5" class="text-body-secondary">No Sentribee OA industries configured.</td></tr>
+                    }
+                    else
+                    {
+                        @foreach (var item in Model.Industries.Items)
+                        {
+                            <tr>
+                                <td data-label="Industry">
+                                    <div class="fw-medium">@item.Name</div>
+                                    <div class="text-body-secondary fs-8">@item.Slug</div>
+                                    <div class="text-body-secondary fs-8">@item.Description</div>
+                                </td>
+                                <td data-label="Merchants">
+                                    <div>@item.MerchantCount merchant@(item.MerchantCount == 1 ? "" : "s")</div>
+                                    <div class="text-body-secondary fs-8">@item.ActiveMerchantCount active</div>
+                                </td>
+                                <td data-label="Sort">@item.SortOrder</td>
+                                <td data-label="Status">
+                                    @if (item.IsActive)
+                                    {
+                                        <span class="badge bg-success-subtle text-success">Active</span>
+                                    }
+                                    else
+                                    {
+                                        <span class="badge bg-secondary-subtle text-secondary">Inactive</span>
+                                    }
+                                </td>
+                                <td data-label="Updated">
+                                    @ProjectTimeZone.Format(item.UpdatedAtUtc, Model.Project.TimeZoneId)
+                                </td>
+                            </tr>
+                        }
+                    }
+                    </tbody>
+                </table>
+            </div>
+            @await Html.PartialAsync("_Pagination", new PagedResult<object>
+            {
+                Items = Model.Industries.Items.Cast<object>().ToList(),
+                PageNumber = Model.Industries.PageNumber,
+                PageSize = Model.Industries.PageSize,
+                TotalCount = Model.Industries.TotalCount
+            })
+        </div>
+    </div>
+</div>

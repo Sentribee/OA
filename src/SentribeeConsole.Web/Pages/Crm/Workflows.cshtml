@@ -1,0 +1,122 @@
+@page "/oa/workflows"
+@model SentribeeConsole.Web.Pages.Crm.WorkflowsModel
+@{
+    Layout = "_CrmLayout";
+}
+
+@if (!string.IsNullOrWhiteSpace(Model.StatusMessage))
+{
+    <div class="alert alert-success">@Model.StatusMessage</div>
+}
+
+<div class="card mb-5">
+    <div class="card-body">
+        <div class="d-flex align-items-start mb-4">
+            <div class="flex-grow-1">
+                <h3 class="card-title fs-6">Leave approval workflow</h3>
+                <p class="card-subtitle text-body-secondary">Staff leave requests follow these approval steps from left to right.</p>
+            </div>
+        </div>
+        <div class="oa-flow-canvas">
+            <div class="oa-flow-node oa-flow-node-start">
+                <div class="oa-flow-icon"><i class="material-symbols-rounded">edit_note</i></div>
+                <div class="oa-flow-title">Submit leave</div>
+                <div class="oa-flow-meta">Employee request</div>
+            </div>
+            <div class="oa-flow-arrow" aria-hidden="true"><span></span><i class="material-symbols-rounded">arrow_forward</i></div>
+            @if (Model.Steps.Count == 0)
+            {
+                <div class="oa-flow-node oa-flow-node-empty">
+                    <div class="oa-flow-icon"><i class="material-symbols-rounded">add_task</i></div>
+                    <div class="oa-flow-title">No approval step</div>
+                    <div class="oa-flow-meta">Add the first approver below</div>
+                </div>
+            }
+            else
+            {
+                @for (var i = 0; i < Model.Steps.Count; i++)
+                {
+                    var step = Model.Steps[i];
+                    <div class="oa-flow-node">
+                        <div class="oa-flow-order">Step @step.StepOrder</div>
+                        <div class="oa-flow-title">@step.StepName</div>
+                        <div class="oa-flow-meta">Role: @(step.RoleName ?? "-")</div>
+                        <div class="oa-flow-meta">Employee: @(step.EmployeeName ?? "-")</div>
+                        @if (step.IsFinalApproval)
+                        {
+                            <span class="badge bg-primary-subtle text-primary mt-3">Final approval</span>
+                        }
+                        <div class="d-flex gap-2 mt-4">
+                            <a asp-page="/Crm/Workflows" asp-route-stepId="@step.Id" class="btn btn-outline-primary btn-sm">Edit</a>
+                            <form method="post" asp-page-handler="DeleteStep">
+                                <input type="hidden" name="stepId" value="@step.Id" />
+                                <button type="submit" class="btn btn-outline-secondary btn-sm">Delete</button>
+                            </form>
+                        </div>
+                    </div>
+                    <div class="oa-flow-arrow" aria-hidden="true"><span></span><i class="material-symbols-rounded">arrow_forward</i></div>
+                }
+            }
+            <div class="oa-flow-node oa-flow-node-end">
+                <div class="oa-flow-icon"><i class="material-symbols-rounded">check_circle</i></div>
+                <div class="oa-flow-title">Complete</div>
+                <div class="oa-flow-meta">Approved or rejected</div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="card">
+    <div class="card-body">
+        <h3 class="card-title fs-6">@(Model.Input.Id > 0 ? "Edit step" : "Add step")</h3>
+        <form method="post" asp-page-handler="SaveStep" class="mt-4">
+            <input type="hidden" asp-for="Input.Id" />
+            <div class="row g-4">
+                <div class="col-12 col-md-2">
+                    <label class="form-label" asp-for="Input.StepOrder">Order</label>
+                    <input asp-for="Input.StepOrder" type="number" min="1" max="100" class="form-control" />
+                    <span asp-validation-for="Input.StepOrder" class="text-danger fs-8"></span>
+                </div>
+                <div class="col-12 col-md-4">
+                    <label class="form-label" asp-for="Input.StepName">Step name</label>
+                    <input asp-for="Input.StepName" class="form-control" placeholder="Manager approval" />
+                    <span asp-validation-for="Input.StepName" class="text-danger fs-8"></span>
+                </div>
+                <div class="col-12 col-md-3">
+                    <label class="form-label" asp-for="Input.ApproverRoleId">Approver role</label>
+                    <select asp-for="Input.ApproverRoleId" class="form-select">
+                        <option value="">No role</option>
+                        @foreach (var role in Model.Roles)
+                        {
+                            <option value="@role.Id">@role.RoleName</option>
+                        }
+                    </select>
+                    <span asp-validation-for="Input.ApproverRoleId" class="text-danger fs-8"></span>
+                </div>
+                <div class="col-12 col-md-3">
+                    <label class="form-label" asp-for="Input.ApproverEmployeeId">Approver employee</label>
+                    <select asp-for="Input.ApproverEmployeeId" class="form-select">
+                        <option value="">No employee</option>
+                        @foreach (var employee in Model.Employees)
+                        {
+                            <option value="@employee.Id">@employee.RealName</option>
+                        }
+                    </select>
+                </div>
+                <div class="col-12">
+                    <div class="form-check form-switch">
+                        <input asp-for="Input.IsFinalApproval" class="form-check-input" />
+                        <label asp-for="Input.IsFinalApproval" class="form-check-label">Mark as final approval step</label>
+                    </div>
+                </div>
+            </div>
+            <div class="d-flex justify-content-end mt-5">
+                <button type="submit" class="btn btn-primary">Save Step</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+}

@@ -1,0 +1,548 @@
+@page "/api-docs"
+@model SentribeeConsole.Web.Pages.ApiDocs.IndexModel
+@{
+    Layout = null;
+}
+
+<!doctype html>
+<html class="api-docs-html" lang="en" data-bs-theme="light" data-theme-color="purple">
+<head>
+    <meta charset="utf-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>API Documentation - SentriBee Console</title>
+    <link rel="icon" type="image/x-icon" href="~/favicon.ico" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Google+Sans:wght@400;500;600;700&display=swap" rel="stylesheet" />
+    <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" rel="stylesheet" />
+    <link rel="stylesheet" href="~/theme/vendor-DDXwb3B2.css" asp-append-version="true" />
+    <link rel="stylesheet" href="~/css/site.css" asp-append-version="true" />
+</head>
+<body class="api-docs-standalone">
+    <header class="api-docs-topbar">
+        <a href="/api-docs" class="api-docs-brand" aria-label="SentriBee API Documentation">
+            <img src="~/images/sentribee-mark.png" alt="" width="32" height="32" />
+            <span>SentriBee Project API</span>
+        </a>
+        <a href="/login" class="api-docs-console-link">Console Login</a>
+    </header>
+
+    <div class="api-docs-shell">
+        <aside class="api-docs-nav" aria-label="API documentation sections">
+            <div class="api-docs-nav-title">Documentation</div>
+            <a href="/api-docs/common">Common APIs</a>
+            <a href="/api-docs">SentriBee Project</a>
+            <a href="/api-docs/spendbee">SpendBee Project</a>
+            <div class="api-docs-nav-title mt-4">SentriBee APIs</div>
+            <a href="#overview">Overview</a>
+            <a href="#security">Security Model</a>
+            <a href="#app-client">App Client API</a>
+            <a href="#authentication">Authentication</a>
+            <a href="#heartbeat">Heartbeat</a>
+            <a href="#events">Event Upload</a>
+            <a href="#payloads">Payload Rules</a>
+            <a href="#errors">Errors</a>
+            <a href="#operations">Operations</a>
+        </aside>
+
+        <main class="api-docs-content">
+        <section id="overview" class="api-doc-section api-doc-hero">
+            <p class="api-doc-kicker">Edge AI Client API</p>
+            <h1>SentriBee Console API Documentation</h1>
+            <p>
+                These APIs connect Edge AI programs to SentriBee Console. Clients authenticate with a project API key,
+                exchange it for a short-lived bearer token, report runtime health every 30 seconds, and upload detected
+                events for server-side workflow processing.
+            </p>
+            <div class="api-doc-meta">
+                <span>Base URL</span>
+                <code>https://console.sentribee.ai</code>
+            </div>
+        </section>
+
+        <section id="security" class="api-doc-section">
+            <h2>Security Model</h2>
+            <p>
+                Project API keys are generated in Project Settings. The full key is displayed only once and the server
+                stores only a SHA-256 hash. Edge clients should call the authentication endpoint during startup, cache
+                the returned bearer token in memory, and refresh it before expiry.
+            </p>
+            <div class="api-doc-callout">
+                Use the long-lived project API key only for token exchange. All normal telemetry and event requests
+                should use <code>Authorization: Bearer &lt;accessToken&gt;</code>.
+            </div>
+        </section>
+
+        <section id="app-client" class="api-doc-section">
+            <h2>App Client API</h2>
+            <p>
+                Client apps first use the common project authentication endpoint <code>/api/edge/auth</code>. The returned
+                project bearer token is required for email verification, registration, and login. Registration and login then return
+                an app bearer token for QR binding and device queries.
+            </p>
+            <table class="api-doc-table">
+                <thead><tr><th>Endpoint</th><th>Purpose</th><th>Auth</th></tr></thead>
+                <tbody>
+                    <tr><td><code>POST /api/app/auth/email-code</code></td><td>Send an Amazon SES email verification code.</td><td>Project Bearer</td></tr>
+                    <tr><td><code>POST /api/app/auth/register</code></td><td>Create a new email user, collect phone device info, and return a 30-day app token.</td><td>Project Bearer</td></tr>
+                    <tr><td><code>POST /api/app/auth/login</code></td><td>Login an existing email user, update phone device/push info, and return a 30-day app token.</td><td>Project Bearer</td></tr>
+                    <tr><td><code>GET /api/app/profile</code></td><td>Return the current logged-in app user's profile.</td><td>App Bearer</td></tr>
+                    <tr><td><code>PUT /api/app/profile</code></td><td>Update display name, first name, last name, and gender for the current app user.</td><td>App Bearer</td></tr>
+                    <tr><td><code>POST /api/app/devices/bind</code></td><td>Bind the logged-in user to a permanent short Edge Device QR code.</td><td>App Bearer</td></tr>
+                    <tr><td><code>GET /api/app/devices</code></td><td>List all Edge Devices bound to the current app user.</td><td>App Bearer</td></tr>
+                    <tr><td><code>GET /api/app/devices/running</code></td><td>Compatibility alias for all bound devices.</td><td>App Bearer</td></tr>
+                    <tr><td><code>GET /api/app/devices/{deviceCode}</code></td><td>Return stream URL, today's people/equipment counts, cameras, and the current user's risk push settings for a bound device.</td><td>App Bearer</td></tr>
+                    <tr><td><code>GET /api/app/devices/{deviceCode}/daily-stats</code></td><td>Return historical daily people, bracelet, vehicle, PPE, and risk statistics.</td><td>App Bearer</td></tr>
+                    <tr><td><code>GET /api/app/devices/{deviceCode}/risk-subjects</code></td><td>Return the people with the most risk reports for a selected day.</td><td>App Bearer</td></tr>
+                    <tr><td><code>GET /api/app/devices/{deviceCode}/risk-notification-settings</code></td><td>Return per-place risk push settings for the current app user.</td><td>App Bearer</td></tr>
+                    <tr><td><code>PUT /api/app/devices/{deviceCode}/risk-notification-settings</code></td><td>Update which verified risk levels should trigger app push for this place.</td><td>App Bearer</td></tr>
+                    <tr><td><code>GET /api/app/notifications</code></td><td>Return unread or recent verified-risk notification records.</td><td>App Bearer</td></tr>
+                    <tr><td><code>PUT /api/app/notifications/{notificationId}/read</code></td><td>Mark one notification as read.</td><td>App Bearer</td></tr>
+                    <tr><td><code>GET /api/app/events/{eventId}/analysis</code></td><td>Return event-level people, vehicle, PPE, and per-person crop analysis.</td><td>App Bearer</td></tr>
+                    <tr><td><code>GET /api/app/events/{eventId}/image</code></td><td>Stream a bound event image through the server for private S3 objects.</td><td>App Bearer</td></tr>
+                    <tr><td><code>GET /api/app/edge-event-subjects/{subjectId}/image/{kind}</code></td><td>Stream a risk-person crop or preview through the server for private S3 objects.</td><td>App Bearer</td></tr>
+                    <tr><td><code>DELETE /api/app/devices/{deviceCode}/binding</code></td><td>Remove the current app user's binding from an Edge Device.</td><td>App Bearer</td></tr>
+                </tbody>
+            </table>
+            <h3>Register Flow</h3>
+            <p>
+                If a new email asks for a code with <code>purpose</code> set to <code>Login</code> or omitted, Console stores it as a
+                registration code. Existing registered emails receive login codes. This allows a single mobile email-code screen
+                to support both new and existing users.
+            </p>
+            <pre class="api-code"><code>POST /api/app/auth/email-code
+Authorization: Bearer sb_token_...
+{
+  "email": "site.manager@example.com",
+  "purpose": "Register"
+}
+
+POST /api/app/auth/register
+Authorization: Bearer sb_token_...
+{
+  "email": "site.manager@example.com",
+  "verificationCode": "123456",
+  "displayName": "Site Manager",
+  "firstName": "Site",
+  "lastName": "Manager",
+  "gender": "Prefer not to say",
+  "device": {
+    "deviceIdentifier": "ios-vendor-id-or-android-id",
+    "deviceType": "iPhone 15 Pro",
+    "platform": "iOS",
+    "osVersion": "18.5",
+    "appVersion": "1.0.0",
+    "pushProvider": "apns",
+    "pushToken": "push-token-for-future-notifications"
+  }
+}</code></pre>
+            <h3>Login Flow</h3>
+            <pre class="api-code"><code>POST /api/app/auth/email-code
+Authorization: Bearer sb_token_...
+{
+  "email": "site.manager@example.com",
+  "purpose": "Login"
+}
+
+POST /api/app/auth/login
+Authorization: Bearer sb_token_...
+{
+  "email": "site.manager@example.com",
+  "verificationCode": "123456",
+  "device": {
+    "deviceIdentifier": "ios-vendor-id-or-android-id",
+    "deviceType": "iPhone 15 Pro",
+    "platform": "iOS",
+    "osVersion": "18.5",
+    "appVersion": "1.0.0",
+    "pushProvider": "apns",
+    "pushToken": "push-token-for-future-notifications"
+  }
+}</code></pre>
+            <h3>App Profile</h3>
+            <pre class="api-code"><code>GET /api/app/profile
+Authorization: Bearer sb_app_...
+
+PUT /api/app/profile
+Authorization: Bearer sb_app_...
+{
+  "displayName": "Site Manager",
+  "firstName": "Site",
+  "lastName": "Manager",
+  "gender": "Female"
+}</code></pre>
+            <h3>Email Delivery</h3>
+            <p>
+                Email verification uses Amazon SES v2. Configure <code>EmailAuth__FromAddress</code> and
+                <code>EmailAuth__SesRegion</code>. When SES-specific access keys are not supplied, Console reuses
+                <code>S3Storage__AccessKeyId</code> and <code>S3Storage__SecretAccessKey</code> for SES signing. The AWS
+                identity must allow <code>ses:SendEmail</code> for the verified SES identity used as the from address.
+            </p>
+            <h3>Bind Device</h3>
+            <p>
+                The Edge Device QR image contains only the permanent short binding code, for example <code>SB8F3K2Q9</code>.
+            </p>
+            <pre class="api-code"><code>POST /api/app/devices/bind
+Authorization: Bearer sb_app_...
+{
+  "bindingCode": "SB8F3K2Q9"
+}</code></pre>
+            <h3>Bound Device List</h3>
+            <pre class="api-code"><code>GET /api/app/devices
+Authorization: Bearer sb_app_...
+
+DELETE /api/app/devices/EDGE-20260528-53A1688A4/binding
+Authorization: Bearer sb_app_...</code></pre>
+            <h3>Daily Stats and Risk People</h3>
+            <pre class="api-code"><code>GET /api/app/devices/EDGE-20260528-53A1688A4/daily-stats?from=2026-06-01&amp;to=2026-06-30
+Authorization: Bearer sb_app_...
+
+GET /api/app/devices/EDGE-20260528-53A1688A4/risk-subjects?date=2026-06-02
+Authorization: Bearer sb_app_...
+
+GET /api/app/events/1842/analysis
+Authorization: Bearer sb_app_...</code></pre>
+            <p>
+                Person crop URLs returned by risk-subject and event-analysis endpoints are server proxy URLs, not raw S3 URLs.
+                Use the same app bearer token when loading those images so private S3 bucket permissions do not leak to the app.
+            </p>
+            <p>
+                Device detail uses today's daily stat row for <code>recognizableWorkerCount</code>,
+                <code>heavyEquipmentCount</code>, and <code>ppeComplianceRate</code>. If today's row is not available yet,
+                Console falls back to the latest heartbeat detail metrics. <code>cameraCount</code> is counted from camera/RTSP
+                endpoints configured under that Edge Device.
+            </p>
+            <h3>Risk Notification Settings</h3>
+            <p>
+                Settings are stored per app user and per bound place. Defaults are <code>Severe Danger</code> enabled,
+                <code>Ordinary Risk</code> disabled, and legacy <code>Real Risk</code> disabled. The app can update them at any time.
+                The same setting list is also included in <code>GET /api/app/devices/{deviceCode}</code> as
+                <code>riskNotificationSettings</code> so the detail screen can render and save the toggles without a separate
+                initial fetch.
+            </p>
+            <pre class="api-code"><code>GET /api/app/devices/EDGE-20260528-53A1688A4/risk-notification-settings
+Authorization: Bearer sb_app_...
+
+PUT /api/app/devices/EDGE-20260528-53A1688A4/risk-notification-settings
+Authorization: Bearer sb_app_...
+{
+  "severeDangerEnabled": true,
+  "ordinaryRiskEnabled": false,
+  "realRiskEnabled": false
+}</code></pre>
+            <h3>Unread Risk Notifications</h3>
+            <p>
+                When an event is verified as a real risk, Console creates one unread notification for each app user bound to that
+                place. If the user's risk setting allows that severity, <code>pushStatus</code> is <code>Queued</code>; otherwise it is
+                <code>Suppressed</code>. When APNS is configured, queued iOS notifications are sent immediately and the record moves
+                to <code>Delivered</code> or <code>Failed</code> with the APNS id or error stored for diagnostics.
+            </p>
+            <pre class="api-code"><code>GET /api/app/notifications?unreadOnly=true
+Authorization: Bearer sb_app_...
+
+PUT /api/app/notifications/9001/read
+Authorization: Bearer sb_app_...</code></pre>
+        </section>
+
+        <section id="authentication" class="api-doc-section">
+            <div class="api-doc-endpoint-heading">
+                <div>
+                    <h2>Authentication</h2>
+                    <p>Exchange a project API key for a bearer token.</p>
+                </div>
+                <div class="api-endpoint"><span>POST</span><code>/api/edge/auth</code></div>
+            </div>
+            <h3>Request Body</h3>
+            <table class="api-doc-table">
+                <thead><tr><th>Field</th><th>Type</th><th>Required</th><th>Description</th></tr></thead>
+                <tbody>
+                    <tr><td><code>apiKey</code></td><td>string</td><td>Yes</td><td>Project API key generated in Project Settings.</td></tr>
+                    <tr><td><code>clientName</code></td><td>string</td><td>No</td><td>Readable client name for audit and troubleshooting.</td></tr>
+                </tbody>
+            </table>
+            <div class="api-doc-grid">
+                <div>
+                    <h3>Example Request</h3>
+                    <pre class="api-code"><code>{
+  "apiKey": "sb_live_...",
+  "clientName": "edge-ai-west-gate-01"
+}</code></pre>
+                </div>
+                <div>
+                    <h3>Example Response</h3>
+                    <pre class="api-code"><code>{
+  "accessToken": "sb_token_...",
+  "tokenType": "Bearer",
+  "expiresAtUtc": "2026-05-29T14:30:00Z",
+  "projectId": 1,
+  "projectName": "PREVENX Edge AI"
+}</code></pre>
+                </div>
+            </div>
+        </section>
+
+        <section id="heartbeat" class="api-doc-section">
+            <div class="api-doc-endpoint-heading">
+                <div>
+                    <h2>Heartbeat</h2>
+                    <p>Report Edge AI runtime and device connection health every 30 seconds.</p>
+                </div>
+                <div class="api-endpoint"><span>POST</span><code>/api/edge/heartbeat</code></div>
+            </div>
+            <h3>Headers</h3>
+            <pre class="api-code"><code>Authorization: Bearer &lt;accessToken&gt;
+Content-Type: application/json</code></pre>
+            <h3>Request Body</h3>
+            <table class="api-doc-table">
+                <thead><tr><th>Field</th><th>Type</th><th>Required</th><th>Description</th></tr></thead>
+                <tbody>
+                    <tr><td><code>deviceCode</code></td><td>string</td><td>Yes</td><td>Existing Edge Device code in the same project.</td></tr>
+                    <tr><td><code>runtimeStatus</code></td><td>string</td><td>No</td><td>Program status, such as <code>Running</code>, <code>Degraded</code>, or <code>Stopped</code>.</td></tr>
+                    <tr><td><code>deviceStatus</code></td><td>string</td><td>No</td><td>Device connectivity, such as <code>Online</code> or <code>Offline</code>.</td></tr>
+                    <tr><td><code>reportedAtUtc</code></td><td>datetime</td><td>No</td><td>Client-side report time. Server UTC time is used when omitted.</td></tr>
+                    <tr><td><code>peopleCount</code></td><td>number</td><td>No</td><td>Current people count in the scene.</td></tr>
+                    <tr><td><code>braceletCount</code></td><td>number</td><td>No</td><td>Current detected Bluetooth safety bracelet count.</td></tr>
+                    <tr><td><code>machineryVehicleCount</code></td><td>number</td><td>No</td><td>Current machinery or heavy vehicle count in the scene.</td></tr>
+                    <tr><td><code>detailJson</code></td><td>object</td><td>No</td><td>Additional runtime details such as camera count, model version, CPU, memory, or queue depth. Risk counts and verified PPE rates are produced from event review, not heartbeat.</td></tr>
+                </tbody>
+            </table>
+            <h3>Example</h3>
+            <pre class="api-code"><code>{
+  "deviceCode": "EDGE-20260529-7A12B4",
+  "runtimeStatus": "Running",
+  "deviceStatus": "Online",
+  "reportedAtUtc": "2026-05-29T02:30:00Z",
+  "peopleCount": 12,
+  "braceletCount": 10,
+  "machineryVehicleCount": 2,
+  "detailJson": {
+    "cameraConnected": true,
+    "modelVersion": "yolo-v8-site-safety-1.4",
+    "fps": 18.7
+  }
+}</code></pre>
+        </section>
+
+        <section id="events" class="api-doc-section">
+            <div class="api-doc-endpoint-heading">
+                <div>
+                    <h2>Event Upload</h2>
+                    <p>Submit events detected by Edge AI for server-side rules, notification, review, and training workflows.</p>
+                </div>
+                <div class="api-endpoint"><span>POST</span><code>/api/edge/events</code></div>
+            </div>
+            <h3>Request Body</h3>
+            <table class="api-doc-table">
+                <thead><tr><th>Field</th><th>Type</th><th>Required</th><th>Description</th></tr></thead>
+                <tbody>
+                    <tr><td><code>deviceCode</code></td><td>string</td><td>Yes</td><td>Existing Edge Device code in the same project.</td></tr>
+                    <tr><td><code>title</code></td><td>string</td><td>Yes</td><td>Short event name shown in Console event lists.</td></tr>
+                    <tr><td><code>description</code></td><td>string</td><td>No</td><td>Human-readable context or detection summary.</td></tr>
+                    <tr><td><code>eventTimeUtc</code></td><td>datetime</td><td>No</td><td>Detection time. Server UTC time is used when omitted.</td></tr>
+                    <tr><td><code>imageUrl</code></td><td>string</td><td>No</td><td>Existing image URL when the client already uploaded the image.</td></tr>
+                    <tr><td><code>imageBase64</code></td><td>string</td><td>No</td><td>Base64 image content. The server uploads it to the <code>sentribeebus</code> S3 bucket.</td></tr>
+                    <tr><td><code>imageContentType</code></td><td>string</td><td>No</td><td><code>image/jpeg</code> by default; <code>image/png</code> is also supported.</td></tr>
+                    <tr><td><code>detectionJson</code></td><td>object</td><td>No</td><td>Detection metadata such as labels, confidence, bounding boxes, and model version.</td></tr>
+                    <tr><td><code>analysis</code></td><td>object</td><td>No</td><td>Event-level counts and risk summary. The server verifies PPE risk first, then stores statistics from the verified result.</td></tr>
+                    <tr><td><code>subjects</code></td><td>array</td><td>No</td><td>Per-person or per-object boxes, crop URLs, PPE boxes, and risk details.</td></tr>
+                </tbody>
+            </table>
+            <h3>Example</h3>
+            <pre class="api-code"><code>{
+  "deviceCode": "EDGE-20260529-7A12B4",
+  "title": "PPE violation",
+  "description": "Helmet missing near entry zone",
+  "eventTimeUtc": "2026-05-29T02:31:00Z",
+  "imageBase64": "...",
+  "imageContentType": "image/jpeg",
+  "detectionJson": {
+    "class": "missing_helmet",
+    "confidence": 0.93,
+    "box": { "x": 220, "y": 88, "w": 140, "h": 240 }
+  },
+  "analysis": {
+    "peopleCount": 3,
+    "machineryVehicleCount": 1,
+    "toolCount": 2,
+    "ppeCompliantPeopleCount": 2,
+    "riskPersonCount": 1,
+    "ppeComplianceRate": 66.7,
+    "riskCategory": "PPE helmet risk",
+    "riskSeverity": "Real Risk",
+    "summary": "One worker is missing helmet near machinery."
+  },
+  "subjects": [
+    {
+      "subjectKey": "person-001",
+      "subjectType": "Person",
+      "trackingLabel": "Worker 1",
+      "cropImageUrl": "https://.../person-001.jpg",
+      "previewImageUrl": "https://.../person-001-preview.jpg",
+      "boundingBoxJson": { "x": 220, "y": 88, "w": 140, "h": 240 },
+      "ppeBoxJson": [{ "class": "vest", "x": 230, "y": 120, "w": 110, "h": 140 }],
+      "ppeStatusJson": { "helmet": "missing", "vest": "ok" },
+      "isRisk": true,
+      "riskCategory": "PPE helmet risk",
+      "riskSeverity": "Real Risk",
+      "riskReason": "Helmet was not detected on this person."
+    }
+  ]
+}</code></pre>
+            <h3>Response</h3>
+            <pre class="api-code"><code>{
+  "success": true,
+  "eventId": 1842,
+  "imageUrl": "https://sentribeebus.s3.ap-southeast-2.amazonaws.com/edge-events/...",
+  "verifiedStatus": "Real Risk",
+  "analysis": { "peopleCount": 3, "riskPersonCount": 1, "riskSeverity": "Real Risk" }
+}</code></pre>
+            <h3>Update Event Analysis</h3>
+            <p>
+                The ins1 annotation worker can update or replace event analysis after it relabels broad people,
+                vehicle, tool, building-material, and large-equipment boxes. Store scene-level boxes in
+                <code>analysisJson.panoramaAnnotation</code>, then send each person slice and per-person PPE boxes in
+                <code>subjects</code>.
+            </p>
+            <pre class="api-code"><code>POST /api/edge/events/1842/analysis
+Authorization: Bearer sb_token_...
+{
+  "peopleCount": 3,
+  "machineryVehicleCount": 1,
+  "toolCount": 2,
+  "ppeCompliantPeopleCount": 2,
+  "riskPersonCount": 1,
+  "ppeComplianceRate": 66.7,
+  "riskCategory": "PPE helmet risk",
+  "riskSeverity": "Real Risk",
+  "summary": "One worker is missing helmet.",
+  "analysisJson": {
+    "model": "ins1-auto-annotation",
+    "version": "2026-06-02",
+    "panoramaAnnotation": {
+      "classes": [
+        { "id": 0, "name": "person" },
+        { "id": 1, "name": "vehicle" },
+        { "id": 2, "name": "tool" },
+        { "id": 3, "name": "building_material" }
+      ],
+      "boxes": [
+        { "classId": 0, "x": 220, "y": 88, "w": 140, "h": 240 },
+        { "classId": 1, "x": 620, "y": 50, "w": 260, "h": 310 }
+      ]
+    }
+  },
+  "subjects": [
+    {
+      "subjectKey": "person-001",
+      "subjectType": "Person",
+      "cropImageUrl": "https://.../person-001.jpg",
+      "boundingBoxJson": { "x": 220, "y": 88, "w": 140, "h": 240 },
+      "ppeBoxJson": [{ "class": "helmet", "status": "missing" }],
+      "isRisk": true
+    }
+  ]
+}</code></pre>
+            <h3>Remote Auto Analysis Service</h3>
+            <p>
+                Console can offload event image analysis to the GPU service on <code>ins1.sentribee.ai</code>.
+                Set <code>EdgeEventAutoAnalysis:Mode</code> to <code>Remote</code>, configure
+                <code>RemoteBaseUrl</code> and <code>RemoteApiKey</code>, then Console will call the internal
+                service and save the returned analysis to the database.
+            </p>
+            <pre class="api-code"><code>POST /api/edge-event-analysis/analyze
+Authorization: Bearer &lt;RemoteApiKey&gt;
+{
+  "eventId": 1842,
+  "projectId": 1,
+  "deviceCode": "EDGE-20260529-7A12B4",
+  "imageUrl": "https://sentribeebus.s3.ap-southeast-2.amazonaws.com/edge-events/...",
+  "imageBase64": "...",
+  "imageContentType": "image/jpeg",
+  "detectionJson": { "class": "missing_helmet", "confidence": 0.93 },
+  "requiredPpe": ["helmet", "vest"],
+  "personConfidence": 0.35,
+  "ppeConfidence": 0.35,
+  "sceneObjectConfidence": 0.25
+}</code></pre>
+            <p>
+                The response should match the event analysis shape above. Include <code>panoramaAnnotation</code>
+                for scene-level boxes and <code>subjects</code> for person crops, PPE boxes, PPE status, and risk flags.
+            </p>
+            <h3>Optional Event Video Upload</h3>
+            <p>
+                After creating the event, clients can attach one video by multipart upload. Uploads are associated by
+                <code>eventId</code>; retry failed parts by sending the same <code>partNumber</code> again, then call complete.
+            </p>
+            <table class="api-doc-table">
+                <thead><tr><th>Step</th><th>Endpoint</th><th>Purpose</th></tr></thead>
+                <tbody>
+                    <tr><td>1</td><td><code>POST /api/edge/events/{eventId}/video/uploads</code></td><td>Start S3 multipart upload and receive <code>videoUploadId</code>.</td></tr>
+                    <tr><td>2</td><td><code>PUT /api/edge/events/{eventId}/video/uploads/{videoUploadId}/parts/{partNumber}</code></td><td>Upload raw binary bytes for one part. Use 8 MB parts except the final part.</td></tr>
+                    <tr><td>3</td><td><code>GET /api/edge/events/{eventId}/video/uploads/{videoUploadId}</code></td><td>Resume support: list uploaded part numbers and ETags.</td></tr>
+                    <tr><td>4</td><td><code>POST /api/edge/events/{eventId}/video/uploads/{videoUploadId}/complete</code></td><td>Complete the video and save its S3 URL.</td></tr>
+                    <tr><td>Cancel</td><td><code>DELETE /api/edge/events/{eventId}/video/uploads/{videoUploadId}</code></td><td>Abort an unfinished S3 multipart upload.</td></tr>
+                </tbody>
+            </table>
+            <h3>Start Video Upload Body</h3>
+            <pre class="api-code"><code>{
+  "fileName": "event-1842.mp4",
+  "contentType": "video/mp4",
+  "fileSizeBytes": 73400320
+}</code></pre>
+            <h3>Start Video Upload Response</h3>
+            <pre class="api-code"><code>{
+  "success": true,
+  "eventId": 1842,
+  "videoUploadId": 51,
+  "uploadId": "...",
+  "key": "edge-events/1/EDGE-.../videos/1842/....mp4",
+  "recommendedPartSizeBytes": 8388608
+}</code></pre>
+            <p>
+                Complete can omit a body; the server uses the saved uploaded part list. To override, send:
+            </p>
+            <pre class="api-code"><code>{
+  "parts": [
+    { "partNumber": 1, "eTag": "\"...\"" },
+    { "partNumber": 2, "eTag": "\"...\"" }
+  ]
+}</code></pre>
+        </section>
+
+        <section id="payloads" class="api-doc-section">
+            <h2>Payload Rules</h2>
+            <ul class="api-doc-list">
+                <li>All dates should be ISO 8601 UTC strings, for example <code>2026-05-29T02:31:00Z</code>.</li>
+                <li>Heartbeat clients should report every 30 seconds. Missing heartbeats can be treated as offline by later workflow logic.</li>
+                <li>Use <code>imageBase64</code> when the Edge program cannot upload directly to storage. Use <code>imageUrl</code> when storage upload is already handled by the client.</li>
+                <li>Do not include API keys in logs. Store project API keys in the Edge device secret store or environment configuration.</li>
+            </ul>
+        </section>
+
+        <section id="errors" class="api-doc-section">
+            <h2>Error Responses</h2>
+            <table class="api-doc-table">
+                <thead><tr><th>Status</th><th>Meaning</th><th>Typical Cause</th></tr></thead>
+                <tbody>
+                    <tr><td><code>400</code></td><td>Bad Request</td><td>Required fields are missing or malformed.</td></tr>
+                    <tr><td><code>401</code></td><td>Unauthorized</td><td>API key or bearer token is missing, invalid, expired, or revoked.</td></tr>
+                    <tr><td><code>404</code></td><td>Not Found</td><td>The provided <code>deviceCode</code> does not belong to the authenticated project.</td></tr>
+                    <tr><td><code>500</code></td><td>Server Error</td><td>Storage, database, or infrastructure failure. Retry with backoff.</td></tr>
+                </tbody>
+            </table>
+        </section>
+
+        <section id="operations" class="api-doc-section">
+            <h2>Operational Notes</h2>
+            <p>
+                Event image upload requires AWS S3 settings on the server: <code>S3Storage__AccessKeyId</code>,
+                <code>S3Storage__SecretAccessKey</code>, <code>S3Storage__Region</code>, and <code>S3Storage__Bucket</code>.
+                The default bucket is <code>sentribeebus</code>. If these settings are missing, event creation with
+                <code>imageUrl</code> still works, but server-side <code>imageBase64</code> upload will fail.
+            </p>
+        </section>
+        </main>
+    </div>
+</body>
+</html>

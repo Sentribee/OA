@@ -1,0 +1,64 @@
+@page
+@model SentribeeConsole.Web.Pages.Operations.SpendBee.UsersModel
+@using SentribeeConsole.Web.Domain.Entities
+@using SentribeeConsole.Web.Application.Services
+@{
+    Layout = "_AdminLayout";
+}
+
+<div class="admin-page-width">
+    <div class="card">
+        <div class="card-body">
+            <div class="d-flex align-items-start justify-content-between gap-3 mb-4">
+                <div>
+                    <h3 class="card-title fs-6">SpendBee users</h3>
+                    <p class="card-subtitle text-body-secondary mb-0">Registered and activated consumer accounts.</p>
+                </div>
+                <span class="badge bg-primary-subtle text-primary">@Model.Users.TotalCount total</span>
+            </div>
+            <div class="table-responsive mobile-card-table-wrap">
+                <table class="table align-middle mobile-card-table">
+                    <thead>
+                    <tr>
+                        <th>User</th>
+                        <th>Profile</th>
+                        <th>Devices</th>
+                        <th>Status</th>
+                        <th>Created</th>
+                    </tr>
+                    </thead>
+                    <tbody>
+                    @foreach (var item in Model.Users.Items)
+                    {
+                        <tr>
+                            <td data-label="User">
+                                <div class="fw-medium">@item.DisplayName</div>
+                                <div class="text-body-secondary fs-8">@item.Email</div>
+                            </td>
+                            <td data-label="Profile">
+                                <div>@(item.Gender ?? "Not set")</div>
+                                <div class="text-body-secondary fs-8">@(!string.IsNullOrWhiteSpace(item.Bio) ? item.Bio : "No bio")</div>
+                            </td>
+                            <td data-label="Devices">
+                                <div>@item.DeviceCount active</div>
+                                <div class="text-body-secondary fs-8">@ProjectTimeZone.Format(item.LastDeviceLoginAtUtc, Model.Project.TimeZoneId, fallback: "Never")</div>
+                            </td>
+                            <td data-label="Status">
+                                <span class="badge bg-success-subtle text-success">@item.Status</span>
+                            </td>
+                            <td data-label="Created">@ProjectTimeZone.Format(item.CreatedAtUtc, Model.Project.TimeZoneId)</td>
+                        </tr>
+                    }
+                    </tbody>
+                </table>
+            </div>
+            @await Html.PartialAsync("_Pagination", new PagedResult<object>
+            {
+                Items = Model.Users.Items.Cast<object>().ToList(),
+                PageNumber = Model.Users.PageNumber,
+                PageSize = Model.Users.PageSize,
+                TotalCount = Model.Users.TotalCount
+            })
+        </div>
+    </div>
+</div>

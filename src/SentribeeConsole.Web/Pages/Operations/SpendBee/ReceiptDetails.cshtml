@@ -1,0 +1,186 @@
+@page "{id:long}"
+@model SentribeeConsole.Web.Pages.Operations.SpendBee.ReceiptDetailsModel
+@using SentribeeConsole.Web.Application.Services
+@{
+    Layout = "_AdminLayout";
+    var receipt = Model.Receipt;
+}
+
+@if (receipt is not null)
+{
+    <div class="admin-page-width">
+        <div class="d-flex align-items-center justify-content-between gap-3 mb-3">
+            <div>
+                <a asp-page="/Operations/SpendBee/Receipts" class="text-body-secondary fs-8">Back to receipts</a>
+                <h3 class="mb-0">Receipt #@receipt.Id</h3>
+            </div>
+            <span class="badge bg-primary-subtle text-primary">@receipt.Status</span>
+        </div>
+
+        <div class="row g-3">
+            <div class="col-xl-4">
+                <div class="card h-100">
+                    <div class="card-body">
+                        <h4 class="fs-6 mb-3">Merchant</h4>
+                        @if (receipt.MerchantId.HasValue && receipt.HasMerchantCover)
+                        {
+                            <img class="spendbee-receipt-cover mb-3" src="/api/spendbee/admin/merchants/@receipt.MerchantId/cover" alt="" />
+                        }
+                        <div class="fw-semibold">@(!string.IsNullOrWhiteSpace(receipt.MerchantName) ? receipt.MerchantName : "Unknown merchant")</div>
+                        <div class="text-body-secondary fs-8">@receipt.MerchantAddress</div>
+                        @if (!string.IsNullOrWhiteSpace(receipt.PlatformDisplayName) || !string.IsNullOrWhiteSpace(receipt.PlatformName) || !string.IsNullOrWhiteSpace(receipt.FulfillmentType))
+                        {
+                            <div class="d-flex flex-wrap gap-1 mt-2">
+                                <span class="badge bg-warning-subtle text-warning-emphasis">@(!string.IsNullOrWhiteSpace(receipt.PlatformDisplayName) ? receipt.PlatformDisplayName : receipt.PlatformName ?? "Delivery platform")</span>
+                                @if (!string.IsNullOrWhiteSpace(receipt.FulfillmentType))
+                                {
+                                    <span class="badge bg-secondary-subtle text-secondary-emphasis">@receipt.FulfillmentType</span>
+                                }
+                                @if (!string.IsNullOrWhiteSpace(receipt.ReceiptType))
+                                {
+                                    <span class="badge bg-info-subtle text-info-emphasis">@receipt.ReceiptType</span>
+                                }
+                            </div>
+                        }
+                        <hr />
+                        <div class="receipt-detail-grid">
+                            <span>User</span>
+                            <strong>@receipt.DisplayName</strong>
+                            <span>Email</span>
+                            <strong>@receipt.Email</strong>
+                            @if (!string.IsNullOrWhiteSpace(receipt.PlatformOrderNumber))
+                            {
+                                <span>Platform order</span>
+                                <strong>@receipt.PlatformOrderNumber</strong>
+                            }
+                            <span>Purchased</span>
+                            <strong>@ProjectTimeZone.Format(receipt.PurchasedAtUtc ?? receipt.CreatedAtUtc, Model.Project.TimeZoneId)</strong>
+                            @if (receipt.OrderedAtUtc.HasValue)
+                            {
+                                <span>Ordered</span>
+                                <strong>@ProjectTimeZone.Format(receipt.OrderedAtUtc.Value, Model.Project.TimeZoneId)</strong>
+                            }
+                            @if (receipt.PickupAtUtc.HasValue)
+                            {
+                                <span>Pickup</span>
+                                <strong>@ProjectTimeZone.Format(receipt.PickupAtUtc.Value, Model.Project.TimeZoneId)</strong>
+                            }
+                            @if (receipt.DeliveredAtUtc.HasValue)
+                            {
+                                <span>Delivered</span>
+                                <strong>@ProjectTimeZone.Format(receipt.DeliveredAtUtc.Value, Model.Project.TimeZoneId)</strong>
+                            }
+                            <span>Total</span>
+                            <strong>@receipt.Currency @receipt.Total?.ToString("0.00")</strong>
+                            <span>Subtotal</span>
+                            <strong>@receipt.Subtotal?.ToString("0.00")</strong>
+                            <span>Tax</span>
+                            <strong>@receipt.Tax?.ToString("0.00")</strong>
+                            @if (receipt.DeliveryFee.HasValue)
+                            {
+                                <span>Delivery fee</span>
+                                <strong>@receipt.DeliveryFee?.ToString("0.00")</strong>
+                            }
+                            @if (receipt.ServiceFee.HasValue)
+                            {
+                                <span>Service fee</span>
+                                <strong>@receipt.ServiceFee?.ToString("0.00")</strong>
+                            }
+                            @if (receipt.PlatformDiscount.HasValue)
+                            {
+                                <span>Platform discount</span>
+                                <strong>@receipt.PlatformDiscount?.ToString("0.00")</strong>
+                            }
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-xl-8">
+                <div class="card h-100">
+                    <div class="card-body">
+                        <div class="d-flex align-items-start justify-content-between gap-3 mb-3">
+                            <div>
+                                <h4 class="fs-6 mb-1">Line items</h4>
+                                <p class="text-body-secondary fs-8 mb-0">@Model.LineItems.Count item@(Model.LineItems.Count == 1 ? "" : "s") detected</p>
+                            </div>
+                            <div class="text-end fs-8 text-body-secondary">
+                                <div>Confidence @((receipt.OverallConfidence * 100)?.ToString("0.0"))%</div>
+                                <div>Error @((receipt.EstimatedErrorRate * 100)?.ToString("0.00"))%</div>
+                            </div>
+                        </div>
+                        <div class="table-responsive">
+                            <table class="table align-middle">
+                                <thead>
+                                <tr>
+                                    <th>Item</th>
+                                    <th>Qty</th>
+                                    <th>Unit</th>
+                                    <th>Amount</th>
+                                    <th>Category</th>
+                                    <th>Confidence</th>
+                                </tr>
+                                </thead>
+                                <tbody>
+                                @foreach (var item in Model.LineItems)
+                                {
+                                    <tr>
+                                        <td class="fw-medium">@item.Name</td>
+                                        <td>@item.Quantity?.ToString("0.###")</td>
+                                        <td>@item.UnitPrice?.ToString("0.00")</td>
+                                        <td class="fw-semibold">@item.Amount?.ToString("0.00")</td>
+                                        <td>@item.Category</td>
+                                        <td>@((item.Confidence * 100)?.ToString("0.0"))%</td>
+                                    </tr>
+                                }
+                                </tbody>
+                                <tfoot>
+                                <tr>
+                                    <th colspan="3">Detected total</th>
+                                    <th>@Model.LineItems.Sum(item => item.Amount ?? 0m).ToString("0.00")</th>
+                                    <th colspan="2"></th>
+                                </tr>
+                                </tfoot>
+                            </table>
+                        </div>
+
+                        @if (Model.FailedChecks.Count > 0)
+                        {
+                            <div class="alert alert-warning mt-3 mb-0">
+                                <div class="fw-semibold mb-1">Review checks</div>
+                                <ul class="mb-0 ps-3">
+                                    @foreach (var check in Model.FailedChecks)
+                                    {
+                                        <li>@check</li>
+                                    }
+                                </ul>
+                            </div>
+                        }
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-12">
+                <div class="card">
+                    <div class="card-body">
+                        <h4 class="fs-6 mb-3">Original receipt images</h4>
+                        <div class="spendbee-receipt-image-grid">
+                            @foreach (var image in Model.Images)
+                            {
+                                var previewUrl = $"/api/spendbee/admin/receipts/{receipt.Id}/images/{image.Id}";
+                                var downloadUrl = $"{previewUrl}?download=1";
+                                <a href="@previewUrl" target="_blank" rel="noopener">
+                                    <img src="@previewUrl" alt="" loading="lazy" />
+                                    <span>Image @(image.SortOrder + 1)</span>
+                                </a>
+                                <a class="btn btn-sm btn-outline-primary mt-2" href="@downloadUrl" download>
+                                    Download image @(image.SortOrder + 1)
+                                </a>
+                            }
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+}

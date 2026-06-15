@@ -1,0 +1,188 @@
+@page "/oa/staff/profile"
+@model SentribeeConsole.Web.Pages.Crm.StaffProfileModel
+@{
+    Layout = "_CrmStaffLayout";
+}
+
+@if (!string.IsNullOrWhiteSpace(Model.StatusMessage))
+{
+    <div class="alert alert-info">@Model.StatusMessage</div>
+}
+
+<div class="row g-5">
+    <div class="col-12 col-xl-8">
+        <div class="card h-100">
+            <div class="card-body">
+                <div class="d-flex justify-content-between gap-3 align-items-start">
+                    <div>
+                        <h3 class="card-title fs-6">Employee profile</h3>
+                        <div class="text-body-secondary fs-8">
+                            @(Model.IsFirstProfileCompletion ? "Complete your profile once. This first submission is saved directly." : "Changes are saved after highest admin approval.")
+                        </div>
+                    </div>
+                    <button type="button" class="btn btn-outline-primary btn-sm" onclick="document.getElementById('password-dialog').showModal()">
+                        <i class="material-symbols-rounded">lock_reset</i> Change password
+                    </button>
+                </div>
+                <form method="post" asp-page-handler="SaveProfile" enctype="multipart/form-data" class="mt-4">
+                    <input type="hidden" asp-for="Input.AvatarUrl" />
+                    <div asp-validation-summary="All" class="text-danger fs-8 mb-4"></div>
+                    <div class="d-flex align-items-center gap-4 mb-5">
+                        <div class="oa-avatar-preview">
+                            @if (!string.IsNullOrWhiteSpace(Model.Input.AvatarUrl))
+                            {
+                                <img src="@Model.Input.AvatarUrl" alt="" />
+                            }
+                            else
+                            {
+                                <i class="material-symbols-rounded">person</i>
+                            }
+                        </div>
+                        <div class="flex-grow-1">
+                            <label class="form-label" for="avatar">Avatar</label>
+                            <input id="avatar" name="avatar" type="file" accept="image/*" class="form-control" />
+                            <span class="text-danger fs-8">@Html.ValidationMessage("avatar")</span>
+                        </div>
+                    </div>
+                    <div class="row g-4">
+                        <div class="col-12 col-md-6">
+                            <label class="form-label" asp-for="Input.RealName">Real name</label>
+                            <input asp-for="Input.RealName" class="form-control" />
+                            <span asp-validation-for="Input.RealName" class="text-danger fs-8"></span>
+                        </div>
+                        <div class="col-12 col-md-6">
+                            <label class="form-label" asp-for="Input.PreferredName">Preferred name</label>
+                            <input asp-for="Input.PreferredName" class="form-control" />
+                            <span asp-validation-for="Input.PreferredName" class="text-danger fs-8"></span>
+                        </div>
+                        <div class="col-12 col-md-6">
+                            <label class="form-label" asp-for="Input.WorkEmail">Work email</label>
+                            <input asp-for="Input.WorkEmail" class="form-control" />
+                            <span asp-validation-for="Input.WorkEmail" class="text-danger fs-8"></span>
+                        </div>
+                        <div class="col-12 col-md-6">
+                            <label class="form-label" asp-for="Input.PrivateEmail">Private email</label>
+                            <input asp-for="Input.PrivateEmail" class="form-control" />
+                            <span asp-validation-for="Input.PrivateEmail" class="text-danger fs-8"></span>
+                        </div>
+                        <div class="col-12 col-md-6">
+                            <label class="form-label" asp-for="Input.Phone">Phone</label>
+                            <input asp-for="Input.Phone" class="form-control" />
+                            <span asp-validation-for="Input.Phone" class="text-danger fs-8"></span>
+                        </div>
+                        <div class="col-12 col-md-6">
+                            <label class="form-label" asp-for="Input.GstNumber">IRD number</label>
+                            <input asp-for="Input.GstNumber" class="form-control" />
+                            <span asp-validation-for="Input.GstNumber" class="text-danger fs-8"></span>
+                        </div>
+                        <div class="col-12">
+                            <label class="form-label" asp-for="Input.BankAccountNumber">Bank account</label>
+                            <input asp-for="Input.BankAccountNumber" class="form-control" />
+                            <span asp-validation-for="Input.BankAccountNumber" class="text-danger fs-8"></span>
+                        </div>
+                        <div class="col-12">
+                            <label class="form-label" asp-for="Input.ResidentialAddress">Residential address</label>
+                            <input asp-for="Input.ResidentialAddress" class="form-control" />
+                            <span asp-validation-for="Input.ResidentialAddress" class="text-danger fs-8"></span>
+                        </div>
+                    </div>
+                    <div class="d-flex justify-content-end mt-5">
+                        <button type="submit" class="btn btn-primary">@(Model.IsFirstProfileCompletion ? "Complete Profile" : "Submit for approval")</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+    <div class="col-12 col-xl-4">
+        <div class="card h-100">
+            <div class="card-body">
+                <h3 class="card-title fs-6">Employment info</h3>
+                <div class="d-grid gap-3 mt-4">
+                    <div>
+                        <div class="text-body-secondary fs-8">Job title</div>
+                        <div class="fw-semibold">@(!string.IsNullOrWhiteSpace(Model.ProfileDetails?.JobTitle) ? Model.ProfileDetails.JobTitle : "-")</div>
+                    </div>
+                    <div>
+                        <div class="text-body-secondary fs-8">Employment type</div>
+                        <div class="fw-semibold">@(!string.IsNullOrWhiteSpace(Model.ProfileDetails?.EmploymentType) ? Model.ProfileDetails.EmploymentType : "-")</div>
+                    </div>
+                    <div>
+                        <div class="text-body-secondary fs-8">Start date</div>
+                        <div class="fw-semibold">@(Model.ProfileDetails?.StartDate?.ToString("yyyy-MM-dd") ?? "-")</div>
+                    </div>
+                    <div>
+                        <div class="text-body-secondary fs-8">Standard weekly hours</div>
+                        <div class="fw-semibold">@(Model.ProfileDetails?.StandardWeeklyHours?.ToString("0.##") ?? "-")</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="card mt-5">
+    <div class="card-body">
+        <h3 class="card-title fs-6">Profile change history</h3>
+        <div class="table-responsive mobile-card-table-wrap mt-4">
+            <table class="table align-middle mobile-card-table">
+                <thead>
+                    <tr>
+                        <th>Date</th>
+                        <th>Changes</th>
+                        <th>Status</th>
+                        <th>Decision</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @if (Model.Requests.Count == 0)
+                    {
+                        <tr><td colspan="4" class="text-body-secondary">No profile change requests yet.</td></tr>
+                    }
+                    else
+                    {
+                        @foreach (var item in Model.Requests)
+                        {
+                            <tr>
+                                <td data-label="Date">@item.CreatedAtUtc.ToString("yyyy-MM-dd HH:mm")</td>
+                                <td data-label="Changes">@item.ChangeSummary</td>
+                                <td data-label="Status"><span class="badge bg-light text-dark">@item.Status</span></td>
+                                <td data-label="Decision">
+                                    <div>@item.DecisionNote</div>
+                                    <div class="text-body-secondary fs-8">@(item.DecisionAtUtc?.ToString("yyyy-MM-dd HH:mm") ?? "")</div>
+                                </td>
+                            </tr>
+                        }
+                    }
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<dialog id="password-dialog" class="oa-password-dialog">
+    <form method="post" asp-page-handler="ChangePassword">
+        <div class="d-flex justify-content-between align-items-start gap-3 mb-4">
+            <h3 class="fs-6 mb-0">Change password</h3>
+            <button type="button" class="btn btn-sm btn-light" onclick="document.getElementById('password-dialog').close()" aria-label="Close">
+                <i class="material-symbols-rounded">close</i>
+            </button>
+        </div>
+        <div class="mb-4">
+            <label class="form-label" asp-for="PasswordInput.CurrentPassword">Current password</label>
+            <input asp-for="PasswordInput.CurrentPassword" type="password" class="form-control" autocomplete="current-password" />
+        </div>
+        <div class="mb-4">
+            <label class="form-label" asp-for="PasswordInput.NewPassword">New password</label>
+            <input asp-for="PasswordInput.NewPassword" type="password" class="form-control" autocomplete="new-password" />
+        </div>
+        <div class="mb-4">
+            <label class="form-label" asp-for="PasswordInput.ConfirmPassword">Confirm password</label>
+            <input asp-for="PasswordInput.ConfirmPassword" type="password" class="form-control" autocomplete="new-password" />
+        </div>
+        <button type="submit" class="btn btn-primary w-100">Update password</button>
+    </form>
+</dialog>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+}

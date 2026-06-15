@@ -1,0 +1,100 @@
+@page
+@model SentribeeConsole.Web.Pages.Operations.SpendBee.ReceiptsModel
+@using SentribeeConsole.Web.Domain.Entities
+@using SentribeeConsole.Web.Application.Services
+@{
+    Layout = "_AdminLayout";
+}
+
+<div class="admin-page-width">
+    <div class="card">
+        <div class="card-body">
+            <div class="d-flex align-items-start justify-content-between gap-3 mb-4">
+                <div>
+                    <h3 class="card-title fs-6">Receipt recognition</h3>
+                    <p class="card-subtitle text-body-secondary mb-0">Original images, OCR fields, item lines, and confidence checks.</p>
+                </div>
+                <span class="badge bg-primary-subtle text-primary">@Model.Receipts.TotalCount total</span>
+            </div>
+            <div class="table-responsive mobile-card-table-wrap">
+                <table class="table align-middle mobile-card-table">
+                    <thead>
+                    <tr>
+                        <th>Receipt</th>
+                        <th>User</th>
+                        <th>Merchant</th>
+                        <th>Total</th>
+                        <th>Quality</th>
+                        <th>Actions</th>
+                    </tr>
+                    </thead>
+                    <tbody>
+                    @foreach (var item in Model.Receipts.Items)
+                    {
+                        <tr>
+                            <td data-label="Receipt">
+                                <div class="fw-medium">#@item.Id</div>
+                                <div class="text-body-secondary fs-8">@ProjectTimeZone.Format(item.PurchasedAtUtc ?? item.CreatedAtUtc, Model.Project.TimeZoneId)</div>
+                                <span class="badge bg-primary-subtle text-primary">@item.Status</span>
+                            </td>
+                            <td data-label="User">
+                                <div>@item.DisplayName</div>
+                                <div class="text-body-secondary fs-8">@item.Email</div>
+                            </td>
+                            <td data-label="Merchant">
+                                <div class="fw-medium">@(!string.IsNullOrWhiteSpace(item.MerchantName) ? item.MerchantName : "Unknown")</div>
+                                <div class="text-body-secondary fs-8">@item.MerchantAddress</div>
+                                @if (!string.IsNullOrWhiteSpace(item.PlatformDisplayName) || !string.IsNullOrWhiteSpace(item.PlatformName) || !string.IsNullOrWhiteSpace(item.FulfillmentType))
+                                {
+                                    <div class="mt-1">
+                                        <span class="badge bg-warning-subtle text-warning-emphasis">@(!string.IsNullOrWhiteSpace(item.PlatformDisplayName) ? item.PlatformDisplayName : item.PlatformName ?? "Delivery platform")</span>
+                                        @if (!string.IsNullOrWhiteSpace(item.FulfillmentType))
+                                        {
+                                            <span class="badge bg-secondary-subtle text-secondary-emphasis">@item.FulfillmentType</span>
+                                        }
+                                    </div>
+                                }
+                                @if (!string.IsNullOrWhiteSpace(item.PlatformOrderNumber))
+                                {
+                                    <div class="text-body-secondary fs-8">Order @item.PlatformOrderNumber</div>
+                                }
+                                <div class="text-body-secondary fs-8">@item.LineItemCount item lines</div>
+                            </td>
+                            <td data-label="Total">
+                                <div class="fw-semibold">@item.Currency @item.Total?.ToString("0.00")</div>
+                                <div class="text-body-secondary fs-8">Subtotal @item.Subtotal?.ToString("0.00") · Tax @item.Tax?.ToString("0.00")</div>
+                                @if (item.DeliveryFee.HasValue || item.ServiceFee.HasValue || item.PlatformDiscount.HasValue)
+                                {
+                                    <div class="text-body-secondary fs-8">Delivery @item.DeliveryFee?.ToString("0.00") · Service @item.ServiceFee?.ToString("0.00") · Discount @item.PlatformDiscount?.ToString("0.00")</div>
+                                }
+                            </td>
+                            <td data-label="Quality">
+                                <div>Confidence @((item.OverallConfidence * 100)?.ToString("0.0"))%</div>
+                                <div class="text-body-secondary fs-8">Error @((item.EstimatedErrorRate * 100)?.ToString("0.00"))%</div>
+                            </td>
+                            <td data-label="Actions">
+                                <a class="btn btn-sm btn-primary mb-1" asp-page="/Operations/SpendBee/ReceiptDetails" asp-route-id="@item.Id">
+                                    Details
+                                </a>
+                                @if (item.FirstImageId.HasValue)
+                                {
+                                    <a class="btn btn-sm btn-outline-primary" href="/api/spendbee/admin/receipts/@item.Id/images/@item.FirstImageId?download=1" download>
+                                        Download first image
+                                    </a>
+                                }
+                            </td>
+                        </tr>
+                    }
+                    </tbody>
+                </table>
+            </div>
+            @await Html.PartialAsync("_Pagination", new PagedResult<object>
+            {
+                Items = Model.Receipts.Items.Cast<object>().ToList(),
+                PageNumber = Model.Receipts.PageNumber,
+                PageSize = Model.Receipts.PageSize,
+                TotalCount = Model.Receipts.TotalCount
+            })
+        </div>
+    </div>
+</div>

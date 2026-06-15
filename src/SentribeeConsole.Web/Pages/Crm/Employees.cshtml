@@ -1,0 +1,256 @@
+@page "/oa/employees"
+@model SentribeeConsole.Web.Pages.Crm.EmployeesModel
+@{
+    Layout = "_CrmLayout";
+}
+
+@if (!string.IsNullOrWhiteSpace(Model.StatusMessage))
+{
+    <div class="alert @(Model.StatusMessage.StartsWith("Please", StringComparison.OrdinalIgnoreCase) ? "alert-warning" : "alert-success")">@Model.StatusMessage</div>
+}
+
+<div class="card mb-5">
+    <div class="card-body">
+        <div class="d-flex align-items-start mb-4">
+            <div class="flex-grow-1">
+                <h3 class="card-title fs-6">@(Model.Input.Id > 0 ? "Edit employee" : "Add employee")</h3>
+                <p class="card-subtitle text-body-secondary">Create staff login with work email, role and start date. The employee completes their own profile on first login.</p>
+            </div>
+            @if (Model.Input.Id > 0)
+            {
+                <a asp-page="/Crm/Employees" class="btn btn-outline-secondary btn-sm">New Employee</a>
+            }
+        </div>
+        <form method="post" asp-page-handler="Save">
+            <input type="hidden" asp-for="Input.Id" />
+            <div asp-validation-summary="All" class="text-danger fs-8 mb-4"></div>
+            <div class="row g-4">
+                @if (Model.Input.Id > 0)
+                {
+                    <div class="col-12 col-md-4">
+                        <label class="form-label" asp-for="Input.RealName">Real name</label>
+                        <input asp-for="Input.RealName" class="form-control" />
+                        <span asp-validation-for="Input.RealName" class="text-danger fs-8"></span>
+                    </div>
+                    <div class="col-12 col-md-4">
+                        <label class="form-label" asp-for="Input.PreferredName">Preferred name</label>
+                        <input asp-for="Input.PreferredName" class="form-control" />
+                    </div>
+                    <div class="col-12 col-md-4">
+                        <label class="form-label" asp-for="Input.JobTitle">Job title</label>
+                        <input asp-for="Input.JobTitle" class="form-control" placeholder="Manager, chef, consultant..." />
+                    </div>
+                }
+                <div class="col-12 col-md-4">
+                    <label class="form-label" asp-for="Input.RoleId">Role</label>
+                    <select asp-for="Input.RoleId" class="form-select">
+                        <option value="">No role</option>
+                        @foreach (var role in Model.Roles)
+                        {
+                            <option value="@role.Id">@role.RoleName</option>
+                        }
+                    </select>
+                    <span asp-validation-for="Input.RoleId" class="text-danger fs-8"></span>
+                </div>
+                <div class="col-12 col-md-4">
+                    <label class="form-label" asp-for="Input.Phone">Phone</label>
+                    <input asp-for="Input.Phone" class="form-control" />
+                </div>
+                <div class="col-12 col-md-4">
+                    <label class="form-label" asp-for="Input.WorkEmail">Work email</label>
+                    <input asp-for="Input.WorkEmail" class="form-control" />
+                    <span asp-validation-for="Input.WorkEmail" class="text-danger fs-8"></span>
+                </div>
+                @if (Model.Input.Id > 0)
+                {
+                    <div class="col-12 col-md-4">
+                        <label class="form-label" asp-for="Input.PrivateEmail">Private email</label>
+                        <input asp-for="Input.PrivateEmail" class="form-control" />
+                        <span asp-validation-for="Input.PrivateEmail" class="text-danger fs-8"></span>
+                    </div>
+                    <div class="col-12 col-md-4">
+                        <label class="form-label" asp-for="Input.InitialPassword">Reset password</label>
+                        <input asp-for="Input.InitialPassword" type="password" class="form-control" autocomplete="new-password" placeholder="Optional password reset" />
+                        <span asp-validation-for="Input.InitialPassword" class="text-danger fs-8"></span>
+                    </div>
+                    <div class="col-12 col-md-4 d-flex align-items-end">
+                        <div class="form-check form-switch mb-2">
+                            <input asp-for="Input.LoginEnabled" class="form-check-input" />
+                            <label class="form-check-label" asp-for="Input.LoginEnabled">Enable employee login</label>
+                        </div>
+                    </div>
+                    <div class="col-12 col-md-4 d-flex align-items-end">
+                        <div class="text-body-secondary fs-8 mb-2">Must change password: @(Model.Input.MustChangePassword ? "Yes" : "No")</div>
+                    </div>
+                    <div class="col-12">
+                        <label class="form-label" asp-for="Input.ResidentialAddress">Residential address</label>
+                        <input asp-for="Input.ResidentialAddress" class="form-control" />
+                    </div>
+                    <div class="col-12 col-md-4">
+                        <label class="form-label" asp-for="Input.GstNumber">IRD number</label>
+                        <input asp-for="Input.GstNumber" class="form-control" />
+                    </div>
+                    <div class="col-12 col-md-4">
+                        <label class="form-label" asp-for="Input.BankAccountNumber">Bank account</label>
+                        <input asp-for="Input.BankAccountNumber" class="form-control" />
+                    </div>
+                    <div class="col-12 col-md-4">
+                        <label class="form-label" asp-for="Input.EmploymentType">Employment type</label>
+                        <input asp-for="Input.EmploymentType" class="form-control" placeholder="Full-time, part-time, contractor..." />
+                    </div>
+                    <div class="col-12 col-md-3">
+                        <label class="form-label" asp-for="Input.PayType">Pay type</label>
+                        <select asp-for="Input.PayType" class="form-select">
+                            <option value="Hourly">Hourly</option>
+                            <option value="Salary">Salary</option>
+                        </select>
+                    </div>
+                    <div class="col-12 col-md-3">
+                        <label class="form-label" asp-for="Input.HourlyRate">Hourly rate</label>
+                        <input asp-for="Input.HourlyRate" type="number" step="0.01" min="0" class="form-control" />
+                        <span asp-validation-for="Input.HourlyRate" class="text-danger fs-8"></span>
+                    </div>
+                    <div class="col-12 col-md-3">
+                        <label class="form-label" asp-for="Input.AnnualSalary">Annual salary</label>
+                        <input asp-for="Input.AnnualSalary" type="number" step="0.01" min="0" class="form-control" />
+                        <span asp-validation-for="Input.AnnualSalary" class="text-danger fs-8"></span>
+                    </div>
+                    <div class="col-12 col-md-3">
+                        <label class="form-label" asp-for="Input.StandardWeeklyHours">Weekly hours</label>
+                        <input asp-for="Input.StandardWeeklyHours" type="number" step="0.25" min="1" max="168" class="form-control" />
+                        <span asp-validation-for="Input.StandardWeeklyHours" class="text-danger fs-8"></span>
+                    </div>
+                    <div class="col-12 col-md-3">
+                        <label class="form-label" asp-for="Input.ScheduledStartTime">Scheduled start</label>
+                        <input asp-for="Input.ScheduledStartTime" type="time" class="form-control" />
+                    </div>
+                    <div class="col-12 col-md-3">
+                        <label class="form-label" asp-for="Input.ScheduledEndTime">Scheduled end</label>
+                        <input asp-for="Input.ScheduledEndTime" type="time" class="form-control" />
+                    </div>
+                }
+                <div class="col-12 col-md-4">
+                    <label class="form-label" asp-for="Input.StartDate">Start date</label>
+                    <input asp-for="Input.StartDate" type="date" class="form-control" />
+                    <span asp-validation-for="Input.StartDate" class="text-danger fs-8"></span>
+                </div>
+                <div class="col-12 col-md-4">
+                    <label class="form-label" asp-for="Input.EndDate">End date</label>
+                    <input asp-for="Input.EndDate" type="date" class="form-control" />
+                </div>
+                <div class="col-12 col-md-4">
+                    <label class="form-label" asp-for="Input.Status">Status</label>
+                    <select asp-for="Input.Status" class="form-select">
+                        <option value="Active">Active</option>
+                        <option value="Inactive">Inactive</option>
+                    </select>
+                </div>
+                @if (Model.Input.Id > 0)
+                {
+                    <div class="col-12 col-md-6">
+                        <label class="form-label" asp-for="Input.OfficeAddressId">Office address</label>
+                        <select asp-for="Input.OfficeAddressId" class="form-select">
+                            <option value="">No default office</option>
+                            @foreach (var office in Model.Offices)
+                            {
+                                <option value="@office.Id">@office.LocationName</option>
+                            }
+                        </select>
+                    </div>
+                    <div class="col-12">
+                        <label class="form-label" asp-for="Input.Notes">Notes</label>
+                        <textarea asp-for="Input.Notes" rows="3" class="form-control"></textarea>
+                    </div>
+                }
+            </div>
+            <div class="d-flex justify-content-end mt-5">
+                <button type="submit" class="btn btn-primary">@(Model.Input.Id > 0 ? "Save Employee" : "Create and Send Invite")</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<div class="card">
+    <div class="card-body">
+        <h3 class="card-title fs-6">Employee list</h3>
+        <div class="table-responsive mobile-card-table-wrap mt-4">
+            <table class="table align-middle mobile-card-table">
+                <thead>
+                    <tr>
+                        <th>Name</th>
+                        <th>Contact</th>
+                        <th>Role</th>
+                        <th>Login</th>
+                        <th>Pay</th>
+                        <th>Start</th>
+                        <th>Tax / bank</th>
+                        <th>Status</th>
+                        <th></th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @if (Model.Employees.Count == 0)
+                    {
+                        <tr><td colspan="9" class="text-body-secondary">No employees yet.</td></tr>
+                    }
+                    else
+                    {
+                        @foreach (var item in Model.Employees)
+                        {
+                            <tr>
+                                <td data-label="Name">
+                                    <div class="fw-semibold">@item.RealName</div>
+                                    <div class="text-body-secondary fs-8">@item.PreferredName</div>
+                                </td>
+                                <td data-label="Contact">
+                                    <div>@item.Phone</div>
+                                    <div class="text-body-secondary fs-8">@item.WorkEmail</div>
+                                    <div class="text-body-secondary fs-8">@item.PrivateEmail</div>
+                                </td>
+                                <td data-label="Role">
+                                    <div>@item.JobTitle</div>
+                                    <div class="text-body-secondary fs-8">@item.EmploymentType</div>
+                                    <div class="text-body-secondary fs-8">@item.OfficeName</div>
+                                    <div class="text-body-secondary fs-8">@item.RoleName</div>
+                                </td>
+                                <td data-label="Login">
+                                    <div>@(item.LoginEnabled ? "Enabled" : "Disabled")</div>
+                                    <div class="text-body-secondary fs-8">Change password: @(item.MustChangePassword ? "Yes" : "No")</div>
+                                    <div class="text-body-secondary fs-8">Profile: @(item.ProfileCompletedAtUtc.HasValue ? "Completed" : "Waiting")</div>
+                                    <div class="text-body-secondary fs-8">Invite: @item.InviteSentAtUtc?.ToString("yyyy-MM-dd")</div>
+                                </td>
+                                <td data-label="Pay">
+                                    <div>@item.PayType</div>
+                                    <div class="text-body-secondary fs-8">Hourly: @item.HourlyRate?.ToString("0.00")</div>
+                                    <div class="text-body-secondary fs-8">Salary: @item.AnnualSalary?.ToString("0.00")</div>
+                                    <div class="text-body-secondary fs-8">@item.StandardWeeklyHours.ToString("0.##") h/week</div>
+                                    <div class="text-body-secondary fs-8">@item.ScheduledStartTime?.ToString(@"hh\:mm") - @item.ScheduledEndTime?.ToString(@"hh\:mm")</div>
+                                </td>
+                                <td data-label="Start">@item.StartDate?.ToString("yyyy-MM-dd")</td>
+                                <td data-label="Tax / bank">
+                                    <div class="fs-8">IRD: @item.GstNumber</div>
+                                    <div class="fs-8">Bank: @item.BankAccountNumber</div>
+                                </td>
+                                <td data-label="Status"><span class="badge bg-light text-body">@item.Status</span></td>
+                                <td class="text-end">
+                                    <div class="d-flex gap-2 justify-content-end">
+                                        <a asp-page="/Crm/Employees" asp-route-employeeId="@item.Id" class="btn btn-outline-primary btn-sm">Edit</a>
+                                        <form method="post" asp-page-handler="SetStatus">
+                                            <input type="hidden" name="employeeId" value="@item.Id" />
+                                            <input type="hidden" name="status" value="@(item.Status == "Active" ? "Inactive" : "Active")" />
+                                            <button type="submit" class="btn btn-outline-secondary btn-sm">@(item.Status == "Active" ? "Deactivate" : "Activate")</button>
+                                        </form>
+                                    </div>
+                                </td>
+                            </tr>
+                        }
+                    }
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+}

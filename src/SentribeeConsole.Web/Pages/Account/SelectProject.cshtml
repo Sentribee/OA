@@ -1,0 +1,33 @@
+@page "/select-project"
+@model SentribeeConsole.Web.Pages.Account.SelectProjectModel
+@{
+    Layout = "_AuthLayout";
+    ViewData["Title"] = "Select Project";
+}
+
+<section class="card login-card select-project-card p-6 p-md-7">
+    <div class="d-flex align-items-center gap-3 mb-7">
+        <img class="brand-logo" src="~/images/sentribee-mark.png" alt="SentriBee" width="44" height="44" />
+        <div>
+            <h1 class="login-brand-name fs-5 mb-0">Select project</h1>
+            <div class="text-body-secondary fs-7">Choose where you want to work</div>
+        </div>
+    </div>
+
+    <form method="post" class="d-grid gap-3">
+        <input asp-for="ReturnUrl" type="hidden" />
+        <input asp-for="FirstLogin" type="hidden" />
+        @foreach (var project in Model.Projects)
+        {
+            <label class="project-choice">
+                <input asp-for="ProjectId" type="radio" value="@project.Id" />
+                <span>
+                    <strong>@project.Name</strong>
+                    <small>@project.AccessRole</small>
+                </span>
+            </label>
+        }
+        <span asp-validation-for="ProjectId" class="text-danger fs-8"></span>
+        <button type="submit" class="btn btn-primary w-100 mt-2">Continue</button>
+    </form>
+</section>

@@ -1,0 +1,157 @@
+@page "/oa/attendance"
+@model SentribeeConsole.Web.Pages.Crm.AttendanceModel
+@using SentribeeConsole.Web.Application.Services
+@{
+    Layout = "_CrmLayout";
+}
+
+@if (!string.IsNullOrWhiteSpace(Model.StatusMessage))
+{
+    <div class="alert alert-success">@Model.StatusMessage</div>
+}
+
+<div class="row g-5 mb-5">
+    <div class="col-12 col-xl-6">
+        <div class="card h-100">
+            <div class="card-body">
+                <h3 class="card-title fs-6">Clock in</h3>
+                <p class="card-subtitle text-body-secondary">Record an employee's start time, office and optional note.</p>
+                <form method="post" asp-page-handler="ClockIn" class="mt-4">
+                    <div class="mb-4">
+                        <label class="form-label" asp-for="Input.EmployeeId">Employee</label>
+                        <select asp-for="Input.EmployeeId" class="form-select">
+                            <option value="">Select employee</option>
+                            @foreach (var employee in Model.Employees)
+                            {
+                                <option value="@employee.Id">@employee.RealName@(string.IsNullOrWhiteSpace(employee.JobTitle) ? string.Empty : $" - {employee.JobTitle}")</option>
+                            }
+                        </select>
+                        <span asp-validation-for="Input.EmployeeId" class="text-danger fs-8"></span>
+                    </div>
+                    <div class="mb-4">
+                        <label class="form-label" asp-for="Input.OfficeAddressId">Office address</label>
+                        <select asp-for="Input.OfficeAddressId" class="form-select">
+                            <option value="">No office selected</option>
+                            @foreach (var office in Model.Offices)
+                            {
+                                <option value="@office.Id">@office.LocationName</option>
+                            }
+                        </select>
+                    </div>
+                    <div class="mb-4">
+                        <label class="form-label" asp-for="Input.ClockInNote">Clock-in note</label>
+                        <textarea asp-for="Input.ClockInNote" rows="3" class="form-control"></textarea>
+                    </div>
+                    <button type="submit" class="btn btn-primary w-100">Clock In</button>
+                </form>
+            </div>
+        </div>
+    </div>
+    <div class="col-12 col-xl-6">
+        <div class="card h-100">
+            <div class="card-body">
+                <h3 class="card-title fs-6">Clock out</h3>
+                <p class="card-subtitle text-body-secondary">Close the latest open clock-in for the selected employee.</p>
+                <form method="post" asp-page-handler="ClockOut" class="mt-4">
+                    <div class="mb-4">
+                        <label class="form-label" asp-for="Input.EmployeeId">Employee</label>
+                        <select asp-for="Input.EmployeeId" class="form-select">
+                            <option value="">Select employee</option>
+                            @foreach (var employee in Model.Employees)
+                            {
+                                <option value="@employee.Id">@employee.RealName@(string.IsNullOrWhiteSpace(employee.JobTitle) ? string.Empty : $" - {employee.JobTitle}")</option>
+                            }
+                        </select>
+                    </div>
+                    <div class="mb-4">
+                        <label class="form-label" asp-for="Input.ClockOutNote">Clock-out note</label>
+                        <textarea asp-for="Input.ClockOutNote" rows="3" class="form-control"></textarea>
+                    </div>
+                    <button type="submit" class="btn btn-outline-primary w-100">Clock Out</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="card">
+    <div class="card-body">
+        <div class="d-flex align-items-start mb-4">
+            <div class="flex-grow-1">
+                <h3 class="card-title fs-6">Recent attendance</h3>
+                <p class="card-subtitle text-body-secondary">Latest 80 clock-in records for this merchant.</p>
+            </div>
+            <a asp-page="/Crm/Employees" class="btn btn-outline-secondary btn-sm">Employees</a>
+        </div>
+        <div class="table-responsive mobile-card-table-wrap">
+            <table class="table align-middle mobile-card-table">
+                <thead>
+                    <tr>
+                        <th>Employee</th>
+                        <th>Office</th>
+                        <th>Date</th>
+                        <th>Clock in</th>
+                        <th>Clock out</th>
+                        <th>Status</th>
+                        <th>IP</th>
+                        <th>Notes</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @if (Model.Records.Count == 0)
+                    {
+                        <tr><td colspan="8" class="text-body-secondary">No attendance records yet.</td></tr>
+                    }
+                    else
+                    {
+                        @foreach (var item in Model.Records)
+                        {
+                            <tr>
+                                <td data-label="Employee">
+                                    <div class="fw-semibold">@item.RealName</div>
+                                    <div class="text-body-secondary fs-8">@item.PreferredName</div>
+                                </td>
+                                <td data-label="Office">@item.OfficeName</td>
+                                <td data-label="Date">@item.AttendanceDate.ToString("yyyy-MM-dd")</td>
+                                <td data-label="Clock in">@ProjectTimeZone.Format(item.ClockInAtUtc, Model.Merchant.TimeZoneId)</td>
+                                <td data-label="Clock out">@ProjectTimeZone.Format(item.ClockOutAtUtc, Model.Merchant.TimeZoneId, fallback: "-")</td>
+                                <td data-label="Status">
+                                    <span class="badge bg-light text-body">@item.Status</span>
+                                    @if (item.IsCompleteDay)
+                                    {
+                                        <span class="badge bg-success ms-1">Complete</span>
+                                    }
+                                    @if (item.IsLateBeyondGrace)
+                                    {
+                                        <span class="badge bg-warning text-dark ms-1">Late &gt; 10m</span>
+                                    }
+                                    @if (!string.IsNullOrWhiteSpace(item.WorkloadLevel))
+                                    {
+                                        <div class="text-body-secondary fs-8 mt-1">Workload: @item.WorkloadLevel</div>
+                                    }
+                                </td>
+                                <td data-label="IP">
+                                    <div class="fs-8">@item.ClockInIp</div>
+                                    <div class="text-body-secondary fs-8">@item.ClockOutIp</div>
+                                </td>
+                                <td data-label="Notes">
+                                    <div class="fs-8">@item.ClockInNote</div>
+                                    <div class="text-body-secondary fs-8">@item.ClockOutNote</div>
+                                    @if (!string.IsNullOrWhiteSpace(item.WorkLogSummary))
+                                    {
+                                        <div class="fs-8 mt-1">@item.WorkLogSummary</div>
+                                        <div class="text-body-secondary fs-8">@item.WorkloadReason</div>
+                                    }
+                                </td>
+                            </tr>
+                        }
+                    }
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+}

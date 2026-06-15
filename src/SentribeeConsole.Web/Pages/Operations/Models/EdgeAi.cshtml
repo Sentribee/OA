@@ -1,0 +1,485 @@
+﻿@page "/models/edge-ai"
+@model SentribeeConsole.Web.Pages.Operations.Models.EdgeAiModel
+@{
+    Layout = "_AdminLayout";
+    ViewData["Title"] = "Code";
+    ViewData["PageTitle"] = "Code";
+    ViewData["ActiveMenu"] = "EdgeAi";
+    ViewData["ProjectTimeZoneId"] = Model.Dashboard.Project.TimeZoneId;
+    var generationActive = Model.Dashboard.ActiveGeneration is not null &&
+        (string.Equals(Model.Dashboard.ActiveGeneration.Status, "Requested", StringComparison.OrdinalIgnoreCase) ||
+            string.Equals(Model.Dashboard.ActiveGeneration.Status, "Generating", StringComparison.OrdinalIgnoreCase));
+}
+
+<div id="edge-ai-feedback"
+     class="admin-toast @(string.IsNullOrEmpty(Model.StatusMessage) ? null : "is-visible") @(Model.StatusIsError ? "is-error" : null)"
+     role="status"
+     aria-live="polite">
+    <i class="material-symbols-rounded">@(Model.StatusIsError ? "error" : "check_circle")</i>
+    <span>@Model.StatusMessage</span>
+</div>
+
+<div class="admin-page-width">
+    <div class="card mb-5 pending-rule-panel">
+        <div class="card-body">
+            <div class="d-flex flex-wrap align-items-start gap-3 mb-4">
+                <i class="material-symbols-rounded text-primary fs-3">psychology</i>
+                <div class="flex-grow-1">
+                    <h3 class="card-title fs-5 mb-1">Upgrade Code</h3>
+                    <p class="card-subtitle mb-0">
+                        Add rule changes, review pending deltas, then generate a new version on the padding branch.
+                    </p>
+                </div>
+                @if (Model.Dashboard.CurrentVersion is not null)
+                {
+                    <span class="badge bg-primary text-primary-emphasis" style="--bs-bg-opacity:.12">
+                        Running @Model.Dashboard.CurrentVersion.VersionName
+                    </span>
+                }
+            </div>
+            <div class="ai-code-upgrade-grid">
+                <section class="ai-code-upgrade-column">
+                    <div class="mb-4">
+                        <h4 class="fs-6 text-body-emphasis mb-1">Add Rule</h4>
+                        <p class="text-body-secondary fs-8 mb-0">Describe a meaningful rule change in English or Chinese.</p>
+                    </div>
+                    <form method="post" asp-page-handler="AddRule" data-global-loading data-loading-label="Generating version rule...">
+                        <div asp-validation-summary="ModelOnly" class="text-danger fs-7 mb-4"></div>
+                        <div>
+                            <label asp-for="RuleInput.Prompt" class="form-label"></label>
+                            <textarea asp-for="RuleInput.Prompt" class="form-control" rows="7" placeholder="Describe a rule to add, or say which logic should be removed."></textarea>
+                            <span asp-validation-for="RuleInput.Prompt" class="text-danger fs-8"></span>
+                        </div>
+                        <div class="d-flex justify-content-end mt-4">
+                            <button type="submit" class="btn btn-primary px-6">
+                                <i class="material-symbols-rounded fs-6 me-2">add_task</i>Add Rule Version
+                            </button>
+                        </div>
+                    </form>
+                </section>
+                <section class="ai-code-upgrade-column">
+                    <div class="d-flex flex-wrap align-items-start gap-3 mb-4">
+                        <div class="flex-grow-1">
+                            <h4 class="fs-6 text-body-emphasis mb-1">Pending Rule Changes</h4>
+                            <p class="text-body-secondary fs-8 mb-0">Review deltas and generate code when ready.</p>
+                        </div>
+                        @if (Model.PendingRules.Count > 0)
+                        {
+                            <div class="pending-handoff-control">
+                                <div class="text-body-secondary fs-8 text-end mb-2">
+                                    Daily use @Model.Dashboard.DailyGitHandoffUsed / @Model.Dashboard.DailyGitHandoffLimit
+                                </div>
+                                <form method="post" asp-page-handler="HandOffGit" data-global-loading data-loading-label="Preparing Git development handoff..." data-confirm="This will send pending rules to the padding branch for code generation. Continue?">
+                                    <button type="submit" class="btn btn-ai-update px-6" disabled="@generationActive">
+                                        <i class="material-symbols-rounded fs-5 me-2">settings</i>Generating New Version
+                                    </button>
+                                </form>
+                            </div>
+                        }
+                    </div>
+                    @if (Model.Dashboard.ActiveGeneration is not null)
+                    {
+                        var generation = Model.Dashboard.ActiveGeneration;
+                        <div id="generation-status" class="generation-status rounded border p-4 mb-4" data-generation-active="@generationActive.ToString().ToLowerInvariant()">
+                            <div class="d-flex flex-wrap align-items-center gap-3 mb-3">
+                                <i class="material-symbols-rounded text-primary fs-4">auto_awesome_motion</i>
+                                <div class="flex-grow-1">
+                                    <div class="fw-medium text-body-emphasis">Code generation <span data-generation-status>@generation.Status</span></div>
+                                    <div class="text-body-secondary fs-8" data-generation-message>@generation.StatusMessage</div>
+                                    @if (generationActive)
+                                    {
+                                        <div class="text-body-secondary fs-8 mt-1">Checking again in <span data-generation-countdown>20</span>s.</div>
+                                    }
+                                </div>
+                                <span class="badge bg-primary text-primary-emphasis" style="--bs-bg-opacity:.12">@generation.BranchName</span>
+                            </div>
+                            <div class="progress mb-3" style="height:.55rem">
+                                <div class="progress-bar" data-generation-progress style="width:@generation.ProgressPercent%"></div>
+                            </div>
+                            <div class="d-flex flex-wrap align-items-center gap-3">
+                                <div class="text-body-secondary fs-8 flex-grow-1">
+                                    Virtual version <span data-generation-version>@generation.VersionName</span>
+                                    @if (!string.IsNullOrWhiteSpace(generation.GeneratedCommitSha))
+                                    {
+                                        <span data-generation-commit> - Generated @generation.GeneratedCommitSha[..Math.Min(8, generation.GeneratedCommitSha.Length)]</span>
+                                    }
+                                    else
+                                    {
+                                        <span data-generation-commit></span>
+                                    }
+                                </div>
+                                <a data-generation-git-link
+                                   class="btn btn-outline-primary btn-sm @(string.Equals(generation.Status, "ReadyToPublish", StringComparison.OrdinalIgnoreCase) || string.Equals(generation.Status, "TimedOut", StringComparison.OrdinalIgnoreCase) || string.Equals(generation.Status, "Failed", StringComparison.OrdinalIgnoreCase) || string.Equals(generation.Status, "NoChanges", StringComparison.OrdinalIgnoreCase) ? null : "d-none")"
+                                   href="@Model.GetGitBranchUrl(generation.BranchName)"
+                                   target="_blank"
+                                   rel="noopener">
+                                    <i class="material-symbols-rounded fs-6 me-1">hub</i>Open Git Branch
+                                </a>
+                                @if (string.Equals(generation.Status, "ReadyToPublish", StringComparison.OrdinalIgnoreCase))
+                                {
+                                    <form data-generation-publish-form method="post" asp-page-handler="PublishGenerated" data-global-loading data-loading-label="Publishing generated AI code..." data-confirm="Publish generated padding branch code as the current AI version?">
+                                        <button type="submit" class="btn btn-primary px-5">
+                                            <i class="material-symbols-rounded fs-6 me-2">rocket_launch</i>Publish Current Version
+                                        </button>
+                                    </form>
+                                }
+                                else
+                                {
+                                    <form data-generation-publish-form method="post" asp-page-handler="PublishGenerated" data-global-loading data-loading-label="Publishing generated AI code..." data-confirm="Publish generated padding branch code as the current AI version?" class="d-none">
+                                        <button type="submit" class="btn btn-primary px-5">
+                                            <i class="material-symbols-rounded fs-6 me-2">rocket_launch</i>Publish Current Version
+                                        </button>
+                                    </form>
+                                }
+                            </div>
+                        </div>
+                    }
+                    @if (Model.PendingRules.Count == 0)
+                    {
+                        <div class="rounded border p-4 text-body-secondary">No pending rule changes.</div>
+                    }
+                </section>
+                @if (Model.PendingRules.Count > 0)
+                {
+                    <section class="ai-code-upgrade-full">
+                        <div class="pending-rule-version rounded border p-4">
+                            <div class="d-flex flex-wrap align-items-start gap-3 mb-3">
+                                <div class="flex-grow-1">
+                                    <div class="fw-medium text-body-emphasis">Virtual version @Model.VirtualPendingVersionName</div>
+                                    <div class="text-body-secondary fs-8">@Model.PendingRules.Count pending rule(s). No rollback version is created until code update succeeds.</div>
+                                </div>
+                            </div>
+                            <div class="requirement-grid">
+                                <partial name="_RequirementGroup" model='("Environment Recognition", Model.GetPendingRules("Environment"))' />
+                                <partial name="_RequirementGroup" model='("Recognition Logic", Model.GetPendingRules("Logic"))' />
+                                <partial name="_RequirementGroup" model='("Event Recognition", Model.GetPendingRules("Event"))' />
+                                <partial name="_RequirementGroup" model='("Response Method", Model.GetPendingRules("Response"))' />
+                            </div>
+                        </div>
+                    </section>
+                }
+            </div>
+        </div>
+    </div>
+
+    <div class="card mb-5">
+        <div class="card-body">
+            <div class="d-flex flex-wrap align-items-start gap-3 mb-5">
+                <i class="material-symbols-rounded text-primary fs-3">memory</i>
+                <div class="flex-grow-1">
+                    <h3 class="card-title fs-5 mb-1">Current Running Code @((Model.Dashboard.CurrentVersion?.VersionName) ?? "-")</h3>
+                    <p class="card-subtitle mb-0">
+                        PREVENX Edge AI Safety System requirements and paired AI model.
+                    </p>
+                </div>
+                @if (Model.CurrentYoloModel is null)
+                {
+                    <span class="badge bg-warning text-warning-emphasis" style="--bs-bg-opacity:.12">No current AI model</span>
+                }
+                else
+                {
+                    <span class="badge bg-primary text-primary-emphasis" style="--bs-bg-opacity:.12">
+                        YOLO @Model.CurrentYoloModel.VersionName - @Model.CurrentYoloModel.Status
+                    </span>
+                }
+            </div>
+            <div class="requirement-grid">
+                <partial name="_RequirementGroup" model='("Environment Recognition", Model.Dashboard.Requirements.EnvironmentRecognition)' />
+                <partial name="_RequirementGroup" model='("Recognition Logic", Model.Dashboard.Requirements.LogicRequirements)' />
+                <partial name="_RequirementGroup" model='("Event Recognition", Model.Dashboard.Requirements.EventRecognition)' />
+                <partial name="_RequirementGroup" model='("Response Method", Model.Dashboard.Requirements.ResponseMethods)' />
+            </div>
+        </div>
+    </div>
+
+    <div class="card mb-5">
+        <div class="card-body">
+            <div class="d-flex flex-wrap align-items-start gap-3 mb-4">
+                <i class="material-symbols-rounded text-primary fs-3">table_view</i>
+                <div class="flex-grow-1">
+                    <h3 class="card-title fs-5 mb-1">Code Runtime Environment Mapping</h3>
+                    <p class="card-subtitle mb-0">
+                        New device instances use this mapping when generating their runtime .env file.
+                    </p>
+                </div>
+            </div>
+            <div class="table-responsive mobile-card-table-wrap">
+                <table class="table table-sm align-middle edge-env-map-table mb-0 mobile-card-table">
+                    <thead>
+                        <tr>
+                            <th>Group</th>
+                            <th>Key</th>
+                            <th>Source</th>
+                            <th>Target</th>
+                            <th>Required</th>
+                            <th>Notes</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var mapping in Model.RuntimeEnvironmentMappings)
+                        {
+                            <tr>
+                                <td data-label="Group"><span class="badge bg-primary text-primary-emphasis" style="--bs-bg-opacity:.1">@mapping.Group</span></td>
+                                <td data-label="Key"><code>@mapping.Key</code></td>
+                                <td data-label="Source">@(mapping.Secret ? "Secret value, copied but hidden" : mapping.Source)</td>
+                                <td data-label="Target">@mapping.Target</td>
+                                <td data-label="Required">
+                                    <span class="badge @(mapping.Required ? "bg-success text-success-emphasis" : "bg-secondary text-secondary-emphasis")" style="--bs-bg-opacity:.12">
+                                        @(mapping.Required ? "Yes" : "Optional")
+                                    </span>
+                                </td>
+                                <td data-label="Notes">@mapping.Description</td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    @foreach (var logic in Model.Dashboard.Logics)
+    {
+        var current = logic.Versions.FirstOrDefault(version => version.IsCurrent);
+        <div class="card mb-5">
+            <div class="card-body">
+                <div class="d-flex align-items-start mb-5">
+                    <div class="flex-grow-1">
+                        <h3 class="card-title fs-5">@logic.Name</h3>
+                        <p class="card-subtitle">@logic.Description</p>
+                    </div>
+                </div>
+                @if (current is not null)
+                {
+                    <div class="edge-ai-version-summary rounded border p-4 mb-5">
+                        <div class="d-flex flex-wrap align-items-start gap-4">
+                            <div class="flex-grow-1">
+                                <div class="text-body-secondary fs-8">Current Version</div>
+                                <h4 class="text-body-emphasis fs-5 mb-2">@current.VersionName</h4>
+                                <p class="mb-0 text-body-secondary">@((current.Description ?? current.Notes) ?? "No version description.")</p>
+                            </div>
+                            <div class="edge-ai-version-metric">
+                                <span>Package Size</span>
+                                <strong>@FormatBytes(current.PackageSizeBytes)</strong>
+                            </div>
+                            <div class="edge-ai-version-metric">
+                                <span>Files</span>
+                                <strong>@(current.FileCount?.ToString() ?? "-")</strong>
+                            </div>
+                            <div class="edge-ai-version-metric">
+                                <span>Created</span>
+                                <strong>@SentribeeConsole.Web.Application.Services.ProjectTimeZone.Format(current.CreatedAtUtc, Model.Dashboard.Project.TimeZoneId, "yyyy-MM-dd")</strong>
+                            </div>
+                        </div>
+                        <div class="mt-4 pt-4 border-top">
+                            <div class="text-body-secondary fs-8 mb-2">Required External Devices Detected from Code</div>
+                            @{
+                                var requiredDevices = EdgeAiModel.GetRequiredDevices(current);
+                            }
+                            @if (requiredDevices.Count == 0)
+                            {
+                                <span class="text-body-secondary fs-8">No external device dependency detected.</span>
+                            }
+                            else
+                            {
+                                <div class="d-flex flex-wrap gap-2">
+                                    @foreach (var device in requiredDevices)
+                                    {
+                                        <span class="badge bg-primary text-primary-emphasis" style="--bs-bg-opacity:.12">@device</span>
+                                    }
+                                </div>
+                            }
+                        </div>
+                    </div>
+                }
+                <div class="row g-4">
+                    <div class="col-lg-6">
+                        <div class="rounded border p-4 h-100">
+                            <div class="d-flex flex-wrap align-items-start gap-3 mb-4">
+                                <i class="material-symbols-rounded text-primary fs-4">hub</i>
+                                <div class="flex-grow-1">
+                                    <h4 class="fs-6 text-body-emphasis mb-1">Code Git Repository</h4>
+                                    <p class="text-body-secondary fs-8 mb-0">Development handoff, version deployment, and rollback workspace.</p>
+                                </div>
+                                <a class="btn btn-outline-primary btn-sm" asp-page="/Settings/Project">
+                                    <i class="material-symbols-rounded fs-6 me-1">settings</i>Configure
+                                </a>
+                            </div>
+                            <dl class="edge-detail-list edge-detail-list-compact mb-4">
+                                <dt>Repository</dt>
+                                <dd><a href="@Model.GetGitRepositoryUrl()" target="_blank" rel="noopener">@Model.GetGitRepositoryUrl()</a></dd>
+                                <dt>Branch</dt>
+                                <dd>@Model.Dashboard.Project.EdgeAiGitBranch</dd>
+                                <dt>Worktree</dt>
+                                <dd>@(string.IsNullOrWhiteSpace(Model.Dashboard.Project.EdgeAiGitWorkingDirectory) ? "Not set" : Model.Dashboard.Project.EdgeAiGitWorkingDirectory)</dd>
+                            </dl>
+                            <a class="btn btn-primary btn-sm" href="@Model.GetGitBranchUrl()" target="_blank" rel="noopener">
+                                <i class="material-symbols-rounded fs-6 me-1">open_in_new</i>Open Workspace
+                            </a>
+                        </div>
+                    </div>
+                    <div class="col-lg-6">
+                        <h4 class="fs-6 text-body-emphasis">Version History</h4>
+                        <div class="d-flex flex-column gap-3">
+                            @foreach (var version in logic.Versions)
+                            {
+                                <div class="rounded border p-3">
+                                    <div class="d-flex align-items-start">
+                                        <div class="flex-grow-1">
+                                            <div class="fw-medium">@version.VersionName</div>
+                                            <div class="text-body-secondary fs-8">@((version.Description ?? version.Notes) ?? "No description.")</div>
+                                        </div>
+                                        @if (version.IsCurrent)
+                                        {
+                                            <span class="badge bg-primary text-primary-emphasis" style="--bs-bg-opacity:.12">Current</span>
+                                        }
+                                    </div>
+                                    <div class="text-body-secondary fs-8">@SentribeeConsole.Web.Application.Services.ProjectTimeZone.Format(version.CreatedAtUtc, Model.Dashboard.Project.TimeZoneId)</div>
+                                    <div class="d-flex gap-2 mt-2 text-body-secondary fs-8">
+                                        <span>@FormatBytes(version.PackageSizeBytes)</span>
+                                        <span>-</span>
+                                        <span>@(version.FileCount?.ToString() ?? "-") files</span>
+                                    </div>
+                                    @if (!version.IsCurrent)
+                                    {
+                                        <form method="post" asp-page-handler="Rollback" data-global-loading data-loading-label="Rolling back AI code..." data-confirm="Rollback to this AI code version?" class="mt-2">
+                                            <input type="hidden" name="versionId" value="@version.Id" />
+                                            <button type="submit" class="btn btn-outline-primary btn-sm">Rollback</button>
+                                        </form>
+                                    }
+                                </div>
+                            }
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    }
+</div>
+
+@functions {
+    private static string FormatBytes(long? bytes)
+    {
+        if (!bytes.HasValue)
+        {
+            return "-";
+        }
+
+        var value = (double)bytes.Value;
+        string[] units = ["B", "KB", "MB", "GB"];
+        var unitIndex = 0;
+        while (value >= 1024 && unitIndex < units.Length - 1)
+        {
+            value /= 1024;
+            unitIndex++;
+        }
+
+        return $"{value:0.#} {units[unitIndex]}";
+    }
+}
+
+@section Scripts {
+    <script>
+        (() => {
+            const panel = document.getElementById("generation-status");
+            if (!panel || panel.dataset.generationActive !== "true") {
+                return;
+            }
+
+            const countdown = panel.querySelector("[data-generation-countdown]");
+            const status = panel.querySelector("[data-generation-status]");
+            const message = panel.querySelector("[data-generation-message]");
+            const progress = panel.querySelector("[data-generation-progress]");
+            const version = panel.querySelector("[data-generation-version]");
+            const commit = panel.querySelector("[data-generation-commit]");
+            const gitLink = panel.querySelector("[data-generation-git-link]");
+            const publishForm = panel.querySelector("[data-generation-publish-form]");
+            const updateButton = document.querySelector(".btn-ai-update");
+            let remaining = 20;
+
+            if (updateButton) {
+                updateButton.disabled = true;
+            }
+
+            setInterval(() => {
+                remaining = remaining <= 1 ? 20 : remaining - 1;
+                if (countdown) {
+                    countdown.textContent = remaining.toString();
+                }
+            }, 1000);
+
+            setInterval(async () => {
+                try {
+                    const response = await fetch("/models/edge-ai?handler=GenerationStatus", {
+                        headers: { "Accept": "application/json" }
+                    });
+                    const data = await response.json();
+                    remaining = 20;
+
+                    if (!data.authenticated || !data.active) {
+                        return;
+                    }
+
+                    if (status) {
+                        status.textContent = data.status || "";
+                    }
+
+                    if (message) {
+                        message.textContent = data.message || "";
+                    }
+
+                    if (progress) {
+                        progress.style.width = `${data.progress || 0}%`;
+                    }
+
+                    if (version) {
+                        version.textContent = data.version || "";
+                    }
+
+                    if (commit) {
+                        commit.textContent = data.commitShort && data.commitShort !== "unknown"
+                            ? ` - Generated ${data.commitShort}`
+                            : "";
+                    }
+
+                    if (data.ready) {
+                        panel.dataset.generationActive = "false";
+
+                        if (updateButton) {
+                            updateButton.disabled = false;
+                        }
+
+                        if (gitLink) {
+                            gitLink.classList.remove("d-none");
+                            if (data.gitUrl) {
+                                gitLink.href = data.gitUrl;
+                            }
+                        }
+
+                        if (publishForm) {
+                            publishForm.classList.remove("d-none");
+                        }
+                    }
+
+                    if (data.timedOut || data.failed || data.noChanges) {
+                        panel.dataset.generationActive = "false";
+
+                        if (updateButton) {
+                            updateButton.disabled = false;
+                        }
+
+                        if (gitLink) {
+                            gitLink.classList.remove("d-none");
+                            if (data.gitUrl) {
+                                gitLink.href = data.gitUrl;
+                            }
+                        }
+                    }
+                } catch {
+                    if (message) {
+                        message.textContent = "Still checking generation status. Network refresh will retry shortly.";
+                    }
+                }
+            }, 20000);
+        })();
+    </script>
+}

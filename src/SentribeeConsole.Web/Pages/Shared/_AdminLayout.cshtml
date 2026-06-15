@@ -1,0 +1,214 @@
+@using SentribeeConsole.Web.Application.Services
+@using SentribeeConsole.Web.Domain.Entities
+@using System.Security.Claims
+@inject SentribeeConsole.Web.Application.Contracts.IProjectService ProjectService
+@{
+    var userAvatarClaim = User.FindFirst(AdminPrincipalFactory.AvatarUrlClaim)?.Value;
+    var userAvatar = string.IsNullOrWhiteSpace(userAvatarClaim)
+        ? Url.Content("~/theme/5-yWga3pRp.jpg")
+        : $"/api/admin/avatar?v={DateTimeOffset.UtcNow.ToUnixTimeMilliseconds()}";
+    var activeMenu = ViewData["ActiveMenu"] as string ?? "Dashboard";
+    Project? currentProject = null;
+    IReadOnlyList<Project> availableProjects = [];
+    if (int.TryParse(User.FindFirstValue(ClaimTypes.NameIdentifier), out var adminId))
+    {
+        currentProject = await ProjectService.GetByAdminIdAsync(adminId, Context.RequestAborted);
+        availableProjects = await ProjectService.ListForAdminAsync(adminId, Context.RequestAborted);
+    }
+
+    var projectName = currentProject?.Name ?? "Create Project";
+    var canViewModels = currentProject?.CanViewModels == true;
+    var canViewCode = currentProject?.CanManageCode == true;
+    var canViewUsers = currentProject?.CanAdministerUsers == true;
+    var isSpendBeeProject = currentProject?.IsSpendBeeProject == true;
+    var isCrmProject = currentProject?.IsSentribeeCrmProject == true;
+}
+<!doctype html>
+<html lang="en" data-page="@activeMenu.ToLowerInvariant()">
+<head>
+    <meta charset="utf-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>@ViewData["Title"] - SentriBee Console</title>
+    <link rel="icon" type="image/x-icon" href="~/favicon.ico" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Google+Sans:wght@400;500;600;700&display=swap" rel="stylesheet" />
+    <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" rel="stylesheet" />
+    <link rel="stylesheet" href="~/theme/vendor-DDXwb3B2.css" asp-append-version="true" />
+    <link rel="stylesheet" href="~/css/site.css" asp-append-version="true" />
+    <script>
+        document.documentElement.setAttribute("data-bs-theme", localStorage.getItem("color-mode") || "light");
+        document.documentElement.setAttribute("data-theme-color", "purple");
+    </script>
+</head>
+<body>
+    <aside id="sidebar" class="sidebar">
+        <div data-simplebar>
+            <div class="user dropdown">
+                <button class="user-btn user-btn-dropdown" type="button" data-bs-toggle="dropdown" aria-expanded="false">
+                    <img data-admin-avatar class="rounded-circle" src="@userAvatar" alt="" />
+                    <div class="flex-grow-1">
+                        <div class="text-body-emphasis">@User.Identity?.Name</div>
+                        <span class="sidebar-project-link">
+                            @if (currentProject?.IsPrivate == true)
+                            {
+                                <span class="project-private-shield project-private-shield-mini material-symbols-rounded" title="Private copyrighted data">shield_lock</span>
+                            }
+                            <span>@projectName</span>
+                        </span>
+                    </div>
+                    <span class="project-menu-toggle" aria-hidden="true">
+                        <i class="material-symbols-rounded fs-4 me-n1">keyboard_arrow_down</i>
+                    </span>
+                </button>
+                <nav class="dropdown-menu start-0 w-100 mt-n1">
+                    <div class="dropdown-header">Projects</div>
+                    @foreach (var project in availableProjects)
+                    {
+                        <form method="post" asp-page="/Settings/Project" asp-page-handler="SwitchProject">
+                            <input type="hidden" name="projectId" value="@project.Id" />
+                            <button type="submit" class="dropdown-item @(project.Id == currentProject?.Id ? "active" : null)">
+                                <i class="material-symbols-rounded">folder</i>@project.Name
+                                <span class="ms-auto fs-8">@project.AccessRole</span>
+                            </button>
+                        </form>
+                    }
+                    <div class="dropdown-divider"></div>
+                    <a asp-page="/Settings/Profile" class="dropdown-item">
+                        <i class="material-symbols-rounded">account_circle</i>Profile
+                    </a>
+                    <a asp-page="/Settings/Project" class="dropdown-item">
+                        <i class="material-symbols-rounded">folder_managed</i>Project Settings
+                    </a>
+                    <form method="post" asp-page="/Account/Logout">
+                        <button type="submit" class="dropdown-item">
+                            <i class="material-symbols-rounded">logout</i>Logout
+                        </button>
+                    </form>
+                </nav>
+            </div>
+            <ul class="menu">
+                <li class="menu-title">Dashboard</li>
+                <li>
+                    <a asp-page="/Dashboard/Index" class="@(activeMenu == "Dashboard" ? "active" : null)">
+                        <i class="material-symbols-rounded">dashboard</i><span>Dashboard</span>
+                    </a>
+                </li>
+                <li class="menu-title">Operations</li>
+                @if (isSpendBeeProject)
+                {
+                    <li><a asp-page="/Operations/SpendBee/Users" class="@(activeMenu == "SpendBeeUsers" ? "active" : null)"><i class="material-symbols-rounded">group</i><span>App Users</span></a></li>
+                    <li><a asp-page="/Operations/SpendBee/Devices" class="@(activeMenu == "SpendBeeDevices" ? "active" : null)"><i class="material-symbols-rounded">smartphone</i><span>Active Devices</span></a></li>
+                    <li><a asp-page="/Operations/SpendBee/Receipts" class="@(activeMenu == "SpendBeeReceipts" ? "active" : null)"><i class="material-symbols-rounded">receipt_long</i><span>Receipts</span></a></li>
+                    <li><a asp-page="/Operations/SpendBee/Merchants" class="@(activeMenu == "SpendBeeMerchants" ? "active" : null)"><i class="material-symbols-rounded">storefront</i><span>Merchants</span></a></li>
+                    <li><a asp-page="/Operations/SpendBee/Photos" class="@(activeMenu == "SpendBeePhotos" ? "active" : null)"><i class="material-symbols-rounded">photo_library</i><span>User Photos</span></a></li>
+                 }
+                else if (isCrmProject)
+                {
+                    <li><a asp-page="/Operations/Crm/Merchants" class="@(activeMenu == "CrmMerchants" ? "active" : null)"><i class="material-symbols-rounded">business_center</i><span>Merchants</span></a></li>
+                    <li><a asp-page="/Operations/Crm/Industries" class="@(activeMenu == "CrmIndustries" ? "active" : null)"><i class="material-symbols-rounded">category</i><span>Industries</span></a></li>
+                    <li><a asp-page="/Operations/Crm/Usage" class="@(activeMenu == "CrmUsage" ? "active" : null)"><i class="material-symbols-rounded">query_stats</i><span>Usage</span></a></li>
+                 }
+                else
+                {
+                    <li><a asp-page="/Operations/EdgeDevices/Index" class="@(activeMenu == "EdgeDevices" ? "active" : null)"><i class="material-symbols-rounded">videocam</i><span>Edge Devices</span></a></li>
+                    <li><a asp-page="/Operations/Events/Index" class="@(activeMenu == "Events" ? "active" : null)"><i class="material-symbols-rounded">notifications_active</i><span>Events</span></a></li>
+                }
+                @if (!isSpendBeeProject && !isCrmProject && (canViewModels || canViewCode))
+                {
+                    <li class="menu-title">AI</li>
+                    @if (canViewModels)
+                    {
+                        <li><a asp-page="/Operations/Models/Yolo" class="@(activeMenu == "YoloModels" ? "active" : null)"><i class="material-symbols-rounded">model_training</i><span>Models</span></a></li>
+                    }
+                    @if (canViewCode)
+                    {
+                        <li><a asp-page="/Operations/Models/EdgeAi" class="@(activeMenu == "EdgeAi" ? "active" : null)"><i class="material-symbols-rounded">terminal</i><span>Code</span></a></li>
+                    }
+                }
+                <li class="menu-title">Administration</li>
+                <li><a asp-page="/Settings/Project" class="@(activeMenu == "Project" ? "active" : null)"><i class="material-symbols-rounded">folder_managed</i><span>Project</span></a></li>
+                @if (canViewUsers)
+                {
+                    <li><a asp-page="/Settings/Users" class="@(activeMenu == "Users" ? "active" : null)"><i class="material-symbols-rounded">group</i><span>Users</span></a></li>
+                }
+                <li><a asp-page="/Settings/Profile" class="@(activeMenu == "Settings" ? "active" : null)"><i class="material-symbols-rounded">account_circle</i><span>Profile</span></a></li>
+                <li class="menu-title">Resources</li>
+                <li><a href="@(isSpendBeeProject ? "/api-docs/spendbee" : "/api-docs")" target="_blank" rel="noopener" class="@(activeMenu == "ApiDocs" ? "active" : null)"><i class="material-symbols-rounded">docs</i><span>API Documentation</span></a></li>
+            </ul>
+        </div>
+        <button class="sidebar-close" type="button" aria-label="Close navigation"></button>
+    </aside>
+
+    <header class="header">
+        <div class="header-visual" aria-hidden="true">
+            <span class="header-globe"></span>
+            <span class="header-orbit header-orbit-1"></span>
+            <span class="header-orbit header-orbit-2"></span>
+            <span class="header-link-line header-link-line-1"></span>
+            <span class="header-link-line header-link-line-2"></span>
+            <span class="header-link-line header-link-line-3"></span>
+            <span class="header-node header-node-1"></span>
+            <span class="header-node header-node-2"></span>
+            <span class="header-node header-node-3"></span>
+        </div>
+        <div class="sidebar-toggle d-xl-none">
+            <div class="sidebar-toggle-inner">
+                <i class="sidebar-toggle-line"></i>
+                <i class="sidebar-toggle-line"></i>
+                <i class="sidebar-toggle-line"></i>
+            </div>
+        </div>
+        <a asp-page="/Dashboard/Index" class="logo dashboard-brand d-none d-md-flex">
+            <img src="~/images/sentribee-mark.png" alt="" width="32" height="32" />
+            <span>SentriBee Console</span>
+        </a>
+        <i class="ms-auto"></i>
+        <ul class="header-menu ms-6">
+            <li>
+                <button id="color-mode-toggle" type="button" title="Toggle color mode">
+                    <i class="material-symbols-rounded filled">light_mode</i>
+                    <i class="material-symbols-rounded filled">dark_mode</i>
+                    <span class="visually-hidden">Toggle color mode</span>
+                </button>
+            </li>
+            <li>
+                <form method="post" asp-page="/Account/Logout" data-global-loading data-loading-label="Signing out...">
+                    <button type="submit" title="Logout">
+                        <i class="material-symbols-rounded filled">logout</i>
+                        <span class="visually-hidden">Logout</span>
+                    </button>
+                </form>
+            </li>
+        </ul>
+    </header>
+
+    <div id="content">
+        <header class="content-header">
+            <h2 class="m-0 text-body-emphasis fs-5 px-3">@ViewData["PageTitle"]</h2>
+            <nav aria-label="breadcrumb" class="ms-6 d-none d-sm-flex">
+                <ol class="breadcrumb fs-8">
+                    <li class="breadcrumb-item"><a asp-page="/Dashboard/Index">SentriBee</a></li>
+                    <li class="breadcrumb-item active" aria-current="page">@ViewData["PageTitle"]</li>
+                </ol>
+            </nav>
+            <i class="ms-auto"></i>
+            <nav class="ms-3 me-n1 gap-1">
+                <a href="#" class="icon material-symbols-rounded" title="Refresh">refresh</a>
+                <a href="#" class="icon material-symbols-rounded" title="Export data">article</a>
+            </nav>
+        </header>
+        <div class="p-5">
+            @RenderBody()
+        </div>
+    </div>
+    <div id="admin-global-loading" class="global-loading" aria-hidden="true" aria-label="Saving changes">
+        <div class="loading-spinner" aria-hidden="true"></div>
+        <div class="loading-label">Saving changes...</div>
+    </div>
+    <script type="module" src="~/theme/vendor-DWdXmVBv.js" asp-append-version="true"></script>
+    <script src="~/js/admin-ui.js" asp-append-version="true"></script>
+    @await RenderSectionAsync("Scripts", required: false)
+</body>
+</html>

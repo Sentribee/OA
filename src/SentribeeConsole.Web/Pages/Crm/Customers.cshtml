@@ -1,0 +1,212 @@
+@page "/oa/customers"
+@model SentribeeConsole.Web.Pages.Crm.CustomersModel
+@using SentribeeConsole.Web.Application.Services
+@using SentribeeConsole.Web.Domain.Entities
+@{
+    Layout = "_CrmLayout";
+}
+
+<div class="row g-5">
+    <div class="col-12 col-xxl-5">
+        <div class="card">
+            <div class="card-body">
+                <div class="d-flex align-items-start justify-content-between gap-3 mb-4">
+                    <div>
+                        <h3 class="card-title fs-6">Customer directory</h3>
+                        <p class="card-subtitle text-body-secondary mb-0">People who have chatted with your support bot.</p>
+                    </div>
+                    <span class="badge bg-primary-subtle text-primary">@Model.Customers.TotalCount total</span>
+                </div>
+
+                <div class="crm-customer-list">
+                    @if (Model.Customers.Items.Count == 0)
+                    {
+                        <div class="text-body-secondary">No customers yet. Public chats will appear here automatically.</div>
+                    }
+                    else
+                    {
+                        @foreach (var item in Model.Customers.Items)
+                        {
+                            var selected = (item.ProfileId.HasValue && item.ProfileId == Model.SelectedProfileId)
+                                || (!item.ProfileId.HasValue && item.ConversationId == Model.SelectedConversationId);
+                            <a class="crm-customer-item @(selected ? "active" : null)"
+                               asp-page="/Crm/Customers"
+                               asp-route-profileId="@item.ProfileId"
+                               asp-route-conversationId="@item.ConversationId">
+                                <div class="d-flex align-items-start justify-content-between gap-3">
+                                    <div class="min-w-0">
+                                        <div class="fw-semibold text-truncate">@(!string.IsNullOrWhiteSpace(item.DisplayName) ? item.DisplayName : item.VisitorLabel ?? $"Customer {item.ConversationId}")</div>
+                                        <div class="text-body-secondary fs-8 text-truncate">@(!string.IsNullOrWhiteSpace(item.CompanyName) ? item.CompanyName : item.Email ?? item.Phone ?? "Contact not captured")</div>
+                                    </div>
+                                    <span class="badge bg-light text-body">@item.ProfileCompleteness%</span>
+                                </div>
+                                <div class="crm-customer-summary">@(!string.IsNullOrWhiteSpace(item.IntentSummary) ? item.IntentSummary : item.ProductInterest ?? "Intent not captured yet")</div>
+                                <div class="d-flex flex-wrap gap-2 text-body-secondary fs-8">
+                                    <span>@item.MessageCount messages</span>
+                                    @if (item.ImageMessageCount > 0)
+                                    {
+                                        <span>@item.ImageMessageCount images</span>
+                                    }
+                                    <span>@ProjectTimeZone.Format(item.LastMessageAtUtc ?? item.UpdatedAtUtc, Model.Merchant.TimeZoneId)</span>
+                                </div>
+                            </a>
+                        }
+                    }
+                </div>
+
+                @await Html.PartialAsync("_Pagination", new PagedResult<object>
+                {
+                    Items = Model.Customers.Items.Cast<object>().ToList(),
+                    PageNumber = Model.Customers.PageNumber,
+                    PageSize = Model.Customers.PageSize,
+                    TotalCount = Model.Customers.TotalCount
+                })
+            </div>
+        </div>
+    </div>
+
+    <div class="col-12 col-xxl-7">
+        @if (Model.SelectedCustomer is null)
+        {
+            <div class="card">
+                <div class="card-body">
+                    <h3 class="card-title fs-6">Customer detail</h3>
+                    <p class="card-subtitle text-body-secondary mb-0">Select a customer to view profile and message history.</p>
+                </div>
+            </div>
+        }
+        else
+        {
+            var customer = Model.SelectedCustomer;
+            <div class="card mb-5">
+                <div class="card-body">
+                    <div class="d-flex flex-wrap align-items-start justify-content-between gap-3 mb-4">
+                        <div>
+                            <h3 class="card-title fs-6">@(!string.IsNullOrWhiteSpace(customer.DisplayName) ? customer.DisplayName : customer.VisitorLabel ?? $"Customer {customer.ConversationId}")</h3>
+                            <p class="card-subtitle text-body-secondary mb-0">
+                                @(customer.CompanyName ?? "Company unknown")
+                                @if (!string.IsNullOrWhiteSpace(customer.JobTitle))
+                                {
+                                    <span>&middot; @customer.JobTitle</span>
+                                }
+                            </p>
+                        </div>
+                        <div class="d-flex flex-wrap gap-2">
+                            @if (customer.ConversationId.HasValue)
+                            {
+                                <a class="btn btn-primary btn-sm" href="@Model.BuildContinueChatUrl(customer)" target="_blank" rel="noopener">
+                                    <i class="material-symbols-rounded">forum</i> Continue Chat
+                                </a>
+                                <a class="btn btn-outline-primary btn-sm" asp-page="/Crm/Conversations" asp-route-conversationId="@customer.ConversationId">Open Conversation</a>
+                            }
+                            @if (customer.ProfileId.HasValue)
+                            {
+                                <a class="btn btn-outline-secondary btn-sm" asp-page="/Crm/Profiles" asp-route-profileId="@customer.ProfileId">Open Profile</a>
+                            }
+                        </div>
+                    </div>
+
+                    <div class="crm-profile-quality mb-4">
+                        <div class="progress" role="progressbar" aria-label="Profile completeness" aria-valuenow="@customer.ProfileCompleteness" aria-valuemin="0" aria-valuemax="100">
+                            <div class="progress-bar" style="width: @customer.ProfileCompleteness%"></div>
+                        </div>
+                        <span>@customer.ProfileCompleteness%</span>
+                    </div>
+
+                    <div class="crm-profile-field-grid">
+                        <div><span>Email</span><strong>@(customer.Email ?? "Unknown")</strong></div>
+                        <div><span>Phone</span><strong>@(customer.Phone ?? "Unknown")</strong></div>
+                        <div><span>Location</span><strong>@(customer.Location ?? "Unknown")</strong></div>
+                        <div><span>Language</span><strong>@(customer.Language ?? "Unknown")</strong></div>
+                        <div><span>Customer Type</span><strong>@(customer.CustomerType ?? "Unknown")</strong></div>
+                        <div><span>Lifecycle</span><strong>@(customer.LifecycleStage ?? "Unknown")</strong></div>
+                        <div><span>Interest</span><strong>@(customer.ProductInterest ?? "Unknown")</strong></div>
+                        <div><span>Timeline</span><strong>@(customer.Timeline ?? "Unknown")</strong></div>
+                        <div><span>Budget</span><strong>@(customer.BudgetRange ?? "Unknown")</strong></div>
+                        <div><span>Priority</span><strong>@customer.PriorityScore</strong></div>
+                        <div><span>Visitor ID</span><strong>@(string.IsNullOrWhiteSpace(customer.VisitorKey) ? "Unknown" : customer.VisitorKey)</strong></div>
+                        <div><span>IP</span><strong>@(customer.VisitorIp ?? "Unknown")</strong></div>
+                    </div>
+
+                    <div class="crm-profile-section">
+                        <span>Browser</span>
+                        <p>@(customer.UserAgent ?? "Unknown")</p>
+                    </div>
+
+                    <div class="crm-profile-section">
+                        <span>Intent</span>
+                        <p>@(customer.IntentSummary ?? "Unknown")</p>
+                    </div>
+                    <div class="crm-profile-section">
+                        <span>Need Summary</span>
+                        <p>@(customer.NeedSummary ?? "Unknown")</p>
+                    </div>
+                    <div class="crm-profile-section">
+                        <span>Pain Points</span>
+                        <p>@(customer.PainPoints ?? "Unknown")</p>
+                    </div>
+                    <div class="crm-profile-section">
+                        <span>Objections</span>
+                        <p>@(customer.Objections ?? "Unknown")</p>
+                    </div>
+                    <div class="crm-profile-section">
+                        <span>Preferences</span>
+                        <p>@(customer.Preferences ?? "Unknown")</p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="row g-5">
+                <div class="col-12 col-xl-4">
+                    <div class="card h-100">
+                        <div class="card-body">
+                            <h3 class="card-title fs-6">History</h3>
+                            <div class="crm-conversation-list mt-4">
+                                @foreach (var conversation in Model.RelatedConversations)
+                                {
+                                    <a class="crm-conversation-item @(conversation.Id == Model.SelectedConversationId ? "active" : null)"
+                                       asp-page="/Crm/Customers"
+                                       asp-route-conversationId="@conversation.Id">
+                                        <div class="fw-semibold">@(conversation.VisitorLabel ?? $"Conversation {conversation.Id}")</div>
+                                        <div class="text-body-secondary fs-8">@conversation.MessageCount messages, @conversation.ImageMessageCount images</div>
+                                        <div class="text-body-secondary fs-8">@ProjectTimeZone.Format(conversation.LastMessageAtUtc ?? conversation.StartedAtUtc, Model.Merchant.TimeZoneId)</div>
+                                    </a>
+                                }
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-12 col-xl-8">
+                    <div class="card h-100">
+                        <div class="card-body">
+                            <h3 class="card-title fs-6">Messages</h3>
+                            @if (Model.Messages.Count == 0)
+                            {
+                                <p class="card-subtitle text-body-secondary mb-0">No messages found.</p>
+                            }
+                            else
+                            {
+                                <div class="crm-message-list mt-4">
+                                    @foreach (var message in Model.Messages)
+                                    {
+                                        <div class="crm-message-row crm-message-@message.SenderRole.ToLowerInvariant()">
+                                            <div class="crm-message-meta">@message.SenderRole &middot; @ProjectTimeZone.Format(message.CreatedAtUtc, Model.Merchant.TimeZoneId)</div>
+                                            @if (!string.IsNullOrWhiteSpace(message.ImageUrl))
+                                            {
+                                                <img src="/api/crm/conversation-messages/@message.Id/image" alt="" />
+                                            }
+                                            @if (!string.IsNullOrWhiteSpace(message.Body))
+                                            {
+                                                <div class="crm-message-body">@message.Body</div>
+                                            }
+                                        </div>
+                                    }
+                                </div>
+                            }
+                        </div>
+                    </div>
+                </div>
+            </div>
+        }
+    </div>
+</div>

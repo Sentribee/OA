@@ -1,0 +1,90 @@
+@page
+@model SentribeeConsole.Web.Pages.Operations.Crm.MerchantsModel
+@using SentribeeConsole.Web.Application.Services
+@using SentribeeConsole.Web.Domain.Entities
+@{
+    Layout = "_AdminLayout";
+}
+
+<div class="admin-page-width">
+    <div class="card">
+        <div class="card-body">
+            <div class="d-flex align-items-start justify-content-between gap-3 mb-4">
+                <div>
+                    <h3 class="card-title fs-6">Registered merchants</h3>
+                    <p class="card-subtitle text-body-secondary mb-0">Business accounts using oa.sentribee.ai customer service bots.</p>
+                </div>
+                <span class="badge bg-primary-subtle text-primary">@Model.Merchants.TotalCount total</span>
+            </div>
+            <div class="table-responsive mobile-card-table-wrap">
+                <table class="table align-middle mobile-card-table">
+                    <thead>
+                    <tr>
+                        <th>Business</th>
+                        <th>Contact</th>
+                        <th>Bot and knowledge</th>
+                        <th>Usage</th>
+                        <th>Status</th>
+                    </tr>
+                    </thead>
+                    <tbody>
+                    @if (Model.Merchants.Items.Count == 0)
+                    {
+                        <tr><td colspan="5" class="text-body-secondary">No Sentribee OA merchants yet.</td></tr>
+                    }
+                    else
+                    {
+                        @foreach (var item in Model.Merchants.Items)
+                        {
+                            <tr>
+                                <td data-label="Business">
+                                    <div class="fw-medium">@item.BusinessName</div>
+                                    <div class="text-body-secondary fs-8">chat.sentribee.ai/@item.CorpId</div>
+                                    <div class="text-body-secondary fs-8">@(item.IndustryName ?? "No industry")</div>
+                                </td>
+                                <td data-label="Contact">
+                                    <div>@(!string.IsNullOrWhiteSpace(item.ContactName) ? item.ContactName : item.Email)</div>
+                                    <div class="text-body-secondary fs-8">@item.Email</div>
+                                    @if (!string.IsNullOrWhiteSpace(item.WebsiteUrl))
+                                    {
+                                        <a class="fs-8" href="@item.WebsiteUrl" target="_blank" rel="noopener">Website</a>
+                                    }
+                                </td>
+                                <td data-label="Bot and knowledge">
+                                    <div>@item.ChatbotCount bot@(item.ChatbotCount == 1 ? "" : "s")</div>
+                                    <div class="text-body-secondary fs-8">@item.KnowledgeDocumentCount knowledge file@(item.KnowledgeDocumentCount == 1 ? "" : "s")</div>
+                                    <div class="text-body-secondary fs-8">Last chat @ProjectTimeZone.Format(item.LastMessageAtUtc, Model.Project.TimeZoneId, fallback: "Never")</div>
+                                </td>
+                                <td data-label="Usage">
+                                    <div>@item.ConversationCount conversation@(item.ConversationCount == 1 ? "" : "s")</div>
+                                    <div class="text-body-secondary fs-8">@item.TotalMessages messages &middot; @item.TotalTokens tokens</div>
+                                    <div class="text-body-secondary fs-8">US$@item.EstimatedCostUsd.ToString("0.0000")</div>
+                                </td>
+                                <td data-label="Status">
+                                    <span class="badge bg-success-subtle text-success">@item.Status</span>
+                                    <div class="text-body-secondary fs-8">@item.PlanName</div>
+                                    <div class="text-body-secondary fs-8">Registered @ProjectTimeZone.Format(item.RegisteredAtUtc, Model.Project.TimeZoneId)</div>
+                                    <div class="crm-inline-qr mt-3">
+                                        <img src="@Url.Page("/Operations/Crm/Merchants", "ChatQr", new { merchantId = item.Id })" alt="Chat QR code" />
+                                        <div class="min-w-0">
+                                            <div class="text-body-secondary fs-8">Chat QR</div>
+                                            <a class="fs-8" href="@Url.Page("/Operations/Crm/Merchants", "ChatQr", new { merchantId = item.Id, download = true })">Download PNG</a>
+                                        </div>
+                                    </div>
+                                </td>
+                            </tr>
+                        }
+                    }
+                    </tbody>
+                </table>
+            </div>
+            @await Html.PartialAsync("_Pagination", new PagedResult<object>
+            {
+                Items = Model.Merchants.Items.Cast<object>().ToList(),
+                PageNumber = Model.Merchants.PageNumber,
+                PageSize = Model.Merchants.PageSize,
+                TotalCount = Model.Merchants.TotalCount
+            })
+        </div>
+    </div>
+</div>

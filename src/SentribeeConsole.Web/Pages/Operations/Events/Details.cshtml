@@ -1,0 +1,154 @@
+@page "/events/{id:int}"
+@model SentribeeConsole.Web.Pages.Operations.Events.DetailsModel
+@{
+    Layout = "_AdminLayout";
+    ViewData["Title"] = "Event Detail";
+    ViewData["PageTitle"] = "Event Detail";
+    ViewData["ActiveMenu"] = "Events";
+}
+
+<div class="admin-page-width event-detail-page" data-event-id="@Model.EventId">
+    <div class="d-flex align-items-center justify-content-between gap-3 mb-4">
+        <div>
+            <a class="btn btn-outline-secondary btn-sm mb-3" asp-page="/Operations/Events/Index">
+                <span class="material-symbols-rounded align-middle fs-6" aria-hidden="true">arrow_back</span>
+                Events
+            </a>
+            <h2 id="event-detail-title" class="mb-1">Event Detail</h2>
+            <div id="event-detail-subtitle" class="text-body-secondary"></div>
+        </div>
+        <span id="event-detail-status" class="badge bg-secondary-subtle text-secondary">Loading</span>
+    </div>
+
+    <div id="event-detail-loading" class="rounded border p-5 text-body-secondary">Loading event analysis...</div>
+    <div id="event-detail-error" class="d-none rounded border border-danger-subtle p-4 text-danger"></div>
+
+    <div id="event-detail-content" class="d-none">
+        <div class="row g-4">
+            <div class="col-xl-8">
+                <div class="card h-100">
+                    <div class="card-body">
+                        <div class="d-flex align-items-start justify-content-between gap-3 mb-4">
+                            <div>
+                                <h3 class="card-title fs-5 mb-1">Scene Analysis</h3>
+                                <p class="card-subtitle">Panorama boxes from event analysis.</p>
+                            </div>
+                            <div id="event-detail-scene-actions" class="d-flex flex-wrap justify-content-end gap-2">
+                                <span id="event-detail-scene-count" class="badge bg-primary text-primary-emphasis" style="--bs-bg-opacity:.12"></span>
+                            </div>
+                        </div>
+                        <div class="event-detail-scene rounded border">
+                            <canvas id="event-detail-scene-canvas"></canvas>
+                        </div>
+                        <div class="d-flex flex-wrap gap-2 mt-3" id="event-detail-scene-legend"></div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-xl-4">
+                <div class="card h-100">
+                    <div class="card-body">
+                        <h3 class="card-title fs-5 mb-1">Analysis Summary</h3>
+                        <p class="card-subtitle">People, PPE and risk counts.</p>
+                        <div class="event-detail-stat-grid mt-4" id="event-detail-stats"></div>
+                        <div class="rounded border p-3 mt-4">
+                            <div class="text-body-secondary fs-8 mb-2">Summary</div>
+                            <div id="event-detail-summary" class="text-body-emphasis"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="card mt-5">
+            <div class="card-body">
+                <div class="d-flex align-items-start justify-content-between gap-3 mb-4">
+                    <div>
+                        <h3 class="card-title fs-5 mb-1">Person PPE Slices</h3>
+                        <p class="card-subtitle">Click a slice to enlarge and inspect PPE boxes.</p>
+                    </div>
+                    <span id="event-detail-subject-count" class="badge bg-primary text-primary-emphasis" style="--bs-bg-opacity:.12"></span>
+                </div>
+                <div id="event-detail-subjects" class="event-detail-subject-grid"></div>
+            </div>
+        </div>
+
+        <div class="card mt-5">
+            <div class="card-body">
+                <h3 class="card-title fs-5 mb-1">Annotation Operation Log</h3>
+                <p class="card-subtitle">Recent event and person slice annotation saves.</p>
+                <div id="event-detail-annotation-logs" class="annotation-operation-list mt-4"></div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="event-subject-zoom-modal" tabindex="-1" aria-labelledby="event-subject-zoom-title" aria-hidden="true">
+    <div class="modal-dialog modal-xl modal-dialog-centered modal-dialog-scrollable">
+        <div class="modal-content">
+            <div class="modal-header">
+                <div>
+                    <h5 class="modal-title" id="event-subject-zoom-title">Person Slice</h5>
+                    <div id="event-subject-zoom-subtitle" class="text-body-secondary fs-8"></div>
+                </div>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <div class="event-subject-zoom-stage">
+                    <div class="event-subject-zoom-image-wrap">
+                        <img id="event-subject-zoom-image" alt="" />
+                        <div id="event-subject-zoom-overlay" class="event-detail-ppe-overlay"></div>
+                    </div>
+                </div>
+                <div id="event-subject-zoom-boxes" class="d-flex flex-wrap gap-2 mt-3"></div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="event-annotation-modal" tabindex="-1" aria-labelledby="event-annotation-title" aria-hidden="true">
+    <div class="modal-dialog modal-xl modal-dialog-centered modal-dialog-scrollable">
+        <div class="modal-content">
+            <div class="modal-header">
+                <div>
+                    <h5 class="modal-title" id="event-annotation-title">Event Image Annotation</h5>
+                    <div id="event-annotation-subtitle" class="text-body-secondary fs-8"></div>
+                </div>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <div class="row g-4">
+                    <div class="col-lg-8">
+                        <div class="annotation-canvas-wrap rounded border">
+                            <canvas id="event-annotation-canvas"></canvas>
+                        </div>
+                        <div id="event-annotation-help" class="form-text">Drag on the image to draw a box. Click and drag an existing box to move it. Select a row to change its class or delete it.</div>
+                    </div>
+                    <div class="col-lg-4">
+                        <h6 class="text-body-emphasis">Boxes</h6>
+                        <div id="event-annotation-classes" class="annotation-class-hint rounded border p-2 mb-3"></div>
+                        <div id="event-annotation-boxes" class="d-flex flex-column gap-2 mb-4"></div>
+                        <div class="rounded border p-3">
+                            <div class="text-body-secondary fs-8 mb-2">AI Label Preview</div>
+                            <pre id="event-annotation-yolo" class="annotation-yolo-preview mb-0"></pre>
+                        </div>
+                        <div class="annotation-operation-log rounded border p-3 mt-3">
+                            <div class="text-body-secondary fs-8 mb-2">Operation Log</div>
+                            <div id="event-annotation-log" class="annotation-operation-log-body text-body-secondary fs-8">No save recorded in this dialog yet.</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" id="event-annotation-clear" class="btn btn-outline-danger me-auto">Clear Boxes</button>
+                <button type="button" class="btn btn-outline-primary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" id="event-annotation-save-learning" class="btn btn-success">Save as Pending Learning</button>
+                <button type="button" id="event-annotation-save" class="btn btn-primary">Save AI Label</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script src="~/js/event-annotation.js" asp-append-version="true"></script>
+    <script src="~/js/event-detail.js" asp-append-version="true"></script>
+}

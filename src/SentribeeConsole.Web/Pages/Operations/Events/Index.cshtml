@@ -1,0 +1,301 @@
+@page "/events"
+@model SentribeeConsole.Web.Pages.Operations.Events.IndexModel
+@{
+    Layout = "_AdminLayout";
+    ViewData["Title"] = "Events";
+    ViewData["PageTitle"] = "Events";
+    ViewData["ActiveMenu"] = "Events";
+    ViewData["ProjectTimeZoneId"] = Model.Project.TimeZoneId;
+    var canEditEvents = Model.Project.CanEditEvents;
+    ViewData["CanEditEvents"] = canEditEvents;
+}
+
+<div class="admin-page-width">
+    <div class="row g-4 mb-5">
+        <div class="col-md-6 col-xl-3">
+            <a class="event-summary-card event-summary-invalid" asp-page="/Operations/Events/Index" asp-route-status="Invalid Event">
+                <span>Invalid Event</span>
+                <strong>@Model.StatusCounts.InvalidEvent</strong>
+                <small>No person or site danger</small>
+            </a>
+        </div>
+        <div class="col-md-6 col-xl-3">
+            <a class="event-summary-card event-summary-severe" asp-page="/Operations/Events/Index" asp-route-status="Severe Danger">
+                <span>Severe Danger</span>
+                <strong>@Model.StatusCounts.SevereDanger</strong>
+                <small>Fire, accident, height risk</small>
+            </a>
+        </div>
+        <div class="col-md-6 col-xl-3">
+            <a class="event-summary-card event-summary-ordinary" asp-page="/Operations/Events/Index" asp-route-status="Ordinary Risk">
+                <span>Ordinary Risk</span>
+                <strong>@Model.StatusCounts.OrdinaryRisk</strong>
+                <small>Missing helmet or vest</small>
+            </a>
+        </div>
+        <div class="col-md-6 col-xl-3">
+            <a class="event-summary-card event-summary-clear" asp-page="/Operations/Events/Index" asp-route-status="No Risk">
+                <span>No Risk</span>
+                <strong>@Model.StatusCounts.NoRisk</strong>
+                <small>PPE and site clear</small>
+            </a>
+        </div>
+    </div>
+
+    <div class="card mb-5">
+            <div class="card-body">
+                <form method="get" class="row g-3 align-items-end">
+                    <input type="hidden" name="PageNumber" value="1" />
+                    <input type="hidden" name="ViewMode" value="@Model.ViewMode" />
+                    <div class="col-md-3">
+                    <label class="form-label">Edge Device</label>
+                    <select class="form-select" asp-for="DeviceId">
+                        <option value="">All devices</option>
+                        @foreach (var device in Model.Devices)
+                        {
+                            <option value="@device.Id">@device.Name</option>
+                        }
+                    </select>
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label">Type</label>
+                    <input class="form-control" asp-for="Type" placeholder="PPE, visitor..." />
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label">Status</label>
+                    <select class="form-select" asp-for="Status">
+                        <option value="">All status</option>
+                        <option value="Invalid Event">Invalid Event</option>
+                        <option value="Severe Danger">Severe Danger</option>
+                        <option value="Ordinary Risk">Ordinary Risk</option>
+                        <option value="No Risk">No Risk</option>
+                        <option value="Real Risk">Real Risk (legacy)</option>
+                        <option value="Pending Review">Pending Review (legacy)</option>
+                    </select>
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label">Learning</label>
+                    <select class="form-select" asp-for="LearningStatus">
+                        <option value="">All learning</option>
+                        <option value="None">Not queued</option>
+                        <option value="Pending Learning">Pending Learning</option>
+                        <option value="Trained">Trained</option>
+                    </select>
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label">From</label>
+                    <input class="form-control" asp-for="DateFrom" type="date" />
+                </div>
+                <div class="col-md-1">
+                    <label class="form-label">To</label>
+                    <input class="form-control" asp-for="DateTo" type="date" />
+                </div>
+                <div class="col-md-1 d-grid">
+                    <button class="btn btn-primary" type="submit">Filter</button>
+                </div>
+            </form>
+        </div>
+        </div>
+
+        <ul class="nav nav-tabs event-view-tabs mb-4">
+            <li class="nav-item">
+                <a class="nav-link @(Model.ViewMode == "scenes" ? "active" : null)"
+                   asp-page="/Operations/Events/Index"
+                   asp-route-viewMode="scenes"
+                   asp-route-pageNumber="1"
+                   asp-route-deviceId="@Model.DeviceId"
+                   asp-route-type="@Model.Type"
+                   asp-route-status="@Model.Status"
+                   asp-route-learningStatus="@Model.LearningStatus"
+                   asp-route-dateFrom="@Model.DateFrom?.ToString("yyyy-MM-dd")"
+                   asp-route-dateTo="@Model.DateTo?.ToString("yyyy-MM-dd")">
+                    Scene Events
+                </a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link @(Model.ViewMode == "subjects" ? "active" : null)"
+                   asp-page="/Operations/Events/Index"
+                   asp-route-viewMode="subjects"
+                   asp-route-pageNumber="1"
+                   asp-route-deviceId="@Model.DeviceId"
+                   asp-route-type="@Model.Type"
+                   asp-route-status="@Model.Status"
+                   asp-route-learningStatus="@Model.LearningStatus"
+                   asp-route-dateFrom="@Model.DateFrom?.ToString("yyyy-MM-dd")"
+                   asp-route-dateTo="@Model.DateTo?.ToString("yyyy-MM-dd")">
+                    Person Slices
+                </a>
+            </li>
+        </ul>
+
+        @if (Model.ViewMode == "subjects")
+        {
+            <div class="card">
+                <div class="card-body">
+                    <div class="d-flex align-items-start mb-5">
+                        <div class="flex-grow-1">
+                            <h3 class="card-title fs-5">Person PPE Slices</h3>
+                            <p class="card-subtitle">Person crops from event scenes with PPE boxes, learning status and risk reason.</p>
+                        </div>
+                        <span class="badge bg-primary text-primary-emphasis" style="--bs-bg-opacity:.12">@Model.Subjects.Count slices</span>
+                    </div>
+                    @if (Model.Subjects.Count == 0)
+                    {
+                        <div class="rounded border p-5 text-body-secondary">No person slices match the current filters.</div>
+                    }
+                    else
+                    {
+                        <div class="table-responsive mobile-card-table-wrap">
+                            <table class="table align-middle mobile-card-table event-subject-table">
+                                <thead>
+                                    <tr>
+                                        <th>Person Slice</th>
+                                        <th>Event</th>
+                                        <th>Learning</th>
+                                        <th>Risk</th>
+                                        <th>Time</th>
+                                        <th></th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    @foreach (var subject in Model.Subjects)
+                                    {
+                                        var statusClass = subject.EventStatus.ToLowerInvariant().Replace(" ", "-");
+                                        var subjectImageUrl = $"/api/edge-event-subjects/{subject.Id}/image/crop";
+                                        var subjectAnnotationReadOnly = !canEditEvents || subject.LearningStatus.Equals("Trained", StringComparison.OrdinalIgnoreCase);
+                                        <tr data-subject-row="@subject.Id">
+                                            <td data-label="Person Slice">
+                                                <div class="d-flex align-items-center gap-3">
+                                                    <a href="@subjectImageUrl" target="_blank" rel="noreferrer">
+                                                        <span class="event-subject-list-frame">
+                                                            <img src="@subjectImageUrl" alt="" class="event-subject-list-thumb" />
+                                                        </span>
+                                                    </a>
+                                                    <div>
+                                                        <div class="fw-medium">@(!string.IsNullOrWhiteSpace(subject.TrackingLabel) ? subject.TrackingLabel : subject.SubjectKey)</div>
+                                                        <div class="text-body-secondary fs-8">Subject ID <code>@subject.Id</code></div>
+                                                        <div class="text-body-secondary fs-8">@subject.SubjectKey</div>
+                                                    </div>
+                                                </div>
+                                            </td>
+                                            <td data-label="Event">
+                                                <div class="fw-medium">@subject.EventTitle</div>
+                                                <div class="text-body-secondary fs-8">Event ID <code>@subject.EdgeEventId</code></div>
+                                                <div class="text-body-secondary fs-8">@subject.EdgeDeviceName <code>@subject.EdgeDeviceCode</code></div>
+                                                <span class="badge event-status event-status-@statusClass mt-1">@subject.EventStatus</span>
+                                            </td>
+                                            <td data-label="Learning">
+                                                @{
+                                                    var subjectLearningClass = subject.LearningStatus.ToLowerInvariant().Replace(" ", "-");
+                                                }
+                                                <span class="badge event-learning-status event-learning-status-@subjectLearningClass" data-learning-badge="subject-@subject.Id">@subject.LearningStatus</span>
+                                            </td>
+                                            <td data-label="Risk">
+                                                <span class="badge @(subject.IsRisk ? "bg-danger-subtle text-danger" : "bg-success-subtle text-success")">
+                                                    @(subject.IsRisk ? "Risk" : "OK")
+                                                </span>
+                                                @if (!string.IsNullOrWhiteSpace(subject.RiskReason))
+                                                {
+                                                    <div class="text-body-secondary fs-8 mt-2 event-subject-risk-text">@subject.RiskReason</div>
+                                                }
+                                            </td>
+                                            <td data-label="Time">@SentribeeConsole.Web.Application.Services.ProjectTimeZone.Format(subject.EventTimeUtc, Model.Project.TimeZoneId)</td>
+                                            <td class="text-end mobile-card-actions" data-label="Actions">
+                                                <div class="event-subject-actions">
+                                                    <a class="btn btn-event-detail btn-sm"
+                                                       asp-page="/Operations/Events/Details"
+                                                       asp-route-id="@subject.EdgeEventId">
+                                                        Event Details
+                                                    </a>
+                                                    <button type="button"
+                                                            class="btn btn-outline-primary btn-sm event-annotate-btn"
+                                                            data-bs-toggle="modal"
+                                                            data-bs-target="#event-annotation-modal"
+                                                            data-annotation-scope="subject"
+                                                            data-subject-id="@subject.Id"
+                                                            data-event-id="@subject.EdgeEventId"
+                                                            data-event-title="@subject.EventTitle - @subject.TrackingLabel"
+                                                            data-image-url="@subjectImageUrl"
+                                                            data-event-status="@subject.EventStatus"
+                                                            data-learning-status="@subject.LearningStatus"
+                                                            data-read-only="@subjectAnnotationReadOnly.ToString().ToLowerInvariant()"
+                                                            data-ppe-boxes='@subject.PpeBoxJson'>
+                                                        @(subjectAnnotationReadOnly ? "View PPE" : "Annotate PPE")
+                                                    </button>
+                                                </div>
+                                            </td>
+                                        </tr>
+                                    }
+                                </tbody>
+                            </table>
+                        </div>
+                    }
+                </div>
+            </div>
+            @await Html.PartialAsync("_Pagination", new SentribeeConsole.Web.Domain.Entities.PagedResult<object>
+            {
+                Items = [],
+                PageNumber = Model.SubjectPage.PageNumber,
+                PageSize = Model.SubjectPage.PageSize,
+                TotalCount = Model.SubjectPage.TotalCount
+            })
+
+            <div class="modal fade" id="event-annotation-modal" tabindex="-1" aria-labelledby="event-annotation-title" aria-hidden="true">
+                <div class="modal-dialog modal-xl modal-dialog-centered modal-dialog-scrollable">
+                    <div class="modal-content">
+                        <div class="modal-header">
+                            <div>
+                                <h5 class="modal-title" id="event-annotation-title">PPE Annotation</h5>
+                                <div id="event-annotation-subtitle" class="text-body-secondary fs-8"></div>
+                            </div>
+                            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                        </div>
+                        <div class="modal-body">
+                            <div class="row g-4">
+                                <div class="col-lg-8">
+                                    <div class="annotation-canvas-wrap rounded border">
+                                        <canvas id="event-annotation-canvas"></canvas>
+                                    </div>
+                                    <div id="event-annotation-help" class="form-text">Drag on the person slice to draw PPE boxes. Select a row to change PPE class or delete it.</div>
+                                </div>
+                                <div class="col-lg-4">
+                                    <h6 class="text-body-emphasis">PPE Boxes</h6>
+                                    <div id="event-annotation-classes" class="annotation-class-hint rounded border p-2 mb-3"></div>
+                                    <div id="event-annotation-boxes" class="d-flex flex-column gap-2 mb-4"></div>
+                                    <div class="rounded border p-3">
+                                        <div class="text-body-secondary fs-8 mb-2">AI Label Preview</div>
+                                        <pre id="event-annotation-yolo" class="annotation-yolo-preview mb-0"></pre>
+                                    </div>
+                                    <div class="annotation-operation-log rounded border p-3 mt-3">
+                                        <div class="text-body-secondary fs-8 mb-2">Operation Log</div>
+                                        <div id="event-annotation-log" class="annotation-operation-log-body text-body-secondary fs-8">No save recorded in this dialog yet.</div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="modal-footer">
+                            <button type="button" id="event-annotation-clear" class="btn btn-outline-danger me-auto">Clear Boxes</button>
+                            <button type="button" class="btn btn-outline-primary" data-bs-dismiss="modal">Cancel</button>
+                            <button type="button" id="event-annotation-save-learning" class="btn btn-success d-none">Save as Pending Learning</button>
+                            <button type="button" id="event-annotation-save" class="btn btn-primary">Save PPE Boxes</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        }
+        else
+        {
+            <partial name="_EventTable" model="Model.Events" />
+            @await Html.PartialAsync("_Pagination", new SentribeeConsole.Web.Domain.Entities.PagedResult<object>
+            {
+                Items = [],
+                PageNumber = Model.EventPage.PageNumber,
+                PageSize = Model.EventPage.PageSize,
+                TotalCount = Model.EventPage.TotalCount
+            })
+        }
+    </div>
+
+@section Scripts {
+    <script src="~/js/event-annotation.js" asp-append-version="true"></script>
+}

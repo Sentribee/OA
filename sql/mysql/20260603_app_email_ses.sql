@@ -1,0 +1,2 @@
+ALTER TABLE bee_AppEmailDelivery
+  MODIFY COLUMN Provider VARCHAR(40) NOT NULL DEFAULT 'AmazonSes';

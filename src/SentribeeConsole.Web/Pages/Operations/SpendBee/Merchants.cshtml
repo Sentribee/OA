@@ -1,0 +1,96 @@
+@page
+@model SentribeeConsole.Web.Pages.Operations.SpendBee.MerchantsModel
+@using SentribeeConsole.Web.Domain.Entities
+@using SentribeeConsole.Web.Application.Services
+@{
+    Layout = "_AdminLayout";
+}
+
+<div class="admin-page-width">
+    <div class="card">
+        <div class="card-body">
+            <div class="d-flex align-items-start justify-content-between gap-3 mb-4">
+                <div>
+                    <h3 class="card-title fs-6">Merchant database</h3>
+                    <p class="card-subtitle text-body-secondary mb-0">Google matched merchants, AI covers, recent receipts, and spend totals.</p>
+                </div>
+                <span class="badge bg-primary-subtle text-primary">@Model.Merchants.TotalCount total</span>
+            </div>
+            <div class="table-responsive mobile-card-table-wrap">
+                <table class="table align-middle mobile-card-table">
+                    <thead>
+                    <tr>
+                        <th>Merchant</th>
+                        <th>Cover</th>
+                        <th>Google</th>
+                        <th>Receipts</th>
+                        <th>Sync</th>
+                    </tr>
+                    </thead>
+                    <tbody>
+                    @foreach (var item in Model.Merchants.Items)
+                    {
+                        <tr>
+                            <td data-label="Merchant">
+                                <div class="fw-medium">@item.Name</div>
+                                <div class="text-body-secondary fs-8">@item.Address</div>
+                                <div class="text-body-secondary fs-8">@item.PrimaryType @item.BusinessStatus</div>
+                            </td>
+                            <td data-label="Cover">
+                                @if (item.HasCover)
+                                {
+                                    <img class="spendbee-merchant-thumb" src="/api/spendbee/admin/merchants/@item.Id/cover" alt="" loading="lazy" />
+                                }
+                                else
+                                {
+                                    <span class="text-body-secondary fs-8">No cover yet</span>
+                                }
+                            </td>
+                            <td data-label="Google">
+                                @if (!string.IsNullOrWhiteSpace(item.GooglePlaceId))
+                                {
+                                    <div class="fw-medium">@item.Rating?.ToString("0.0") <span class="text-body-secondary fs-8">(@item.UserRatingCount)</span></div>
+                                    @if (!string.IsNullOrWhiteSpace(item.GoogleMapsUri))
+                                    {
+                                        <a class="fs-8" href="@item.GoogleMapsUri" target="_blank" rel="noopener">Open Google Maps</a>
+                                    }
+                                }
+                                else
+                                {
+                                    <span class="text-body-secondary fs-8">Local only</span>
+                                }
+                            </td>
+                            <td data-label="Receipts">
+                                <div class="fw-semibold">@item.ReceiptCount receipt@(item.ReceiptCount == 1 ? "" : "s")</div>
+                                <div class="text-body-secondary fs-8">Spent @item.TotalSpent.ToString("0.00")</div>
+                                @if (item.LastReceiptAtUtc.HasValue)
+                                {
+                                    <div class="text-body-secondary fs-8">Last @ProjectTimeZone.Format(item.LastReceiptAtUtc.Value, Model.Project.TimeZoneId)</div>
+                                }
+                            </td>
+                            <td data-label="Sync">
+                                <span class="badge bg-primary-subtle text-primary">@item.SyncStatus</span>
+                                @if (item.LastGoogleSyncAtUtc.HasValue)
+                                {
+                                    <div class="text-body-secondary fs-8">Google @ProjectTimeZone.Format(item.LastGoogleSyncAtUtc.Value, Model.Project.TimeZoneId)</div>
+                                }
+                                @if (item.LastAiCoverGeneratedAtUtc.HasValue)
+                                {
+                                    <div class="text-body-secondary fs-8">AI cover @ProjectTimeZone.Format(item.LastAiCoverGeneratedAtUtc.Value, Model.Project.TimeZoneId)</div>
+                                }
+                            </td>
+                        </tr>
+                    }
+                    </tbody>
+                </table>
+            </div>
+            @await Html.PartialAsync("_Pagination", new PagedResult<object>
+            {
+                Items = Model.Merchants.Items.Cast<object>().ToList(),
+                PageNumber = Model.Merchants.PageNumber,
+                PageSize = Model.Merchants.PageSize,
+                TotalCount = Model.Merchants.TotalCount
+            })
+        </div>
+    </div>
+</div>
