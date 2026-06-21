@@ -245,6 +245,13 @@
                                 <td class="text-end">
                                     <div class="d-flex gap-2 justify-content-end">
                                         <a asp-page="/Crm/Employees" asp-route-employeeId="@item.Id" class="btn btn-outline-primary btn-sm">Edit</a>
+                                        @if (!item.ProfileCompletedAtUtc.HasValue)
+                                        {
+                                            <form method="post" asp-page-handler="ResendInvite">
+                                                <input type="hidden" name="employeeId" value="@item.Id" />
+                                                <button type="submit" class="btn btn-outline-secondary btn-sm">Resend Invite</button>
+                                            </form>
+                                        }
                                         <form method="post" asp-page-handler="SetStatus">
                                             <input type="hidden" name="employeeId" value="@item.Id" />
                                             <input type="hidden" name="status" value="@(item.Status == "Active" ? "Inactive" : "Active")" />

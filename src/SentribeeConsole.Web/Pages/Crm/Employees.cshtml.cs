@@ -196,6 +196,70 @@ public class EmployeesModel(
         return RedirectToPage();
     }
 
+    public async Task<IActionResult> OnPostResendInviteAsync(long employeeId, CancellationToken cancellationToken)
+    {
+        var merchant = await LoadCurrentMerchantAsync(cancellationToken);
+        if (merchant is null)
+        {
+            return RedirectToPage("/Crm/Login");
+        }
+
+        Merchant = merchant;
+        await using var connection = new MySqlConnection(ConnectionString);
+        await connection.OpenAsync(cancellationToken);
+        const string selectSql = """
+            SELECT id, WorkEmail
+            FROM bee_CrmEmployee
+            WHERE id = @EmployeeId AND MerchantId = @MerchantId
+            LIMIT 1;
+            """;
+        await using var selectCommand = new MySqlCommand(selectSql, connection);
+        selectCommand.Parameters.Add("@EmployeeId", MySqlDbType.Int64).Value = employeeId;
+        selectCommand.Parameters.Add("@MerchantId", MySqlDbType.Int64).Value = Merchant.Id;
+        await using var reader = await selectCommand.ExecuteReaderAsync(cancellationToken);
+        if (!await reader.ReadAsync(cancellationToken))
+        {
+            TempData["CrmEmployeesStatus"] = "Employee was not found.";
+            return RedirectToPage();
+        }
+
+        var workEmail = reader["WorkEmail"] as string;
+        await reader.DisposeAsync();
+        if (string.IsNullOrWhiteSpace(workEmail))
+        {
+            TempData["CrmEmployeesStatus"] = "Employee does not have a work email.";
+            return RedirectToPage();
+        }
+
+        var temporaryPassword = GenerateTemporaryPassword();
+        var passwordHash = CreateInitialPasswordHash(employeeId, workEmail, temporaryPassword);
+        const string updateSql = """
+            UPDATE bee_CrmEmployee
+            SET EmployeePasswordHash = @EmployeePasswordHash,
+                MustChangePassword = 1,
+                LoginEnabled = 1,
+                InviteSentAtUtc = UTC_TIMESTAMP(6),
+                UpdatedAtUtc = UTC_TIMESTAMP(6)
+            WHERE id = @EmployeeId AND MerchantId = @MerchantId;
+            """;
+        await using var updateCommand = new MySqlCommand(updateSql, connection);
+        updateCommand.Parameters.Add("@EmployeePasswordHash", MySqlDbType.VarChar, 512).Value = passwordHash!;
+        updateCommand.Parameters.Add("@EmployeeId", MySqlDbType.Int64).Value = employeeId;
+        updateCommand.Parameters.Add("@MerchantId", MySqlDbType.Int64).Value = Merchant.Id;
+        await updateCommand.ExecuteNonQueryAsync(cancellationToken);
+
+        var emailResult = await emailService.SendEmployeeWelcomeAsync(
+            workEmail.Trim(),
+            Merchant.BusinessName,
+            BuildEmployeeLoginUrl(),
+            temporaryPassword,
+            cancellationToken);
+        TempData["CrmEmployeesStatus"] = emailResult.Success
+            ? "Employee invite resent."
+            : $"Employee password was reset, but email delivery failed: {emailResult.Message}";
+        return RedirectToPage();
+    }
+
     private void SetViewData()
     {
         ViewData["CrmMerchant"] = Merchant;
