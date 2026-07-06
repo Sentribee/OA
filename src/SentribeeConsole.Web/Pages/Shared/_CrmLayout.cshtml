@@ -1,4 +1,4 @@
-@using SentribeeConsole.Web.Pages.Crm
+﻿@using SentribeeConsole.Web.Pages.Crm
 @{
     var merchant = ViewData["CrmMerchant"] as CrmMerchantSession;
     var activeMenu = ViewData["ActiveMenu"] as string ?? "Dashboard";
@@ -32,13 +32,13 @@
             <div class="crm-nav-section">工作台</div>
             <a asp-page="/Crm/Dashboard" class="@(activeMenu == "Dashboard" ? "active" : null)"><i class="material-symbols-rounded">dashboard</i><span>Dashboard</span></a>
             <a asp-page="/Crm/Profile" class="@(activeMenu == "MyProfile" ? "active" : null)"><i class="material-symbols-rounded">account_circle</i><span>My Profile</span></a>
+            <a asp-page="/Crm/MindMaps" class="@(activeMenu == "MindMaps" ? "active" : null)"><i class="material-symbols-rounded">psychology_alt</i><span>Mind Maps</span></a>
             <div class="crm-nav-section">客服增长</div>
             <a asp-page="/Crm/Bot" class="@(activeMenu == "Bot" ? "active" : null)"><i class="material-symbols-rounded">smart_toy</i><span>Bot</span></a>
             <a asp-page="/Crm/Knowledge" class="@(activeMenu == "Knowledge" ? "active" : null)"><i class="material-symbols-rounded">library_books</i><span>Knowledge</span></a>
             <a asp-page="/Crm/Customers" class="@(activeMenu == "Customers" ? "active" : null)"><i class="material-symbols-rounded">contacts</i><span>Customers</span></a>
             <a asp-page="/Crm/Conversations" class="@(activeMenu == "Conversations" ? "active" : null)"><i class="material-symbols-rounded">forum</i><span>Conversations</span></a>
             <a asp-page="/Crm/Profiles" class="@(activeMenu == "Profiles" ? "active" : null)"><i class="material-symbols-rounded">person_search</i><span>Profiles</span></a>
-            <a asp-page="/Crm/MindMaps" class="@(activeMenu == "MindMaps" ? "active" : null)"><i class="material-symbols-rounded">psychology_alt</i><span>Mind Maps</span></a>
             <div class="crm-nav-section">组织人事</div>
             <a asp-page="/Crm/Employees" class="@(activeMenu == "Employees" ? "active" : null)"><i class="material-symbols-rounded">badge</i><span>Employees</span></a>
             <a asp-page="/Crm/Roles" class="@(activeMenu == "Roles" ? "active" : null)"><i class="material-symbols-rounded">admin_panel_settings</i><span>Roles</span></a>

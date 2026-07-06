@@ -3,6 +3,7 @@
 @using System.Text.Json
 @{
     Layout = null;
+    var activitiesJson = JsonSerializer.Serialize(Model.Activities.Select(MindMapEditorModel.ToActivityJson));
 }
 
 <!doctype html>
@@ -21,37 +22,51 @@
 <body class="mindmap-share-body">
     @if (Model.Map is not null)
     {
+        <form id="mindmap-share-form" method="post" asp-page-handler="Save">
+            @Html.AntiForgeryToken()
+        </form>
         <header class="mindmap-share-header">
             <div>
-                <div class="text-body-secondary fs-8">@Model.Map.BusinessName</div>
+                <div class="text-body-secondary fs-8">@Model.Map.BusinessName · @Model.Map.ParticipantName</div>
                 <h1>@Model.Map.Title</h1>
             </div>
             <div class="mindmap-share-actions">
+                <span class="mindmap-tag" style="--tag-color:@Model.Map.ColorTag">@Model.Map.MapStatus</span>
                 <input id="mindmap-share-state" class="form-control form-control-sm" readonly value="Loaded" />
                 <button type="button" id="mindmap-share-save" class="btn btn-primary btn-sm">
                     <i class="material-symbols-rounded">save</i> Save
                 </button>
             </div>
         </header>
-        <form id="mindmap-share-form" method="post" asp-page-handler="Save">
-            @Html.AntiForgeryToken()
-        </form>
-        <main id="mindmap-share-canvas" class="mindmap-share-canvas"></main>
+        <div id="mindmap-share-overlay" class="mindmap-activity-overlay"></div>
+        <main class="mindmap-share-main">
+            <section id="mindmap-share-canvas" class="mindmap-share-canvas"></section>
+            <aside class="mindmap-share-side">
+                <h2>Recent changes</h2>
+                <div id="mindmap-share-activity-list" class="mindmap-side-list"></div>
+            </aside>
+        </main>
 
         <script type="module">
             import MindElixir from 'https://cdn.jsdelivr.net/npm/mind-elixir@5.13.0/dist/MindElixir.js';
 
             const rawMapJson = @Html.Raw(JsonSerializer.Serialize(Model.Map.MapJson));
             const initialTitle = @Html.Raw(JsonSerializer.Serialize(Model.Map.Title));
-            const initialUpdatedAt = @Html.Raw(JsonSerializer.Serialize(Model.Map.UpdatedAtUtc.ToString("O")));
+            const myEmail = @Html.Raw(JsonSerializer.Serialize(Model.Map.ParticipantEmail));
+            const myName = @Html.Raw(JsonSerializer.Serialize(Model.Map.ParticipantName));
             const canvas = document.getElementById('mindmap-share-canvas');
             const state = document.getElementById('mindmap-share-state');
             const saveButton = document.getElementById('mindmap-share-save');
             const token = document.querySelector('input[name="__RequestVerificationToken"]')?.value || '';
+            const activityList = document.getElementById('mindmap-share-activity-list');
+            const overlay = document.getElementById('mindmap-share-overlay');
+            let activities = @Html.Raw(activitiesJson);
+            let lastActivityId = activities[0]?.id || 0;
             let saveTimer;
             let saving = false;
             let dirty = false;
-            let lastUpdatedAt = initialUpdatedAt;
+            let lastUpdatedAt = @Html.Raw(JsonSerializer.Serialize(Model.Map.UpdatedAtUtc.ToString("O")));
+            let lastOperation = null;
 
             const parseData = (json) => {
                 try {
@@ -60,7 +75,7 @@
                         return data;
                     }
                 } catch {
-                    // Fall through to default data.
+                    // Use default data if the stored document cannot be parsed.
                 }
 
                 return MindElixir.new(initialTitle || 'Product brainstorm');
@@ -87,6 +102,48 @@
                 state.value = value;
             };
 
+            const operationSummary = (operation) => {
+                if (!operation) {
+                    return `${myName || 'Participant'} updated the mind map`;
+                }
+
+                const name = operation.name || operation.type || 'operation';
+                const topic = operation.obj?.topic || operation.node?.topic || operation.topic;
+                return topic ? `${name}: ${topic}` : `Mind map ${name}`;
+            };
+
+            const operationNode = (operation) => ({
+                nodeId: operation?.obj?.id || operation?.node?.id || operation?.id || '',
+                nodeTopic: operation?.obj?.topic || operation?.node?.topic || operation?.topic || ''
+            });
+
+            const renderActivities = () => {
+                activityList.innerHTML = '';
+                activities.slice(0, 12).forEach((activity) => {
+                    const item = document.createElement('div');
+                    item.className = 'mindmap-activity-item';
+                    item.innerHTML = `
+                        <span class="mindmap-color-dot" style="--tag-color:${activity.colorTag || '#7c3aed'}"></span>
+                        <div>
+                            <div><strong>${activity.actorName || 'Participant'}</strong> <span>${activity.summary || 'Updated the map'}</span></div>
+                            <div class="text-body-secondary fs-8">${new Date(activity.createdAtUtc).toLocaleString()}</div>
+                        </div>`;
+                    activityList.appendChild(item);
+                });
+            };
+
+            const showRemoteNotice = () => {
+                const newestRemote = activities.find(item => item.id > lastActivityId && item.actorEmail !== myEmail);
+                if (!newestRemote) {
+                    return;
+                }
+
+                overlay.innerHTML = `<span style="--tag-color:${newestRemote.colorTag || '#7c3aed'}"></span><strong>${newestRemote.actorName}</strong> ${newestRemote.summary}`;
+                overlay.classList.add('show');
+                window.setTimeout(() => overlay.classList.remove('show'), 6500);
+                lastActivityId = Math.max(lastActivityId, newestRemote.id);
+            };
+
             const saveMap = async () => {
                 if (saving) {
                     return;
@@ -94,8 +151,12 @@
 
                 saving = true;
                 setState('Saving...');
+                const node = operationNode(lastOperation);
                 const body = new URLSearchParams();
                 body.set('mapJson', getMapJson());
+                body.set('operationSummary', operationSummary(lastOperation));
+                body.set('nodeId', node.nodeId);
+                body.set('nodeTopic', node.nodeTopic);
                 body.set('__RequestVerificationToken', token);
 
                 try {
@@ -112,6 +173,7 @@
                         dirty = false;
                         lastUpdatedAt = result.updatedAtUtc;
                         setState(`Saved ${result.savedAt}`);
+                        await pollRemote(false);
                     } else {
                         setState(result.message || 'Save failed');
                     }
@@ -122,36 +184,45 @@
                 }
             };
 
-            const scheduleSave = () => {
+            const scheduleSave = (operation = null) => {
+                lastOperation = operation || lastOperation;
                 dirty = true;
                 window.clearTimeout(saveTimer);
                 setState('Unsaved changes');
                 saveTimer = window.setTimeout(saveMap, 1500);
             };
 
-            const pollRemote = async () => {
-                if (dirty || saving) {
+            const pollRemote = async (refreshMap = true) => {
+                if (saving) {
                     return;
                 }
 
                 try {
                     const response = await fetch(`${location.pathname}?handler=Data`, { cache: 'no-store' });
                     const result = await response.json();
-                    if (result.success && result.updatedAtUtc && result.updatedAtUtc !== lastUpdatedAt) {
+                    if (!result.success) {
+                        return;
+                    }
+
+                    activities = result.activities || [];
+                    renderActivities();
+                    showRemoteNotice();
+                    if (refreshMap && !dirty && result.updatedAtUtc && result.updatedAtUtc !== lastUpdatedAt) {
                         lastUpdatedAt = result.updatedAtUtc;
                         if (typeof mind.refresh === 'function') {
                             mind.refresh(parseData(result.mapJson));
-                            setState('Updated from meeting');
                         }
+                        setState('Updated from meeting');
                     }
                 } catch {
-                    // Keep the local editor usable when polling fails.
+                    // Keep the current editing session usable.
                 }
             };
 
             saveButton.addEventListener('click', saveMap);
             mind.bus.addListener('operation', scheduleSave);
-            window.setInterval(pollRemote, 6000);
+            renderActivities();
+            window.setInterval(pollRemote, 5000);
         </script>
     }
 </body>

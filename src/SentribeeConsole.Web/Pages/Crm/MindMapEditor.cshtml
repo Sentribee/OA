@@ -1,0 +1,312 @@
+@page "/oa/mindmaps/{mapId:long}/edit"
+@model SentribeeConsole.Web.Pages.Crm.MindMapEditorModel
+@using System.Text.Json
+@{
+    Layout = null;
+    var participantsJson = JsonSerializer.Serialize(Model.Participants.Select(MindMapEditorModel.ToParticipantJson));
+    var activitiesJson = JsonSerializer.Serialize(Model.Activities.Select(MindMapEditorModel.ToActivityJson));
+}
+
+<!doctype html>
+<html lang="en" data-bs-theme="light">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>@Model.Map.Title - Sentribee OA</title>
+    <link rel="icon" type="image/x-icon" href="~/favicon.ico" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Google+Sans:wght@400;500;600;700&display=swap" rel="stylesheet" />
+    <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" rel="stylesheet" />
+    <link rel="stylesheet" href="~/theme/vendor-DDXwb3B2.css" asp-append-version="true" />
+    <link rel="stylesheet" href="~/css/site.css" asp-append-version="true" />
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/mind-elixir@5.13.0/dist/MindElixir.css" />
+</head>
+<body class="mindmap-editor-body">
+    <form id="mindmap-editor-token-form">
+        @Html.AntiForgeryToken()
+    </form>
+    <div class="mindmap-editor-shell">
+        <main class="mindmap-editor-stage">
+            <header class="mindmap-editor-header">
+                <div class="d-flex align-items-center gap-3">
+                    <a class="btn btn-icon btn-outline-secondary" asp-page="/Crm/MindMaps" title="Back">
+                        <i class="material-symbols-rounded">arrow_back</i>
+                    </a>
+                    <div>
+                        <div class="text-body-secondary fs-8">Mind Map #@Model.Map.Id</div>
+                        <h1>@Model.Map.Title</h1>
+                    </div>
+                </div>
+                <div class="mindmap-editor-actions">
+                    <input id="mindmap-editor-state" class="form-control form-control-sm" readonly value="Loaded" />
+                    <button type="button" id="mindmap-editor-save" class="btn btn-primary btn-sm">
+                        <i class="material-symbols-rounded">save</i> Save
+                    </button>
+                </div>
+            </header>
+            @if (!string.IsNullOrWhiteSpace(Model.StatusMessage))
+            {
+                <div class="alert alert-success mindmap-editor-alert">@Model.StatusMessage</div>
+            }
+            <div id="mindmap-activity-overlay" class="mindmap-activity-overlay"></div>
+            <section id="mindmap-editor-canvas" class="mindmap-editor-canvas"></section>
+        </main>
+
+        <aside class="mindmap-editor-aside">
+            <section class="mindmap-info-section">
+                <div class="d-flex justify-content-between align-items-center gap-3">
+                    <h2>Map info</h2>
+                    <span class="badge mindmap-status-badge">@Model.Map.MapStatus</span>
+                </div>
+                <label class="form-label" for="mindmap-editor-title">主题</label>
+                <input id="mindmap-editor-title" class="form-control" value="@Model.Map.Title" maxlength="180" />
+                <label class="form-label mt-3" for="mindmap-editor-status">导图状态</label>
+                <select id="mindmap-editor-status" class="form-select" data-current-status="@Model.Map.MapStatus">
+                    <option value="Draft">Draft</option>
+                    <option value="InProgress">In Progress</option>
+                    <option value="Final">Final</option>
+                </select>
+                <div class="mindmap-info-grid">
+                    <span>ID</span><strong>#@Model.Map.Id</strong>
+                    <span>Created</span><strong>@Model.Map.CreatedAtUtc.ToString("yyyy-MM-dd HH:mm")</strong>
+                    <span>Updated</span><strong>@Model.Map.UpdatedAtUtc.ToString("yyyy-MM-dd HH:mm")</strong>
+                </div>
+                <form method="post" asp-page-handler="Invite" asp-route-mapId="@Model.Map.Id">
+                    @Html.AntiForgeryToken()
+                    <button type="submit" class="btn btn-outline-primary w-100">
+                        <i class="material-symbols-rounded">outgoing_mail</i> Invite All
+                    </button>
+                </form>
+            </section>
+
+            <section class="mindmap-info-section">
+                <h2>Shared people</h2>
+                <div id="mindmap-participant-list" class="mindmap-side-list">
+                    @foreach (var participant in Model.Participants)
+                    {
+                        <div class="mindmap-side-person" data-participant-id="@participant.Id">
+                            <span class="mindmap-color-dot" style="--tag-color:@participant.ColorTag"></span>
+                            <div>
+                                <div class="fw-semibold">@participant.DisplayName</div>
+                                <div class="text-body-secondary fs-8">@participant.Email</div>
+                            </div>
+                            <span class="mindmap-online-dot @(participant.IsOnline ? "online" : null)" title="@(participant.IsOnline ? "Online" : "Offline")"></span>
+                            <form method="post" asp-page-handler="Invite" asp-route-mapId="@Model.Map.Id">
+                                @Html.AntiForgeryToken()
+                                <input type="hidden" name="participantId" value="@participant.Id" />
+                                <button type="submit" class="btn btn-icon btn-outline-secondary" title="Invite">
+                                    <i class="material-symbols-rounded">mail</i>
+                                </button>
+                            </form>
+                        </div>
+                    }
+                </div>
+            </section>
+
+            <section class="mindmap-info-section">
+                <h2>Recent changes</h2>
+                <div id="mindmap-activity-list" class="mindmap-side-list"></div>
+            </section>
+        </aside>
+    </div>
+
+    <script type="module">
+        import MindElixir from 'https://cdn.jsdelivr.net/npm/mind-elixir@5.13.0/dist/MindElixir.js';
+
+        const mapId = @Model.Map.Id;
+        const rawMapJson = @Html.Raw(JsonSerializer.Serialize(Model.Map.MapJson));
+        const initialTitle = @Html.Raw(JsonSerializer.Serialize(Model.Map.Title));
+        let participants = @Html.Raw(participantsJson);
+        let activities = @Html.Raw(activitiesJson);
+        let lastActivityId = activities[0]?.id || 0;
+        let lastUpdatedAt = @Html.Raw(JsonSerializer.Serialize(Model.Map.UpdatedAtUtc.ToString("O")));
+        const canvas = document.getElementById('mindmap-editor-canvas');
+        const titleInput = document.getElementById('mindmap-editor-title');
+        const statusInput = document.getElementById('mindmap-editor-status');
+        const state = document.getElementById('mindmap-editor-state');
+        const saveButton = document.getElementById('mindmap-editor-save');
+        const token = document.querySelector('input[name="__RequestVerificationToken"]')?.value || '';
+        const activityList = document.getElementById('mindmap-activity-list');
+        const participantList = document.getElementById('mindmap-participant-list');
+        const overlay = document.getElementById('mindmap-activity-overlay');
+        let saving = false;
+        let dirty = false;
+        let saveTimer;
+        let lastOperation = null;
+
+        const parseData = (json) => {
+            try {
+                const data = JSON.parse(json);
+                if (data?.nodeData) {
+                    return data;
+                }
+            } catch {
+                // Keep the editor available with default data.
+            }
+
+            return MindElixir.new(initialTitle || 'Product brainstorm');
+        };
+
+        const mind = new MindElixir({
+            el: canvas,
+            direction: MindElixir.SIDE,
+            draggable: true,
+            contextMenu: true,
+            toolBar: true,
+            nodeMenu: true,
+            keypress: true,
+            locale: 'en',
+            overflowHidden: false
+        });
+        mind.init(parseData(rawMapJson));
+        statusInput.value = statusInput.dataset.currentStatus || 'Draft';
+
+        const getMapJson = () => typeof mind.getDataString === 'function'
+            ? mind.getDataString()
+            : JSON.stringify(mind.getData());
+
+        const setState = (value) => {
+            state.value = value;
+        };
+
+        const operationSummary = (operation) => {
+            if (!operation) {
+                return 'Updated the mind map';
+            }
+
+            const name = operation.name || operation.type || 'operation';
+            const topic = operation.obj?.topic || operation.node?.topic || operation.topic;
+            return topic ? `${name}: ${topic}` : `Mind map ${name}`;
+        };
+
+        const operationNode = (operation) => ({
+            nodeId: operation?.obj?.id || operation?.node?.id || operation?.id || '',
+            nodeTopic: operation?.obj?.topic || operation?.node?.topic || operation?.topic || ''
+        });
+
+        const saveMap = async () => {
+            if (saving) {
+                return;
+            }
+
+            saving = true;
+            setState('Saving...');
+            const node = operationNode(lastOperation);
+            const body = new URLSearchParams();
+            body.set('title', titleInput.value || 'Product brainstorm');
+            body.set('mapStatus', statusInput.value || 'Draft');
+            body.set('mapJson', getMapJson());
+            body.set('operationSummary', operationSummary(lastOperation));
+            body.set('nodeId', node.nodeId);
+            body.set('nodeTopic', node.nodeTopic);
+            body.set('__RequestVerificationToken', token);
+
+            try {
+                const response = await fetch(`${location.pathname}?handler=Save`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/x-www-form-urlencoded;charset=UTF-8',
+                        'RequestVerificationToken': token
+                    },
+                    body
+                });
+                const result = await response.json();
+                if (result.success) {
+                    dirty = false;
+                    lastUpdatedAt = result.updatedAtUtc;
+                    setState(`Saved ${result.savedAt}`);
+                    await pollData(false);
+                } else {
+                    setState(result.message || 'Save failed');
+                }
+            } catch {
+                setState('Save failed');
+            } finally {
+                saving = false;
+            }
+        };
+
+        const scheduleSave = (operation = null) => {
+            lastOperation = operation || lastOperation;
+            dirty = true;
+            window.clearTimeout(saveTimer);
+            setState('Unsaved changes');
+            saveTimer = window.setTimeout(saveMap, 1500);
+        };
+
+        const renderParticipants = () => {
+            participantList.querySelectorAll('.mindmap-side-person').forEach((row) => {
+                const person = participants.find(item => String(item.id) === row.dataset.participantId);
+                const dot = row.querySelector('.mindmap-online-dot');
+                dot?.classList.toggle('online', Boolean(person?.isOnline));
+                if (dot && person?.lastSeenAtUtc) {
+                    dot.title = person.isOnline ? 'Online' : `Last seen ${new Date(person.lastSeenAtUtc).toLocaleString()}`;
+                }
+            });
+        };
+
+        const renderActivities = () => {
+            activityList.innerHTML = '';
+            activities.slice(0, 12).forEach((activity) => {
+                const item = document.createElement('div');
+                item.className = 'mindmap-activity-item';
+                item.innerHTML = `
+                    <span class="mindmap-color-dot" style="--tag-color:${activity.colorTag || '#7c3aed'}"></span>
+                    <div>
+                        <div><strong>${activity.actorName || 'Participant'}</strong> <span>${activity.summary || 'Updated the map'}</span></div>
+                        <div class="text-body-secondary fs-8">${new Date(activity.createdAtUtc).toLocaleString()}</div>
+                    </div>`;
+                activityList.appendChild(item);
+            });
+
+            const newestRemote = activities.find(item => item.id > lastActivityId && item.actorEmail !== @Html.Raw(JsonSerializer.Serialize(Model.Merchant.Email)));
+            if (newestRemote) {
+                overlay.innerHTML = `<span style="--tag-color:${newestRemote.colorTag || '#7c3aed'}"></span><strong>${newestRemote.actorName}</strong> ${newestRemote.summary}`;
+                overlay.classList.add('show');
+                window.setTimeout(() => overlay.classList.remove('show'), 6500);
+                lastActivityId = Math.max(lastActivityId, newestRemote.id);
+            }
+        };
+
+        const pollData = async (refreshMap = true) => {
+            if (saving) {
+                return;
+            }
+
+            try {
+                const response = await fetch(`${location.pathname}?handler=Data`, { cache: 'no-store' });
+                const result = await response.json();
+                if (!result.success) {
+                    return;
+                }
+
+                participants = result.participants || [];
+                activities = result.activities || [];
+                renderParticipants();
+                renderActivities();
+                if (refreshMap && !dirty && result.updatedAtUtc && result.updatedAtUtc !== lastUpdatedAt) {
+                    lastUpdatedAt = result.updatedAtUtc;
+                    if (typeof mind.refresh === 'function') {
+                        mind.refresh(parseData(result.mapJson));
+                    }
+                    titleInput.value = result.title || titleInput.value;
+                    statusInput.value = result.mapStatus || statusInput.value;
+                    setState('Updated from meeting');
+                }
+            } catch {
+                // The editor remains usable if polling temporarily fails.
+            }
+        };
+
+        saveButton.addEventListener('click', saveMap);
+        titleInput.addEventListener('input', () => scheduleSave());
+        statusInput.addEventListener('change', () => scheduleSave());
+        mind.bus.addListener('operation', scheduleSave);
+        renderParticipants();
+        renderActivities();
+        window.setInterval(pollData, 5000);
+    </script>
+    <script type="module" src="~/theme/vendor-DWdXmVBv.js" asp-append-version="true"></script>
+</body>
+</html>

@@ -63,6 +63,19 @@ public sealed class SesConsoleEmailService(
         return SendEmailAsync(email, subject, html, text, cancellationToken);
     }
 
+    public Task<ConsoleEmailResult> SendMindMapInvitationAsync(
+        string email,
+        string companyName,
+        string mapTitle,
+        string shareUrl,
+        CancellationToken cancellationToken)
+    {
+        var subject = $"{companyName} invited you to a brainstorm map: {mapTitle}";
+        var html = BuildMindMapInvitationHtml(companyName, mapTitle, shareUrl);
+        var text = BuildMindMapInvitationText(companyName, mapTitle, shareUrl);
+        return SendEmailAsync(email, subject, html, text, cancellationToken);
+    }
+
     private async Task<ConsoleEmailResult> SendEmailAsync(
         string email,
         string subject,
@@ -420,6 +433,50 @@ public sealed class SesConsoleEmailService(
     private static string BuildMindMapSummaryText(string companyName, string mapTitle, string shareUrl, string outlineText)
     {
         return $"{companyName} shared the final brainstorm mind map: {mapTitle}\n\nOpen: {shareUrl}\n\nOutline:\n{outlineText}";
+    }
+
+    private static string BuildMindMapInvitationHtml(string companyName, string mapTitle, string shareUrl)
+    {
+        var encodedCompanyName = WebUtility.HtmlEncode(companyName);
+        var encodedMapTitle = WebUtility.HtmlEncode(mapTitle);
+        var encodedUrl = WebUtility.HtmlEncode(shareUrl);
+        return $$"""
+            <!doctype html>
+            <html>
+            <body style="margin:0;background:#f6f7fb;font-family:Arial,Helvetica,sans-serif;color:#172033;">
+              <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="background:#f6f7fb;padding:32px 12px;">
+                <tr>
+                  <td align="center">
+                    <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="max-width:600px;background:#ffffff;border:1px solid #e5e7eb;border-radius:14px;overflow:hidden;">
+                      <tr>
+                        <td style="padding:30px 34px 16px;">
+                          <div style="font-size:13px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:#6d28d9;">Sentribee OA</div>
+                          <h1 style="margin:14px 0 10px;font-size:24px;line-height:1.25;color:#111827;">Join the brainstorm map</h1>
+                          <p style="margin:0;color:#4b5563;font-size:15px;line-height:1.6;">{{encodedCompanyName}} invited you to collaborate on <strong>{{encodedMapTitle}}</strong>.</p>
+                        </td>
+                      </tr>
+                      <tr>
+                        <td style="padding:14px 34px 8px;">
+                          <a href="{{encodedUrl}}" style="display:inline-block;background:#6d28d9;color:#ffffff;text-decoration:none;font-weight:700;border-radius:10px;padding:13px 20px;">Open mind map</a>
+                        </td>
+                      </tr>
+                      <tr>
+                        <td style="padding:18px 34px 30px;">
+                          <p style="margin:0;color:#4f46e5;font-size:13px;line-height:1.6;word-break:break-all;">{{encodedUrl}}</p>
+                        </td>
+                      </tr>
+                    </table>
+                  </td>
+                </tr>
+              </table>
+            </body>
+            </html>
+            """;
+    }
+
+    private static string BuildMindMapInvitationText(string companyName, string mapTitle, string shareUrl)
+    {
+        return $"{companyName} invited you to collaborate on the brainstorm mind map: {mapTitle}\n\nOpen: {shareUrl}";
     }
 
     private static string TrimDiagnostic(string? value, int maxLength = 500)
