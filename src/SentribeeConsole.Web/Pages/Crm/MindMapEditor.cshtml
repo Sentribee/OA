@@ -92,6 +92,7 @@
                                 <div class="text-body-secondary fs-8">@participant.Email</div>
                             </div>
                             <span class="mindmap-online-dot @(participant.IsOnline ? "online" : null)" title="@(participant.IsOnline ? "Online" : "Offline")"></span>
+                            <span class="mindmap-online-label">@(participant.IsOnline ? "Online" : "Offline")</span>
                             <form method="post" asp-page-handler="Invite" asp-route-mapId="@Model.Map.Id">
                                 @Html.AntiForgeryToken()
                                 <input type="hidden" name="participantId" value="@participant.Id" />
@@ -117,8 +118,28 @@
         const mapId = @Model.Map.Id;
         const rawMapJson = @Html.Raw(JsonSerializer.Serialize(Model.Map.MapJson));
         const initialTitle = @Html.Raw(JsonSerializer.Serialize(Model.Map.Title));
-        let participants = @Html.Raw(participantsJson);
-        let activities = @Html.Raw(activitiesJson);
+        const normalizeParticipant = (item) => ({
+            id: item.id ?? item.Id,
+            displayName: item.displayName ?? item.DisplayName,
+            email: item.email ?? item.Email,
+            colorTag: item.colorTag ?? item.ColorTag,
+            isOnline: item.isOnline ?? item.IsOnline ?? false,
+            lastSeenAtUtc: item.lastSeenAtUtc ?? item.LastSeenAtUtc,
+            lastInvitedAtUtc: item.lastInvitedAtUtc ?? item.LastInvitedAtUtc
+        });
+        const normalizeActivity = (item) => ({
+            id: item.id ?? item.Id ?? 0,
+            participantId: item.participantId ?? item.ParticipantId,
+            actorName: item.actorName ?? item.ActorName,
+            actorEmail: item.actorEmail ?? item.ActorEmail,
+            colorTag: item.colorTag ?? item.ColorTag,
+            nodeId: item.nodeId ?? item.NodeId,
+            nodeTopic: item.nodeTopic ?? item.NodeTopic,
+            summary: item.summary ?? item.Summary,
+            createdAtUtc: item.createdAtUtc ?? item.CreatedAtUtc
+        });
+        let participants = (@Html.Raw(participantsJson)).map(normalizeParticipant);
+        let activities = (@Html.Raw(activitiesJson)).map(normalizeActivity);
         let lastActivityId = activities[0]?.id || 0;
         let lastUpdatedAt = @Html.Raw(JsonSerializer.Serialize(Model.Map.UpdatedAtUtc.ToString("O")));
         const canvas = document.getElementById('mindmap-editor-canvas');
@@ -135,17 +156,39 @@
         let saveTimer;
         let lastOperation = null;
 
+        const buildDefaultData = () => {
+            const data = MindElixir.new(initialTitle || 'Product brainstorm');
+            data.nodeData.topic = initialTitle || 'Product brainstorm';
+            data.nodeData.root = true;
+            return data;
+        };
+
+        const normalizeMapData = (data) => {
+            if (!data?.nodeData) {
+                return buildDefaultData();
+            }
+
+            data.nodeData.id = data.nodeData.id || `root-${Date.now()}`;
+            data.nodeData.topic = data.nodeData.topic || initialTitle || 'Product brainstorm';
+            data.nodeData.root = true;
+            if (!Array.isArray(data.nodeData.children)) {
+                data.nodeData.children = [];
+            }
+
+            return data;
+        };
+
         const parseData = (json) => {
             try {
                 const data = JSON.parse(json);
                 if (data?.nodeData) {
-                    return data;
+                    return normalizeMapData(data);
                 }
             } catch {
                 // Keep the editor available with default data.
             }
 
-            return MindElixir.new(initialTitle || 'Product brainstorm');
+            return buildDefaultData();
         };
 
         const mind = new MindElixir({
@@ -161,6 +204,12 @@
         });
         mind.init(parseData(rawMapJson));
         statusInput.value = statusInput.dataset.currentStatus || 'Draft';
+        requestAnimationFrame(() => {
+            window.dispatchEvent(new Event('resize'));
+            if (typeof mind.toCenter === 'function') {
+                mind.toCenter();
+            }
+        });
 
         const getMapJson = () => typeof mind.getDataString === 'function'
             ? mind.getDataString()
@@ -214,7 +263,7 @@
                 const result = await response.json();
                 if (result.success) {
                     dirty = false;
-                    lastUpdatedAt = result.updatedAtUtc;
+                    lastUpdatedAt = result.updatedAtUtc || result.UpdatedAtUtc;
                     setState(`Saved ${result.savedAt}`);
                     await pollData(false);
                 } else {
@@ -239,7 +288,12 @@
             participantList.querySelectorAll('.mindmap-side-person').forEach((row) => {
                 const person = participants.find(item => String(item.id) === row.dataset.participantId);
                 const dot = row.querySelector('.mindmap-online-dot');
+                const label = row.querySelector('.mindmap-online-label');
                 dot?.classList.toggle('online', Boolean(person?.isOnline));
+                if (label) {
+                    label.textContent = person?.isOnline ? 'Online' : 'Offline';
+                    label.classList.toggle('online', Boolean(person?.isOnline));
+                }
                 if (dot && person?.lastSeenAtUtc) {
                     dot.title = person.isOnline ? 'Online' : `Last seen ${new Date(person.lastSeenAtUtc).toLocaleString()}`;
                 }
@@ -281,17 +335,19 @@
                     return;
                 }
 
-                participants = result.participants || [];
-                activities = result.activities || [];
+                const nextUpdatedAt = result.updatedAtUtc || result.UpdatedAtUtc;
+                const nextMapJson = result.mapJson || result.MapJson;
+                participants = (result.participants || result.Participants || []).map(normalizeParticipant);
+                activities = (result.activities || result.Activities || []).map(normalizeActivity);
                 renderParticipants();
                 renderActivities();
-                if (refreshMap && !dirty && result.updatedAtUtc && result.updatedAtUtc !== lastUpdatedAt) {
-                    lastUpdatedAt = result.updatedAtUtc;
+                if (refreshMap && !dirty && nextUpdatedAt && nextUpdatedAt !== lastUpdatedAt) {
+                    lastUpdatedAt = nextUpdatedAt;
                     if (typeof mind.refresh === 'function') {
-                        mind.refresh(parseData(result.mapJson));
+                        mind.refresh(parseData(nextMapJson));
                     }
-                    titleInput.value = result.title || titleInput.value;
-                    statusInput.value = result.mapStatus || statusInput.value;
+                    titleInput.value = result.title || result.Title || titleInput.value;
+                    statusInput.value = result.mapStatus || result.MapStatus || statusInput.value;
                     setState('Updated from meeting');
                 }
             } catch {
@@ -305,6 +361,7 @@
         mind.bus.addListener('operation', scheduleSave);
         renderParticipants();
         renderActivities();
+        window.setTimeout(() => pollData(false), 800);
         window.setInterval(pollData, 5000);
     </script>
     <script type="module" src="~/theme/vendor-DWdXmVBv.js" asp-append-version="true"></script>

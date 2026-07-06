@@ -4451,7 +4451,7 @@ textarea,
   border-radius: .5rem;
   display: grid;
   gap: .65rem;
-  grid-template-columns: auto minmax(0, 1fr) auto auto;
+  grid-template-columns: auto minmax(0, 1fr) auto auto auto;
   padding: .7rem;
 }
 
@@ -4476,6 +4476,17 @@ textarea,
 .mindmap-online-dot.online {
   background: #16a34a;
   box-shadow: 0 0 0 .22rem rgba(22, 163, 74, .12);
+}
+
+.mindmap-online-label {
+  color: #64748b;
+  font-size: .75rem;
+  font-weight: 700;
+  min-width: 3.2rem;
+}
+
+.mindmap-online-label.online {
+  color: #15803d;
 }
 
 .mindmap-tag {

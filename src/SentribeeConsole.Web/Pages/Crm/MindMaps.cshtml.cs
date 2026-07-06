@@ -2,6 +2,7 @@ using System.Net.Mail;
 using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
+using System.Text.Json.Nodes;
 using Microsoft.AspNetCore.Mvc;
 using MySqlConnector;
 using SentribeeConsole.Web.Application.Contracts;
@@ -374,8 +375,34 @@ public class MindMapsModel(
 
         try
         {
-            using var _ = JsonDocument.Parse(mapJson);
-            return mapJson;
+            var node = JsonNode.Parse(mapJson);
+            if (node is not JsonObject root)
+            {
+                return BuildDefaultMapJson(title);
+            }
+
+            if (root["nodeData"] is not JsonObject nodeData)
+            {
+                return BuildDefaultMapJson(title);
+            }
+
+            if (string.IsNullOrWhiteSpace(nodeData["id"]?.GetValue<string>()))
+            {
+                nodeData["id"] = CreateNodeId();
+            }
+
+            if (string.IsNullOrWhiteSpace(nodeData["topic"]?.GetValue<string>()))
+            {
+                nodeData["topic"] = NormalizeTitle(title);
+            }
+
+            nodeData["root"] = true;
+            if (nodeData["children"] is not JsonArray)
+            {
+                nodeData["children"] = new JsonArray();
+            }
+
+            return root.ToJsonString();
         }
         catch (JsonException)
         {

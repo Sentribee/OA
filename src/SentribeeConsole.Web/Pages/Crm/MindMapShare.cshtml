@@ -60,7 +60,18 @@
             const token = document.querySelector('input[name="__RequestVerificationToken"]')?.value || '';
             const activityList = document.getElementById('mindmap-share-activity-list');
             const overlay = document.getElementById('mindmap-share-overlay');
-            let activities = @Html.Raw(activitiesJson);
+            const normalizeActivity = (item) => ({
+                id: item.id ?? item.Id ?? 0,
+                participantId: item.participantId ?? item.ParticipantId,
+                actorName: item.actorName ?? item.ActorName,
+                actorEmail: item.actorEmail ?? item.ActorEmail,
+                colorTag: item.colorTag ?? item.ColorTag,
+                nodeId: item.nodeId ?? item.NodeId,
+                nodeTopic: item.nodeTopic ?? item.NodeTopic,
+                summary: item.summary ?? item.Summary,
+                createdAtUtc: item.createdAtUtc ?? item.CreatedAtUtc
+            });
+            let activities = (@Html.Raw(activitiesJson)).map(normalizeActivity);
             let lastActivityId = activities[0]?.id || 0;
             let saveTimer;
             let saving = false;
@@ -68,17 +79,39 @@
             let lastUpdatedAt = @Html.Raw(JsonSerializer.Serialize(Model.Map.UpdatedAtUtc.ToString("O")));
             let lastOperation = null;
 
+            const buildDefaultData = () => {
+                const data = MindElixir.new(initialTitle || 'Product brainstorm');
+                data.nodeData.topic = initialTitle || 'Product brainstorm';
+                data.nodeData.root = true;
+                return data;
+            };
+
+            const normalizeMapData = (data) => {
+                if (!data?.nodeData) {
+                    return buildDefaultData();
+                }
+
+                data.nodeData.id = data.nodeData.id || `root-${Date.now()}`;
+                data.nodeData.topic = data.nodeData.topic || initialTitle || 'Product brainstorm';
+                data.nodeData.root = true;
+                if (!Array.isArray(data.nodeData.children)) {
+                    data.nodeData.children = [];
+                }
+
+                return data;
+            };
+
             const parseData = (json) => {
                 try {
                     const data = JSON.parse(json);
                     if (data?.nodeData) {
-                        return data;
+                        return normalizeMapData(data);
                     }
                 } catch {
                     // Use default data if the stored document cannot be parsed.
                 }
 
-                return MindElixir.new(initialTitle || 'Product brainstorm');
+                return buildDefaultData();
             };
 
             const mind = new MindElixir({
@@ -93,6 +126,12 @@
                 overflowHidden: false
             });
             mind.init(parseData(rawMapJson));
+            requestAnimationFrame(() => {
+                window.dispatchEvent(new Event('resize'));
+                if (typeof mind.toCenter === 'function') {
+                    mind.toCenter();
+                }
+            });
 
             const getMapJson = () => typeof mind.getDataString === 'function'
                 ? mind.getDataString()
@@ -171,7 +210,7 @@
                     const result = await response.json();
                     if (result.success) {
                         dirty = false;
-                        lastUpdatedAt = result.updatedAtUtc;
+                        lastUpdatedAt = result.updatedAtUtc || result.UpdatedAtUtc;
                         setState(`Saved ${result.savedAt}`);
                         await pollRemote(false);
                     } else {
@@ -204,13 +243,15 @@
                         return;
                     }
 
-                    activities = result.activities || [];
+                    const nextUpdatedAt = result.updatedAtUtc || result.UpdatedAtUtc;
+                    const nextMapJson = result.mapJson || result.MapJson;
+                    activities = (result.activities || result.Activities || []).map(normalizeActivity);
                     renderActivities();
                     showRemoteNotice();
-                    if (refreshMap && !dirty && result.updatedAtUtc && result.updatedAtUtc !== lastUpdatedAt) {
-                        lastUpdatedAt = result.updatedAtUtc;
+                    if (refreshMap && !dirty && nextUpdatedAt && nextUpdatedAt !== lastUpdatedAt) {
+                        lastUpdatedAt = nextUpdatedAt;
                         if (typeof mind.refresh === 'function') {
-                            mind.refresh(parseData(result.mapJson));
+                            mind.refresh(parseData(nextMapJson));
                         }
                         setState('Updated from meeting');
                     }
@@ -222,6 +263,7 @@
             saveButton.addEventListener('click', saveMap);
             mind.bus.addListener('operation', scheduleSave);
             renderActivities();
+            window.setTimeout(() => pollRemote(false), 800);
             window.setInterval(pollRemote, 5000);
         </script>
     }
