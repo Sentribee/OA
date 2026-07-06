@@ -1,0 +1,232 @@
+@page "/oa/mindmaps"
+@model SentribeeConsole.Web.Pages.Crm.MindMapsModel
+@using System.Text.Json
+@{
+    Layout = "_CrmLayout";
+}
+
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/mind-elixir@5.13.0/dist/MindElixir.css" />
+
+@if (!string.IsNullOrWhiteSpace(Model.StatusMessage))
+{
+    <div class="alert @(Model.StatusMessage.Contains("failed", StringComparison.OrdinalIgnoreCase) || Model.StatusMessage.Contains("Add at least", StringComparison.OrdinalIgnoreCase) ? "alert-warning" : "alert-success")">@Model.StatusMessage</div>
+}
+
+<div class="row g-5 mindmap-workspace">
+    <div class="col-12 col-xl-3">
+        <div class="card mb-5">
+            <div class="card-body">
+                <h3 class="card-title fs-6">New brainstorm</h3>
+                <form method="post" asp-page-handler="Create" class="mt-4">
+                    <label class="form-label" for="new-map-title">Title</label>
+                    <input id="new-map-title" name="title" class="form-control" value="Product brainstorm" />
+                    <button type="submit" class="btn btn-primary w-100 mt-3">
+                        <i class="material-symbols-rounded">add</i> Create Map
+                    </button>
+                </form>
+            </div>
+        </div>
+
+        <div class="card">
+            <div class="card-body">
+                <div class="d-flex align-items-center justify-content-between gap-3 mb-3">
+                    <h3 class="card-title fs-6 mb-0">Maps</h3>
+                    <span class="badge bg-light text-body">@Model.Maps.Count</span>
+                </div>
+                <div class="mindmap-list">
+                    @if (Model.Maps.Count == 0)
+                    {
+                        <div class="text-body-secondary fs-8">No brainstorm maps yet.</div>
+                    }
+                    else
+                    {
+                        @foreach (var map in Model.Maps)
+                        {
+                            <a class="mindmap-list-item @(Model.SelectedMap?.Id == map.Id ? "active" : null)"
+                               asp-page="/Crm/MindMaps"
+                               asp-route-mapId="@map.Id">
+                                <span class="fw-semibold text-truncate">@map.Title</span>
+                                <span class="text-body-secondary fs-8">Updated @map.UpdatedAtUtc.ToString("yyyy-MM-dd HH:mm")</span>
+                                @if (map.LastSentAtUtc.HasValue)
+                                {
+                                    <span class="text-body-secondary fs-8">Sent @map.LastSentAtUtc.Value.ToString("yyyy-MM-dd HH:mm")</span>
+                                }
+                            </a>
+                        }
+                    }
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-12 col-xl-9">
+        @if (Model.SelectedMap is null)
+        {
+            <div class="card">
+                <div class="card-body">
+                    <h3 class="card-title fs-6">Mind map editor</h3>
+                    <p class="card-subtitle text-body-secondary mb-0">Create a brainstorm map to start editing with the team.</p>
+                </div>
+            </div>
+        }
+        else
+        {
+            var shareUrl = Model.BuildShareUrl(Model.SelectedMap.ShareToken);
+            <div class="card mindmap-editor-card">
+                <div class="card-body">
+                    <form id="mindmap-save-form" method="post" asp-page-handler="Save">
+                        @Html.AntiForgeryToken()
+                        <input type="hidden" name="mapId" value="@Model.SelectedMap.Id" />
+                        <div class="mindmap-toolbar">
+                            <div class="mindmap-title-fields">
+                                <label class="form-label" for="mindmap-title">Title</label>
+                                <input id="mindmap-title" name="title" class="form-control" value="@Model.SelectedMap.Title" />
+                            </div>
+                            <div class="mindmap-actions">
+                                <button type="button" id="mindmap-save" class="btn btn-primary btn-sm">
+                                    <i class="material-symbols-rounded">save</i> Save
+                                </button>
+                                <button type="button" id="mindmap-copy-link" class="btn btn-outline-primary btn-sm" data-share-url="@shareUrl">
+                                    <i class="material-symbols-rounded">link</i> Copy Link
+                                </button>
+                                <button type="submit" form="mindmap-email-form" class="btn btn-outline-secondary btn-sm">
+                                    <i class="material-symbols-rounded">outgoing_mail</i> Email Final
+                                </button>
+                            </div>
+                        </div>
+                        <div class="row g-4 mt-1">
+                            <div class="col-12 col-lg-8">
+                                <label class="form-label" for="mindmap-share-url">Shared meeting link</label>
+                                <input id="mindmap-share-url" class="form-control" readonly value="@shareUrl" />
+                            </div>
+                            <div class="col-12 col-lg-4">
+                                <label class="form-label" for="mindmap-save-state">Status</label>
+                                <input id="mindmap-save-state" class="form-control" readonly value="Loaded" />
+                            </div>
+                            <div class="col-12">
+                                <label class="form-label" for="mindmap-participants">Participant emails</label>
+                                <textarea id="mindmap-participants" name="participantEmails" rows="2" class="form-control" placeholder="one@example.com, two@example.com">@Model.SelectedMap.ParticipantEmails</textarea>
+                            </div>
+                        </div>
+                    </form>
+
+                    <form id="mindmap-email-form" method="post" asp-page-handler="Email">
+                        @Html.AntiForgeryToken()
+                        <input type="hidden" name="mapId" value="@Model.SelectedMap.Id" />
+                    </form>
+
+                    <div id="mindmap-canvas" class="mindmap-canvas" data-map-id="@Model.SelectedMap.Id"></div>
+                </div>
+            </div>
+        }
+    </div>
+</div>
+
+@if (Model.SelectedMap is not null)
+{
+    <script type="module">
+        import MindElixir from 'https://cdn.jsdelivr.net/npm/mind-elixir@5.13.0/dist/MindElixir.js';
+
+        const rawMapJson = @Html.Raw(JsonSerializer.Serialize(Model.SelectedMap.MapJson));
+        const initialTitle = @Html.Raw(JsonSerializer.Serialize(Model.SelectedMap.Title));
+        const form = document.getElementById('mindmap-save-form');
+        const canvas = document.getElementById('mindmap-canvas');
+        const saveButton = document.getElementById('mindmap-save');
+        const state = document.getElementById('mindmap-save-state');
+        const title = document.getElementById('mindmap-title');
+        const participants = document.getElementById('mindmap-participants');
+        const copyLink = document.getElementById('mindmap-copy-link');
+        const token = form?.querySelector('input[name="__RequestVerificationToken"]')?.value;
+        let saveTimer;
+        let saving = false;
+
+        const parseInitialData = () => {
+            try {
+                const data = JSON.parse(rawMapJson);
+                if (data?.nodeData) {
+                    return data;
+                }
+            } catch {
+                // Fall through to library default.
+            }
+
+            return MindElixir.new(initialTitle || 'Product brainstorm');
+        };
+
+        const mind = new MindElixir({
+            el: canvas,
+            direction: MindElixir.SIDE,
+            draggable: true,
+            contextMenu: true,
+            toolBar: true,
+            nodeMenu: true,
+            keypress: true,
+            locale: 'en',
+            overflowHidden: false
+        });
+
+        mind.init(parseInitialData());
+
+        const getMapJson = () => {
+            if (typeof mind.getDataString === 'function') {
+                return mind.getDataString();
+            }
+
+            return JSON.stringify(mind.getData());
+        };
+
+        const setState = (value) => {
+            if (state) {
+                state.value = value;
+            }
+        };
+
+        const saveMap = async (manual = false) => {
+            if (!form || saving) {
+                return;
+            }
+
+            saving = true;
+            setState('Saving...');
+            const body = new URLSearchParams();
+            body.set('mapId', form.querySelector('input[name="mapId"]').value);
+            body.set('title', title.value || 'Product brainstorm');
+            body.set('participantEmails', participants.value || '');
+            body.set('mapJson', getMapJson());
+            body.set('__RequestVerificationToken', token || '');
+
+            try {
+                const response = await fetch(`${location.pathname}?handler=Save`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/x-www-form-urlencoded;charset=UTF-8',
+                        'RequestVerificationToken': token || ''
+                    },
+                    body
+                });
+                const result = await response.json();
+                setState(result.success ? `Saved ${result.savedAt}` : result.message || 'Save failed');
+            } catch {
+                setState('Save failed');
+            } finally {
+                saving = false;
+            }
+        };
+
+        const scheduleSave = () => {
+            window.clearTimeout(saveTimer);
+            setState('Unsaved changes');
+            saveTimer = window.setTimeout(() => saveMap(false), 1600);
+        };
+
+        saveButton?.addEventListener('click', () => saveMap(true));
+        title?.addEventListener('input', scheduleSave);
+        participants?.addEventListener('input', scheduleSave);
+        copyLink?.addEventListener('click', async () => {
+            const shareUrl = copyLink.dataset.shareUrl || '';
+            await navigator.clipboard?.writeText(shareUrl);
+            setState('Share link copied');
+        });
+        mind.bus.addListener('operation', scheduleSave);
+    </script>
+}

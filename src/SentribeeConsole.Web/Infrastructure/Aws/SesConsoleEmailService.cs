@@ -49,6 +49,20 @@ public sealed class SesConsoleEmailService(
         return SendEmailAsync(email, subject, html, text, cancellationToken);
     }
 
+    public Task<ConsoleEmailResult> SendMindMapSummaryAsync(
+        string email,
+        string companyName,
+        string mapTitle,
+        string shareUrl,
+        string outlineText,
+        CancellationToken cancellationToken)
+    {
+        var subject = $"{companyName} brainstorm map: {mapTitle}";
+        var html = BuildMindMapSummaryHtml(companyName, mapTitle, shareUrl, outlineText);
+        var text = BuildMindMapSummaryText(companyName, mapTitle, shareUrl, outlineText);
+        return SendEmailAsync(email, subject, html, text, cancellationToken);
+    }
+
     private async Task<ConsoleEmailResult> SendEmailAsync(
         string email,
         string subject,
@@ -355,6 +369,57 @@ public sealed class SesConsoleEmailService(
     private static string BuildEmployeeWelcomeText(string companyName, string loginUrl, string temporaryPassword)
     {
         return $"{companyName} created a Sentribee OA staff account for you. Login: {loginUrl}. Temporary password: {temporaryPassword}. On first login, change the password and complete your staff profile.";
+    }
+
+    private static string BuildMindMapSummaryHtml(string companyName, string mapTitle, string shareUrl, string outlineText)
+    {
+        var encodedCompanyName = WebUtility.HtmlEncode(companyName);
+        var encodedMapTitle = WebUtility.HtmlEncode(mapTitle);
+        var encodedUrl = WebUtility.HtmlEncode(shareUrl);
+        var encodedOutline = WebUtility.HtmlEncode(outlineText);
+        return $$"""
+            <!doctype html>
+            <html>
+            <body style="margin:0;background:#f6f7fb;font-family:Arial,Helvetica,sans-serif;color:#172033;">
+              <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="background:#f6f7fb;padding:32px 12px;">
+                <tr>
+                  <td align="center">
+                    <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="max-width:640px;background:#ffffff;border:1px solid #e5e7eb;border-radius:14px;overflow:hidden;">
+                      <tr>
+                        <td style="padding:30px 34px 16px;">
+                          <div style="font-size:13px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:#6d28d9;">Sentribee OA</div>
+                          <h1 style="margin:14px 0 10px;font-size:24px;line-height:1.25;color:#111827;">{{encodedMapTitle}}</h1>
+                          <p style="margin:0;color:#4b5563;font-size:15px;line-height:1.6;">{{encodedCompanyName}} shared the final brainstorm mind map with you.</p>
+                        </td>
+                      </tr>
+                      <tr>
+                        <td style="padding:14px 34px 8px;">
+                          <a href="{{encodedUrl}}" style="display:inline-block;background:#6d28d9;color:#ffffff;text-decoration:none;font-weight:700;border-radius:10px;padding:13px 20px;">Open mind map</a>
+                        </td>
+                      </tr>
+                      <tr>
+                        <td style="padding:18px 34px 10px;">
+                          <div style="font-size:12px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:#6b7280;">Outline</div>
+                          <pre style="white-space:pre-wrap;background:#f3f4f6;border:1px solid #e5e7eb;border-radius:12px;padding:16px 18px;color:#111827;font-family:Consolas,Menlo,monospace;font-size:13px;line-height:1.55;">{{encodedOutline}}</pre>
+                        </td>
+                      </tr>
+                      <tr>
+                        <td style="padding:0 34px 30px;">
+                          <p style="margin:0;color:#4f46e5;font-size:13px;line-height:1.6;word-break:break-all;">{{encodedUrl}}</p>
+                        </td>
+                      </tr>
+                    </table>
+                  </td>
+                </tr>
+              </table>
+            </body>
+            </html>
+            """;
+    }
+
+    private static string BuildMindMapSummaryText(string companyName, string mapTitle, string shareUrl, string outlineText)
+    {
+        return $"{companyName} shared the final brainstorm mind map: {mapTitle}\n\nOpen: {shareUrl}\n\nOutline:\n{outlineText}";
     }
 
     private static string TrimDiagnostic(string? value, int maxLength = 500)

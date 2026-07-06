@@ -1,0 +1,158 @@
+@page "/oa/mindmaps/share/{shareToken}"
+@model SentribeeConsole.Web.Pages.Crm.MindMapShareModel
+@using System.Text.Json
+@{
+    Layout = null;
+}
+
+<!doctype html>
+<html lang="en" data-bs-theme="light">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>@Model.Map?.Title - Sentribee OA</title>
+    <link rel="icon" type="image/x-icon" href="~/favicon.ico" />
+    <link href="https://fonts.googleapis.com/css2?family=Google+Sans:wght@400;500;600;700&display=swap" rel="stylesheet" />
+    <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" rel="stylesheet" />
+    <link rel="stylesheet" href="~/theme/vendor-DDXwb3B2.css" asp-append-version="true" />
+    <link rel="stylesheet" href="~/css/site.css" asp-append-version="true" />
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/mind-elixir@5.13.0/dist/MindElixir.css" />
+</head>
+<body class="mindmap-share-body">
+    @if (Model.Map is not null)
+    {
+        <header class="mindmap-share-header">
+            <div>
+                <div class="text-body-secondary fs-8">@Model.Map.BusinessName</div>
+                <h1>@Model.Map.Title</h1>
+            </div>
+            <div class="mindmap-share-actions">
+                <input id="mindmap-share-state" class="form-control form-control-sm" readonly value="Loaded" />
+                <button type="button" id="mindmap-share-save" class="btn btn-primary btn-sm">
+                    <i class="material-symbols-rounded">save</i> Save
+                </button>
+            </div>
+        </header>
+        <form id="mindmap-share-form" method="post" asp-page-handler="Save">
+            @Html.AntiForgeryToken()
+        </form>
+        <main id="mindmap-share-canvas" class="mindmap-share-canvas"></main>
+
+        <script type="module">
+            import MindElixir from 'https://cdn.jsdelivr.net/npm/mind-elixir@5.13.0/dist/MindElixir.js';
+
+            const rawMapJson = @Html.Raw(JsonSerializer.Serialize(Model.Map.MapJson));
+            const initialTitle = @Html.Raw(JsonSerializer.Serialize(Model.Map.Title));
+            const initialUpdatedAt = @Html.Raw(JsonSerializer.Serialize(Model.Map.UpdatedAtUtc.ToString("O")));
+            const canvas = document.getElementById('mindmap-share-canvas');
+            const state = document.getElementById('mindmap-share-state');
+            const saveButton = document.getElementById('mindmap-share-save');
+            const token = document.querySelector('input[name="__RequestVerificationToken"]')?.value || '';
+            let saveTimer;
+            let saving = false;
+            let dirty = false;
+            let lastUpdatedAt = initialUpdatedAt;
+
+            const parseData = (json) => {
+                try {
+                    const data = JSON.parse(json);
+                    if (data?.nodeData) {
+                        return data;
+                    }
+                } catch {
+                    // Fall through to default data.
+                }
+
+                return MindElixir.new(initialTitle || 'Product brainstorm');
+            };
+
+            const mind = new MindElixir({
+                el: canvas,
+                direction: MindElixir.SIDE,
+                draggable: true,
+                contextMenu: true,
+                toolBar: true,
+                nodeMenu: true,
+                keypress: true,
+                locale: 'en',
+                overflowHidden: false
+            });
+            mind.init(parseData(rawMapJson));
+
+            const getMapJson = () => typeof mind.getDataString === 'function'
+                ? mind.getDataString()
+                : JSON.stringify(mind.getData());
+
+            const setState = (value) => {
+                state.value = value;
+            };
+
+            const saveMap = async () => {
+                if (saving) {
+                    return;
+                }
+
+                saving = true;
+                setState('Saving...');
+                const body = new URLSearchParams();
+                body.set('mapJson', getMapJson());
+                body.set('__RequestVerificationToken', token);
+
+                try {
+                    const response = await fetch(`${location.pathname}?handler=Save`, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/x-www-form-urlencoded;charset=UTF-8',
+                            'RequestVerificationToken': token
+                        },
+                        body
+                    });
+                    const result = await response.json();
+                    if (result.success) {
+                        dirty = false;
+                        lastUpdatedAt = result.updatedAtUtc;
+                        setState(`Saved ${result.savedAt}`);
+                    } else {
+                        setState(result.message || 'Save failed');
+                    }
+                } catch {
+                    setState('Save failed');
+                } finally {
+                    saving = false;
+                }
+            };
+
+            const scheduleSave = () => {
+                dirty = true;
+                window.clearTimeout(saveTimer);
+                setState('Unsaved changes');
+                saveTimer = window.setTimeout(saveMap, 1500);
+            };
+
+            const pollRemote = async () => {
+                if (dirty || saving) {
+                    return;
+                }
+
+                try {
+                    const response = await fetch(`${location.pathname}?handler=Data`, { cache: 'no-store' });
+                    const result = await response.json();
+                    if (result.success && result.updatedAtUtc && result.updatedAtUtc !== lastUpdatedAt) {
+                        lastUpdatedAt = result.updatedAtUtc;
+                        if (typeof mind.refresh === 'function') {
+                            mind.refresh(parseData(result.mapJson));
+                            setState('Updated from meeting');
+                        }
+                    }
+                } catch {
+                    // Keep the local editor usable when polling fails.
+                }
+            };
+
+            saveButton.addEventListener('click', saveMap);
+            mind.bus.addListener('operation', scheduleSave);
+            window.setInterval(pollRemote, 6000);
+        </script>
+    }
+</body>
+</html>

@@ -19,6 +19,14 @@ public interface IConsoleEmailService
         string loginUrl,
         string temporaryPassword,
         CancellationToken cancellationToken);
+
+    Task<ConsoleEmailResult> SendMindMapSummaryAsync(
+        string email,
+        string companyName,
+        string mapTitle,
+        string shareUrl,
+        string outlineText,
+        CancellationToken cancellationToken);
 }
 
 public sealed record ConsoleEmailResult(

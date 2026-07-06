@@ -4253,12 +4253,126 @@ pre,
     width: 4.25rem !important;
   }
 
-  input,
-  select,
-  textarea,
-  .form-control,
-  .form-select {
-    font-size: 16px;
+input,
+select,
+textarea,
+.form-control,
+.form-select {
+  font-size: 16px;
+}
+}
+
+.mindmap-list {
+  display: grid;
+  gap: .65rem;
+}
+
+.mindmap-list-item {
+  border: 1px solid rgba(148, 163, 184, .22);
+  border-radius: .45rem;
+  color: inherit;
+  display: grid;
+  gap: .18rem;
+  padding: .85rem .9rem;
+  text-decoration: none;
+}
+
+.mindmap-list-item:hover,
+.mindmap-list-item.active {
+  background: rgba(109, 40, 217, .07);
+  border-color: rgba(109, 40, 217, .28);
+}
+
+.mindmap-editor-card .card-body {
+  display: grid;
+  gap: 1rem;
+}
+
+.mindmap-toolbar {
+  align-items: end;
+  display: grid;
+  gap: 1rem;
+  grid-template-columns: minmax(16rem, 1fr) auto;
+}
+
+.mindmap-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: .55rem;
+  justify-content: flex-end;
+}
+
+.mindmap-canvas {
+  border: 1px solid rgba(148, 163, 184, .24);
+  border-radius: .5rem;
+  height: min(68vh, 48rem);
+  min-height: 34rem;
+  overflow: hidden;
+}
+
+.mindmap-share-body {
+  background: #f6f7fb;
+  font-family: "Google Sans", Arial, Helvetica, sans-serif;
+  min-height: 100vh;
+}
+
+.mindmap-share-header {
+  align-items: center;
+  background: #fff;
+  border-bottom: 1px solid rgba(148, 163, 184, .22);
+  display: flex;
+  gap: 1rem;
+  justify-content: space-between;
+  padding: .9rem 1rem;
+}
+
+.mindmap-share-header h1 {
+  font-size: 1.05rem;
+  font-weight: 700;
+  margin: 0;
+}
+
+.mindmap-share-actions {
+  align-items: center;
+  display: flex;
+  gap: .55rem;
+}
+
+.mindmap-share-actions .form-control {
+  width: 14rem;
+}
+
+.mindmap-share-canvas {
+  height: calc(100vh - 4.25rem);
+  overflow: hidden;
+}
+
+@media (max-width: 767.98px) {
+  .mindmap-toolbar,
+  .mindmap-share-header {
+    align-items: stretch;
+    grid-template-columns: 1fr;
+  }
+
+  .mindmap-toolbar {
+    display: grid;
+  }
+
+  .mindmap-actions,
+  .mindmap-share-actions {
+    display: grid;
+    grid-template-columns: 1fr;
+  }
+
+  .mindmap-actions .btn,
+  .mindmap-share-actions .btn,
+  .mindmap-share-actions .form-control {
+    width: 100%;
+  }
+
+  .mindmap-canvas {
+    height: 70vh;
+    min-height: 30rem;
   }
 }
 
