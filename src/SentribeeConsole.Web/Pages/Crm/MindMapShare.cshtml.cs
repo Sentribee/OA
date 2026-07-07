@@ -48,6 +48,7 @@ public class MindMapShareModel(IConfiguration configuration) : PageModel
         {
             success = true,
             mapJson = map.MapJson,
+            mapStatus = map.MapStatus,
             updatedAtUtc = map.UpdatedAtUtc.ToString("O"),
             activities = activities.Select(MindMapEditorModel.ToActivityJson)
         });
@@ -68,6 +69,17 @@ public class MindMapShareModel(IConfiguration configuration) : PageModel
         if (map is null)
         {
             return new JsonResult(new { success = false, message = "Mind map was not found." }) { StatusCode = 404 };
+        }
+
+        if (string.Equals(map.MapStatus, "Final", StringComparison.OrdinalIgnoreCase))
+        {
+            return new JsonResult(new
+            {
+                success = false,
+                locked = true,
+                message = "This mind map is final and cannot be edited."
+            })
+            { StatusCode = 409 };
         }
 
         var normalizedJson = MindMapsModel.NormalizeMapJson(mapJson, map.Title);

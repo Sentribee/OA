@@ -4468,6 +4468,40 @@ textarea,
   overflow: hidden;
 }
 
+.mindmap-editor-canvas.locked,
+.mindmap-share-canvas.locked {
+  pointer-events: none;
+}
+
+.mindmap-lock-overlay {
+  align-items: center;
+  background: rgba(255, 255, 255, .96);
+  border: 1px solid rgba(148, 163, 184, .28);
+  border-radius: 999px;
+  box-shadow: 0 16px 46px rgba(15, 23, 42, .16);
+  display: none;
+  gap: .5rem;
+  left: 50%;
+  padding: .65rem .95rem;
+  position: absolute;
+  top: 5.2rem;
+  transform: translateX(-50%);
+  z-index: 18;
+}
+
+.mindmap-lock-overlay.show {
+  display: flex;
+}
+
+.mindmap-lock-overlay i {
+  color: #7c3aed;
+}
+
+.mindmap-lock-overlay span {
+  color: #64748b;
+  font-size: .82rem;
+}
+
 .mindmap-editor-aside,
 .mindmap-share-side {
   background: #fff;
@@ -4603,6 +4637,7 @@ textarea,
   display: grid;
   grid-template-columns: minmax(0, 1fr) 20rem;
   height: calc(100vh - 4.5rem);
+  position: relative;
 }
 
 .mindmap-share-canvas {

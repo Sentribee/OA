@@ -44,6 +44,11 @@
                 <div class="alert alert-success mindmap-editor-alert">@Model.StatusMessage</div>
             }
             <div id="mindmap-activity-overlay" class="mindmap-activity-overlay"></div>
+            <div id="mindmap-lock-overlay" class="mindmap-lock-overlay">
+                <i class="material-symbols-rounded">lock</i>
+                <strong>Final version locked</strong>
+                <span>Change status to In Progress and save before editing.</span>
+            </div>
             <div id="mindmap-editor-canvas" class="mindmap-editor-canvas"></div>
         </main>
 
@@ -70,6 +75,9 @@
                     <input id="mindmap-editor-state" class="form-control form-control-sm" readonly value="Loaded" />
                     <button type="button" id="mindmap-editor-save" class="btn btn-primary w-100">
                         <i class="material-symbols-rounded">save</i> Save
+                    </button>
+                    <button type="button" id="mindmap-final-email" class="btn btn-outline-secondary w-100 @(Model.Map.MapStatus == "Final" ? null : "d-none")">
+                        <i class="material-symbols-rounded">mark_email_read</i> Send Final Email
                     </button>
                 </div>
                 <form method="post" asp-page-handler="Invite" asp-route-mapId="@Model.Map.Id">
@@ -118,6 +126,7 @@
         const mapId = @Model.Map.Id;
         const rawMapJson = @Html.Raw(JsonSerializer.Serialize(Model.Map.MapJson));
         const initialTitle = @Html.Raw(JsonSerializer.Serialize(Model.Map.Title));
+        const initialMapStatus = @Html.Raw(JsonSerializer.Serialize(Model.Map.MapStatus));
         const normalizeParticipant = (item) => ({
             id: item.id ?? item.Id,
             displayName: item.displayName ?? item.DisplayName,
@@ -147,14 +156,18 @@
         const statusInput = document.getElementById('mindmap-editor-status');
         const state = document.getElementById('mindmap-editor-state');
         const saveButton = document.getElementById('mindmap-editor-save');
+        const finalEmailButton = document.getElementById('mindmap-final-email');
         const token = document.querySelector('input[name="__RequestVerificationToken"]')?.value || '';
         const activityList = document.getElementById('mindmap-activity-list');
         const participantList = document.getElementById('mindmap-participant-list');
         const overlay = document.getElementById('mindmap-activity-overlay');
+        const lockOverlay = document.getElementById('mindmap-lock-overlay');
         let saving = false;
         let dirty = false;
         let saveTimer;
         let lastOperation = null;
+        let currentMapStatus = initialMapStatus || 'Draft';
+        let lastSerializedMap = '';
 
         const buildDefaultData = () => {
             const data = MindElixir.new(initialTitle || 'Product brainstorm');
@@ -220,8 +233,24 @@
             ? mind.getDataString()
             : JSON.stringify(mind.getData());
 
+        lastSerializedMap = getMapJson();
+
         const setState = (value) => {
             state.value = value;
+        };
+
+        const isFinalLocked = () => currentMapStatus === 'Final' && statusInput.value === 'Final';
+
+        const applyLockState = () => {
+            const locked = isFinalLocked();
+            canvas.classList.toggle('locked', locked);
+            lockOverlay?.classList.toggle('show', locked);
+            finalEmailButton?.classList.toggle('d-none', currentMapStatus !== 'Final');
+            if (locked && typeof mind.disableEdit === 'function') {
+                mind.disableEdit();
+            } else if (!locked && typeof mind.enableEdit === 'function') {
+                mind.enableEdit();
+            }
         };
 
         const operationSummary = (operation) => {
@@ -241,6 +270,11 @@
 
         const saveMap = async () => {
             if (saving) {
+                return;
+            }
+
+            if (isFinalLocked()) {
+                setState('Final is locked');
                 return;
             }
 
@@ -269,6 +303,9 @@
                 if (result.success) {
                     dirty = false;
                     lastUpdatedAt = result.updatedAtUtc || result.UpdatedAtUtc;
+                    currentMapStatus = result.mapStatus || result.MapStatus || statusInput.value || currentMapStatus;
+                    lastSerializedMap = getMapJson();
+                    applyLockState();
                     setState(`Saved ${result.savedAt}`);
                     await pollData(false);
                 } else {
@@ -282,6 +319,11 @@
         };
 
         const scheduleSave = (operation = null) => {
+            if (operation && isFinalLocked()) {
+                setState('Final is locked');
+                return;
+            }
+
             lastOperation = operation || lastOperation;
             dirty = true;
             window.clearTimeout(saveTimer);
@@ -342,15 +384,18 @@
 
                 const nextUpdatedAt = result.updatedAtUtc || result.UpdatedAtUtc;
                 const nextMapJson = result.mapJson || result.MapJson;
+                currentMapStatus = result.mapStatus || result.MapStatus || currentMapStatus;
                 participants = (result.participants || result.Participants || []).map(normalizeParticipant);
                 activities = (result.activities || result.Activities || []).map(normalizeActivity);
                 renderParticipants();
                 renderActivities();
+                applyLockState();
                 if (refreshMap && !dirty && nextUpdatedAt && nextUpdatedAt !== lastUpdatedAt) {
                     lastUpdatedAt = nextUpdatedAt;
                     if (typeof mind.refresh === 'function') {
                         mind.refresh(parseData(nextMapJson));
                     }
+                    lastSerializedMap = getMapJson();
                     titleInput.value = result.title || result.Title || titleInput.value;
                     statusInput.value = result.mapStatus || result.MapStatus || statusInput.value;
                     setState('Updated from meeting');
@@ -360,14 +405,79 @@
             }
         };
 
+        const exportMapImage = async () => {
+            const { toPng } = await import('https://cdn.jsdelivr.net/npm/html-to-image@1.11.11/+esm');
+            const target = canvas.querySelector('.map-container') || canvas;
+            return toPng(target, {
+                backgroundColor: '#ffffff',
+                cacheBust: true,
+                pixelRatio: 2
+            });
+        };
+
+        const sendFinalEmail = async () => {
+            if (currentMapStatus !== 'Final') {
+                setState('Set status to Final first');
+                return;
+            }
+
+            if (dirty) {
+                await saveMap();
+            }
+
+            setState('Preparing final email...');
+            try {
+                const imageDataUrl = await exportMapImage();
+                const body = new URLSearchParams();
+                body.set('imageDataUrl', imageDataUrl);
+                body.set('__RequestVerificationToken', token);
+                const response = await fetch(`${location.pathname}?handler=FinalEmail`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/x-www-form-urlencoded;charset=UTF-8',
+                        'RequestVerificationToken': token
+                    },
+                    body
+                });
+                const result = await response.json();
+                setState(result.message || (result.success ? 'Final email sent' : 'Final email failed'));
+            } catch {
+                setState('Final email failed');
+            }
+        };
+
+        const watchSerializedChanges = () => {
+            if (saving || isFinalLocked()) {
+                return;
+            }
+
+            const currentSerialized = getMapJson();
+            if (currentSerialized !== lastSerializedMap) {
+                lastSerializedMap = currentSerialized;
+                scheduleSave({ name: 'undo/redo' });
+            }
+        };
+
         saveButton.addEventListener('click', saveMap);
+        finalEmailButton?.addEventListener('click', sendFinalEmail);
         titleInput.addEventListener('input', () => scheduleSave());
-        statusInput.addEventListener('change', () => scheduleSave());
+        statusInput.addEventListener('change', () => {
+            applyLockState();
+            scheduleSave();
+        });
+        document.addEventListener('keydown', (event) => {
+            const key = event.key.toLowerCase();
+            if ((event.ctrlKey || event.metaKey) && (key === 'z' || key === 'y')) {
+                window.setTimeout(watchSerializedChanges, 120);
+            }
+        });
         mind.bus.addListener('operation', scheduleSave);
+        applyLockState();
         renderParticipants();
         renderActivities();
         window.setTimeout(() => pollData(false), 800);
         window.setInterval(pollData, 5000);
+        window.setInterval(watchSerializedChanges, 1200);
     </script>
     <script type="module" src="~/theme/vendor-DWdXmVBv.js" asp-append-version="true"></script>
 </body>

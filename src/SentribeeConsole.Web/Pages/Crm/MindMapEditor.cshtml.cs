@@ -4,6 +4,7 @@ using SentribeeConsole.Web.Application.Contracts;
 
 namespace SentribeeConsole.Web.Pages.Crm;
 
+[RequestSizeLimit(6_000_000)]
 public class MindMapEditorModel(
     IConfiguration configuration,
     IConsoleEmailService emailService) : CrmMerchantPageModel(configuration)
@@ -102,6 +103,26 @@ public class MindMapEditorModel(
         await using var connection = new MySqlConnection(ConnectionString);
         await connection.OpenAsync(cancellationToken);
         await MindMapsModel.EnsureMindMapTablesAsync(connection, cancellationToken);
+        var existingMap = await MindMapStore.LoadMapAsync(connection, merchant.Id, mapId, cancellationToken);
+        if (existingMap is null)
+        {
+            return new JsonResult(new { success = false, message = "Mind map was not found." }) { StatusCode = 404 };
+        }
+
+        var normalizedStatus = MindMapsModel.NormalizeMapStatus(mapStatus);
+        if (string.Equals(existingMap.MapStatus, "Final", StringComparison.OrdinalIgnoreCase) &&
+            string.Equals(normalizedStatus, "Final", StringComparison.OrdinalIgnoreCase) &&
+            !string.Equals(existingMap.MapJson, normalizedJson, StringComparison.Ordinal))
+        {
+            return new JsonResult(new
+            {
+                success = false,
+                locked = true,
+                message = "This mind map is final. Change status to In Progress before editing."
+            })
+            { StatusCode = 409 };
+        }
+
         await using var transaction = await connection.BeginTransactionAsync(cancellationToken);
 
         const string updateSql = """
@@ -115,7 +136,7 @@ public class MindMapEditorModel(
         await using (var command = new MySqlCommand(updateSql, connection, transaction))
         {
             command.Parameters.Add("@Title", MySqlDbType.VarChar, 180).Value = normalizedTitle;
-            command.Parameters.Add("@MapStatus", MySqlDbType.VarChar, 40).Value = MindMapsModel.NormalizeMapStatus(mapStatus);
+            command.Parameters.Add("@MapStatus", MySqlDbType.VarChar, 40).Value = normalizedStatus;
             command.Parameters.Add("@MapJson", MySqlDbType.LongText).Value = normalizedJson;
             command.Parameters.Add("@MapId", MySqlDbType.Int64).Value = mapId;
             command.Parameters.Add("@MerchantId", MySqlDbType.Int64).Value = merchant.Id;
@@ -140,12 +161,89 @@ public class MindMapEditorModel(
             cancellationToken);
 
         await transaction.CommitAsync(cancellationToken);
+        var participants = await MindMapStore.LoadParticipantsAsync(connection, merchant.Id, mapId, cancellationToken);
+        if (!string.Equals(existingMap.MapStatus, normalizedStatus, StringComparison.OrdinalIgnoreCase))
+        {
+            await NotifyStatusChangedAsync(merchant, normalizedTitle, normalizedStatus, participants, cancellationToken);
+        }
+
         var now = DateTime.UtcNow;
         return new JsonResult(new
         {
             success = true,
             savedAt = now.ToString("yyyy-MM-dd HH:mm:ss"),
-            updatedAtUtc = now.ToString("O")
+            updatedAtUtc = now.ToString("O"),
+            mapStatus = normalizedStatus
+        });
+    }
+
+    public async Task<IActionResult> OnPostFinalEmailAsync(
+        long mapId,
+        string? imageDataUrl,
+        CancellationToken cancellationToken)
+    {
+        var merchant = await LoadCurrentMerchantAsync(cancellationToken);
+        if (merchant is null)
+        {
+            return new JsonResult(new { success = false, message = "Login required." }) { StatusCode = 401 };
+        }
+
+        await using var connection = new MySqlConnection(ConnectionString);
+        await connection.OpenAsync(cancellationToken);
+        await MindMapsModel.EnsureMindMapTablesAsync(connection, cancellationToken);
+        var map = await MindMapStore.LoadMapAsync(connection, merchant.Id, mapId, cancellationToken);
+        if (map is null)
+        {
+            return new JsonResult(new { success = false, message = "Mind map was not found." }) { StatusCode = 404 };
+        }
+
+        if (!string.Equals(map.MapStatus, "Final", StringComparison.OrdinalIgnoreCase))
+        {
+            return new JsonResult(new { success = false, message = "Set this mind map to Final before sending the final email." }) { StatusCode = 409 };
+        }
+
+        var participants = await MindMapStore.LoadParticipantsAsync(connection, merchant.Id, mapId, cancellationToken);
+        if (participants.Count == 0)
+        {
+            return new JsonResult(new { success = false, message = "No shared people found." }) { StatusCode = 400 };
+        }
+
+        var outline = MindMapsModel.BuildOutline(map.MapJson, map.Title);
+        var sent = 0;
+        var failed = new List<string>();
+        foreach (var participant in participants)
+        {
+            var result = await emailService.SendMindMapFinalAsync(
+                participant.Email,
+                merchant.BusinessName,
+                map.Title,
+                BuildParticipantShareUrl(participant.InviteToken),
+                outline,
+                NormalizeImageDataUrl(imageDataUrl),
+                cancellationToken);
+            if (result.Success)
+            {
+                sent++;
+            }
+            else
+            {
+                failed.Add(participant.Email);
+            }
+        }
+
+        if (sent > 0)
+        {
+            await MindMapStore.MarkMapSentAsync(connection, merchant.Id, mapId, cancellationToken);
+        }
+
+        return new JsonResult(new
+        {
+            success = failed.Count == 0,
+            sent,
+            failed = failed.Count,
+            message = failed.Count == 0
+                ? $"Final email sent to {sent} participant(s)."
+                : $"Final email sent to {sent}; failed for {failed.Count}."
         });
     }
 
@@ -279,5 +377,36 @@ public class MindMapEditorModel(
         ViewData["Title"] = "Mind Map Editor";
         ViewData["PageTitle"] = "Mind Map Editor";
         ViewData["ActiveMenu"] = "MindMaps";
+    }
+
+    private async Task NotifyStatusChangedAsync(
+        CrmMerchantSession merchant,
+        string mapTitle,
+        string mapStatus,
+        IReadOnlyList<CrmMindMapParticipant> participants,
+        CancellationToken cancellationToken)
+    {
+        foreach (var participant in participants)
+        {
+            await emailService.SendMindMapStatusChangedAsync(
+                participant.Email,
+                merchant.BusinessName,
+                mapTitle,
+                mapStatus,
+                BuildParticipantShareUrl(participant.InviteToken),
+                cancellationToken);
+        }
+    }
+
+    private static string? NormalizeImageDataUrl(string? imageDataUrl)
+    {
+        if (string.IsNullOrWhiteSpace(imageDataUrl) ||
+            !imageDataUrl.StartsWith("data:image/", StringComparison.OrdinalIgnoreCase) ||
+            imageDataUrl.Length > 5_000_000)
+        {
+            return null;
+        }
+
+        return imageDataUrl;
     }
 }

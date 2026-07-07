@@ -40,6 +40,11 @@
         </header>
         <div id="mindmap-share-overlay" class="mindmap-activity-overlay"></div>
         <main class="mindmap-share-main">
+            <div id="mindmap-share-lock-overlay" class="mindmap-lock-overlay">
+                <i class="material-symbols-rounded">lock</i>
+                <strong>Final version locked</strong>
+                <span>This map is final and cannot be edited.</span>
+            </div>
             <div id="mindmap-share-canvas" class="mindmap-share-canvas"></div>
             <aside class="mindmap-share-side">
                 <h2>Recent changes</h2>
@@ -52,6 +57,7 @@
 
             const rawMapJson = @Html.Raw(JsonSerializer.Serialize(Model.Map.MapJson));
             const initialTitle = @Html.Raw(JsonSerializer.Serialize(Model.Map.Title));
+            const initialMapStatus = @Html.Raw(JsonSerializer.Serialize(Model.Map.MapStatus));
             const myEmail = @Html.Raw(JsonSerializer.Serialize(Model.Map.ParticipantEmail));
             const myName = @Html.Raw(JsonSerializer.Serialize(Model.Map.ParticipantName));
             const canvas = document.getElementById('mindmap-share-canvas');
@@ -60,6 +66,7 @@
             const token = document.querySelector('input[name="__RequestVerificationToken"]')?.value || '';
             const activityList = document.getElementById('mindmap-share-activity-list');
             const overlay = document.getElementById('mindmap-share-overlay');
+            const lockOverlay = document.getElementById('mindmap-share-lock-overlay');
             const normalizeActivity = (item) => ({
                 id: item.id ?? item.Id ?? 0,
                 participantId: item.participantId ?? item.ParticipantId,
@@ -78,6 +85,8 @@
             let dirty = false;
             let lastUpdatedAt = @Html.Raw(JsonSerializer.Serialize(Model.Map.UpdatedAtUtc.ToString("O")));
             let lastOperation = null;
+            let currentMapStatus = initialMapStatus || 'Draft';
+            let lastSerializedMap = '';
 
             const buildDefaultData = () => {
                 const data = MindElixir.new(initialTitle || 'Product brainstorm');
@@ -142,8 +151,24 @@
                 ? mind.getDataString()
                 : JSON.stringify(mind.getData());
 
+            lastSerializedMap = getMapJson();
+
             const setState = (value) => {
                 state.value = value;
+            };
+
+            const isFinalLocked = () => currentMapStatus === 'Final';
+
+            const applyLockState = () => {
+                const locked = isFinalLocked();
+                canvas.classList.toggle('locked', locked);
+                lockOverlay?.classList.toggle('show', locked);
+                saveButton.disabled = locked;
+                if (locked && typeof mind.disableEdit === 'function') {
+                    mind.disableEdit();
+                } else if (!locked && typeof mind.enableEdit === 'function') {
+                    mind.enableEdit();
+                }
             };
 
             const operationSummary = (operation) => {
@@ -193,6 +218,11 @@
                     return;
                 }
 
+                if (isFinalLocked()) {
+                    setState('Final is locked');
+                    return;
+                }
+
                 saving = true;
                 setState('Saving...');
                 const node = operationNode(lastOperation);
@@ -216,6 +246,7 @@
                     if (result.success) {
                         dirty = false;
                         lastUpdatedAt = result.updatedAtUtc || result.UpdatedAtUtc;
+                        lastSerializedMap = getMapJson();
                         setState(`Saved ${result.savedAt}`);
                         await pollRemote(false);
                     } else {
@@ -229,6 +260,11 @@
             };
 
             const scheduleSave = (operation = null) => {
+                if (operation && isFinalLocked()) {
+                    setState('Final is locked');
+                    return;
+                }
+
                 lastOperation = operation || lastOperation;
                 dirty = true;
                 window.clearTimeout(saveTimer);
@@ -250,14 +286,17 @@
 
                     const nextUpdatedAt = result.updatedAtUtc || result.UpdatedAtUtc;
                     const nextMapJson = result.mapJson || result.MapJson;
+                    currentMapStatus = result.mapStatus || result.MapStatus || currentMapStatus;
                     activities = (result.activities || result.Activities || []).map(normalizeActivity);
                     renderActivities();
                     showRemoteNotice();
+                    applyLockState();
                     if (refreshMap && !dirty && nextUpdatedAt && nextUpdatedAt !== lastUpdatedAt) {
                         lastUpdatedAt = nextUpdatedAt;
                         if (typeof mind.refresh === 'function') {
                             mind.refresh(parseData(nextMapJson));
                         }
+                        lastSerializedMap = getMapJson();
                         setState('Updated from meeting');
                     }
                 } catch {
@@ -265,11 +304,31 @@
                 }
             };
 
+            const watchSerializedChanges = () => {
+                if (saving || isFinalLocked()) {
+                    return;
+                }
+
+                const currentSerialized = getMapJson();
+                if (currentSerialized !== lastSerializedMap) {
+                    lastSerializedMap = currentSerialized;
+                    scheduleSave({ name: 'undo/redo' });
+                }
+            };
+
             saveButton.addEventListener('click', saveMap);
+            document.addEventListener('keydown', (event) => {
+                const key = event.key.toLowerCase();
+                if ((event.ctrlKey || event.metaKey) && (key === 'z' || key === 'y')) {
+                    window.setTimeout(watchSerializedChanges, 120);
+                }
+            });
             mind.bus.addListener('operation', scheduleSave);
+            applyLockState();
             renderActivities();
             window.setTimeout(() => pollRemote(false), 800);
             window.setInterval(pollRemote, 5000);
+            window.setInterval(watchSerializedChanges, 1200);
         </script>
     }
 </body>

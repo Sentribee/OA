@@ -76,6 +76,35 @@ public sealed class SesConsoleEmailService(
         return SendEmailAsync(email, subject, html, text, cancellationToken);
     }
 
+    public Task<ConsoleEmailResult> SendMindMapStatusChangedAsync(
+        string email,
+        string companyName,
+        string mapTitle,
+        string mapStatus,
+        string shareUrl,
+        CancellationToken cancellationToken)
+    {
+        var subject = $"{companyName} updated brainstorm map status: {mapTitle}";
+        var html = BuildMindMapStatusChangedHtml(companyName, mapTitle, mapStatus, shareUrl);
+        var text = BuildMindMapStatusChangedText(companyName, mapTitle, mapStatus, shareUrl);
+        return SendEmailAsync(email, subject, html, text, cancellationToken);
+    }
+
+    public Task<ConsoleEmailResult> SendMindMapFinalAsync(
+        string email,
+        string companyName,
+        string mapTitle,
+        string shareUrl,
+        string outlineText,
+        string? imageDataUrl,
+        CancellationToken cancellationToken)
+    {
+        var subject = $"{companyName} final brainstorm map: {mapTitle}";
+        var html = BuildMindMapFinalHtml(companyName, mapTitle, shareUrl, outlineText, imageDataUrl);
+        var text = BuildMindMapFinalText(companyName, mapTitle, shareUrl, outlineText);
+        return SendEmailAsync(email, subject, html, text, cancellationToken);
+    }
+
     private async Task<ConsoleEmailResult> SendEmailAsync(
         string email,
         string subject,
@@ -477,6 +506,136 @@ public sealed class SesConsoleEmailService(
     private static string BuildMindMapInvitationText(string companyName, string mapTitle, string shareUrl)
     {
         return $"{companyName} invited you to collaborate on the brainstorm mind map: {mapTitle}\n\nOpen: {shareUrl}";
+    }
+
+    private static string BuildMindMapStatusChangedHtml(
+        string companyName,
+        string mapTitle,
+        string mapStatus,
+        string shareUrl)
+    {
+        var encodedCompanyName = WebUtility.HtmlEncode(companyName);
+        var encodedMapTitle = WebUtility.HtmlEncode(mapTitle);
+        var encodedMapStatus = WebUtility.HtmlEncode(mapStatus);
+        var encodedUrl = WebUtility.HtmlEncode(shareUrl);
+        return $$"""
+            <!doctype html>
+            <html>
+            <body style="margin:0;background:#f6f7fb;font-family:Arial,Helvetica,sans-serif;color:#172033;">
+              <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="background:#f6f7fb;padding:32px 12px;">
+                <tr>
+                  <td align="center">
+                    <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="max-width:600px;background:#ffffff;border:1px solid #e5e7eb;border-radius:14px;overflow:hidden;">
+                      <tr>
+                        <td style="padding:30px 34px 16px;">
+                          <div style="font-size:13px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:#6d28d9;">Sentribee OA</div>
+                          <h1 style="margin:14px 0 10px;font-size:24px;line-height:1.25;color:#111827;">Mind map status changed</h1>
+                          <p style="margin:0;color:#4b5563;font-size:15px;line-height:1.6;">{{encodedCompanyName}} updated <strong>{{encodedMapTitle}}</strong> to <strong>{{encodedMapStatus}}</strong>.</p>
+                        </td>
+                      </tr>
+                      <tr>
+                        <td style="padding:14px 34px 8px;">
+                          <a href="{{encodedUrl}}" style="display:inline-block;background:#6d28d9;color:#ffffff;text-decoration:none;font-weight:700;border-radius:10px;padding:13px 20px;">Open mind map</a>
+                        </td>
+                      </tr>
+                      <tr>
+                        <td style="padding:18px 34px 30px;">
+                          <p style="margin:0;color:#4f46e5;font-size:13px;line-height:1.6;word-break:break-all;">{{encodedUrl}}</p>
+                        </td>
+                      </tr>
+                    </table>
+                  </td>
+                </tr>
+              </table>
+            </body>
+            </html>
+            """;
+    }
+
+    private static string BuildMindMapStatusChangedText(
+        string companyName,
+        string mapTitle,
+        string mapStatus,
+        string shareUrl)
+    {
+        return $"{companyName} updated the brainstorm mind map status to {mapStatus}: {mapTitle}\n\nOpen: {shareUrl}";
+    }
+
+    private static string BuildMindMapFinalHtml(
+        string companyName,
+        string mapTitle,
+        string shareUrl,
+        string outlineText,
+        string? imageDataUrl)
+    {
+        var encodedCompanyName = WebUtility.HtmlEncode(companyName);
+        var encodedMapTitle = WebUtility.HtmlEncode(mapTitle);
+        var encodedUrl = WebUtility.HtmlEncode(shareUrl);
+        var encodedOutline = WebUtility.HtmlEncode(outlineText);
+        var imageBlock = BuildMindMapFinalImageBlock(imageDataUrl);
+        return $$"""
+            <!doctype html>
+            <html>
+            <body style="margin:0;background:#f6f7fb;font-family:Arial,Helvetica,sans-serif;color:#172033;">
+              <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="background:#f6f7fb;padding:32px 12px;">
+                <tr>
+                  <td align="center">
+                    <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="max-width:760px;background:#ffffff;border:1px solid #e5e7eb;border-radius:14px;overflow:hidden;">
+                      <tr>
+                        <td style="padding:30px 34px 16px;">
+                          <div style="font-size:13px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:#6d28d9;">Sentribee OA</div>
+                          <h1 style="margin:14px 0 10px;font-size:24px;line-height:1.25;color:#111827;">{{encodedMapTitle}}</h1>
+                          <p style="margin:0;color:#4b5563;font-size:15px;line-height:1.6;">{{encodedCompanyName}} shared the finalized brainstorm map.</p>
+                        </td>
+                      </tr>
+                      {{imageBlock}}
+                      <tr>
+                        <td style="padding:18px 34px 10px;">
+                          <div style="font-size:12px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:#6b7280;">Structured notes</div>
+                          <pre style="white-space:pre-wrap;background:#f3f4f6;border:1px solid #e5e7eb;border-radius:12px;padding:16px 18px;color:#111827;font-family:Consolas,Menlo,monospace;font-size:13px;line-height:1.55;">{{encodedOutline}}</pre>
+                        </td>
+                      </tr>
+                      <tr>
+                        <td style="padding:0 34px 30px;">
+                          <a href="{{encodedUrl}}" style="display:inline-block;background:#6d28d9;color:#ffffff;text-decoration:none;font-weight:700;border-radius:10px;padding:13px 20px;">Open final map</a>
+                          <p style="margin:16px 0 0;color:#4f46e5;font-size:13px;line-height:1.6;word-break:break-all;">{{encodedUrl}}</p>
+                        </td>
+                      </tr>
+                    </table>
+                  </td>
+                </tr>
+              </table>
+            </body>
+            </html>
+            """;
+    }
+
+    private static string BuildMindMapFinalImageBlock(string? imageDataUrl)
+    {
+        if (string.IsNullOrWhiteSpace(imageDataUrl) ||
+            !imageDataUrl.StartsWith("data:image/", StringComparison.OrdinalIgnoreCase) ||
+            imageDataUrl.Length > 5_000_000)
+        {
+            return string.Empty;
+        }
+
+        var encodedImage = WebUtility.HtmlEncode(imageDataUrl);
+        return $$"""
+                      <tr>
+                        <td style="padding:14px 34px 8px;">
+                          <img src="{{encodedImage}}" alt="Final mind map" style="display:block;width:100%;max-width:692px;border:1px solid #e5e7eb;border-radius:12px;background:#ffffff;" />
+                        </td>
+                      </tr>
+            """;
+    }
+
+    private static string BuildMindMapFinalText(
+        string companyName,
+        string mapTitle,
+        string shareUrl,
+        string outlineText)
+    {
+        return $"{companyName} shared the finalized brainstorm mind map: {mapTitle}\n\nOpen: {shareUrl}\n\nStructured notes:\n{outlineText}";
     }
 
     private static string TrimDiagnostic(string? value, int maxLength = 500)

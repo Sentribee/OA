@@ -764,4 +764,21 @@ internal static class MindMapStore
         command.Parameters.Add("@MerchantId", MySqlDbType.Int64).Value = merchantId;
         await command.ExecuteNonQueryAsync(cancellationToken);
     }
+
+    public static async Task MarkMapSentAsync(
+        MySqlConnection connection,
+        long merchantId,
+        long mapId,
+        CancellationToken cancellationToken)
+    {
+        const string sql = """
+            UPDATE bee_CrmMindMap
+            SET LastSentAtUtc = UTC_TIMESTAMP(6), UpdatedAtUtc = UTC_TIMESTAMP(6)
+            WHERE id = @MapId AND MerchantId = @MerchantId;
+            """;
+        await using var command = new MySqlCommand(sql, connection);
+        command.Parameters.Add("@MapId", MySqlDbType.Int64).Value = mapId;
+        command.Parameters.Add("@MerchantId", MySqlDbType.Int64).Value = merchantId;
+        await command.ExecuteNonQueryAsync(cancellationToken);
+    }
 }

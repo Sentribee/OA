@@ -34,6 +34,23 @@ public interface IConsoleEmailService
         string mapTitle,
         string shareUrl,
         CancellationToken cancellationToken);
+
+    Task<ConsoleEmailResult> SendMindMapStatusChangedAsync(
+        string email,
+        string companyName,
+        string mapTitle,
+        string mapStatus,
+        string shareUrl,
+        CancellationToken cancellationToken);
+
+    Task<ConsoleEmailResult> SendMindMapFinalAsync(
+        string email,
+        string companyName,
+        string mapTitle,
+        string shareUrl,
+        string outlineText,
+        string? imageDataUrl,
+        CancellationToken cancellationToken);
 }
 
 public sealed record ConsoleEmailResult(
