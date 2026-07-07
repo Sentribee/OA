@@ -353,14 +353,7 @@ public class MindMapsModel(
             {
                 id = CreateNodeId(),
                 topic = title,
-                root = true,
-                children = new[]
-                {
-                    new { id = CreateNodeId(), topic = "Customer problem", children = Array.Empty<object>() },
-                    new { id = CreateNodeId(), topic = "Solution ideas", children = Array.Empty<object>() },
-                    new { id = CreateNodeId(), topic = "Risks and assumptions", children = Array.Empty<object>() },
-                    new { id = CreateNodeId(), topic = "Next actions", children = Array.Empty<object>() }
-                }
+                children = Array.Empty<object>()
             }
         };
         return JsonSerializer.Serialize(data);
@@ -396,7 +389,7 @@ public class MindMapsModel(
                 nodeData["topic"] = NormalizeTitle(title);
             }
 
-            nodeData["root"] = true;
+            nodeData.Remove("root");
             if (nodeData["children"] is not JsonArray)
             {
                 nodeData["children"] = new JsonArray();

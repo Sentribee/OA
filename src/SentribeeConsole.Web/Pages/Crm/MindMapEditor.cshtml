@@ -50,7 +50,7 @@
                 <div class="alert alert-success mindmap-editor-alert">@Model.StatusMessage</div>
             }
             <div id="mindmap-activity-overlay" class="mindmap-activity-overlay"></div>
-            <section id="mindmap-editor-canvas" class="mindmap-editor-canvas"></section>
+            <div id="mindmap-editor-canvas" class="mindmap-editor-canvas"></div>
         </main>
 
         <aside class="mindmap-editor-aside">
@@ -159,7 +159,6 @@
         const buildDefaultData = () => {
             const data = MindElixir.new(initialTitle || 'Product brainstorm');
             data.nodeData.topic = initialTitle || 'Product brainstorm';
-            data.nodeData.root = true;
             return data;
         };
 
@@ -170,7 +169,7 @@
 
             data.nodeData.id = data.nodeData.id || `root-${Date.now()}`;
             data.nodeData.topic = data.nodeData.topic || initialTitle || 'Product brainstorm';
-            data.nodeData.root = true;
+            delete data.nodeData.root;
             if (!Array.isArray(data.nodeData.children)) {
                 data.nodeData.children = [];
             }
@@ -210,6 +209,12 @@
                 mind.toCenter();
             }
         });
+        window.setTimeout(() => {
+            window.dispatchEvent(new Event('resize'));
+            if (typeof mind.toCenter === 'function') {
+                mind.toCenter();
+            }
+        }, 350);
 
         const getMapJson = () => typeof mind.getDataString === 'function'
             ? mind.getDataString()

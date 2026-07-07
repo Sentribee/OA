@@ -13,10 +13,15 @@
     }));
 }
 
-@if (!string.IsNullOrWhiteSpace(Model.StatusMessage))
-{
-    <div class="alert @(Model.StatusMessage.Contains("failed", StringComparison.OrdinalIgnoreCase) ? "alert-warning" : "alert-success")">@Model.StatusMessage</div>
-}
+<div id="mindmap-global-toast"
+     class="mindmap-global-toast"
+     role="status"
+     aria-live="polite"
+     data-message="@Model.StatusMessage"
+     data-kind="@(Model.StatusMessage?.Contains("failed", StringComparison.OrdinalIgnoreCase) == true || Model.StatusMessage?.Contains("Add at least", StringComparison.OrdinalIgnoreCase) == true ? "warning" : "success")">
+    <i class="material-symbols-rounded">info</i>
+    <span></span>
+</div>
 
 <div class="crm-page-actions">
     <div>
@@ -157,9 +162,32 @@
             const manualEmail = document.getElementById('mindmap-manual-email');
             const addExisting = document.getElementById('mindmap-add-existing');
             const addManual = document.getElementById('mindmap-add-manual');
+            const form = document.getElementById('mindmap-create-form');
             const chips = document.getElementById('mindmap-participant-chips');
             const hidden = document.getElementById('mindmap-hidden-participants');
+            const toast = document.getElementById('mindmap-global-toast');
+            const toastText = toast?.querySelector('span');
             const participants = new Map();
+            let toastTimer;
+
+            const showToast = (message, kind = 'warning') => {
+                if (!toast || !toastText || !message) {
+                    return;
+                }
+
+                toastText.textContent = message;
+                toast.classList.toggle('warning', kind === 'warning');
+                toast.classList.toggle('success', kind !== 'warning');
+                toast.classList.add('show');
+                window.clearTimeout(toastTimer);
+                toastTimer = window.setTimeout(() => toast.classList.remove('show'), 4200);
+            };
+
+            const isEmail = (value) => /^[^\s@@]+@@[^\s@@]+\.[^\s@@]+$/.test(value || '');
+
+            if (toast?.dataset.message) {
+                showToast(toast.dataset.message, toast.dataset.kind || 'success');
+            }
 
             const findCandidate = (value) => {
                 const query = (value || '').trim().toLowerCase();
@@ -201,14 +229,30 @@
                 }
             };
 
-            const addParticipant = (participant) => {
+            const setInvalid = (...fields) => {
+                fields.forEach(field => field?.classList.add('is-invalid'));
+            };
+
+            const clearInvalid = (...fields) => {
+                fields.forEach(field => field?.classList.remove('is-invalid'));
+            };
+
+            const addParticipant = (participant, options = {}) => {
                 if (!participant?.email) {
-                    return;
+                    if (options.notify) {
+                        showToast('Please enter an email for the shared person.');
+                    }
+
+                    return false;
                 }
 
                 const email = participant.email.trim();
-                if (!email.includes('@@')) {
-                    return;
+                if (!isEmail(email)) {
+                    if (options.notify) {
+                        showToast('Please enter a valid email address.');
+                    }
+
+                    return false;
                 }
 
                 participants.set(email.toLowerCase(), {
@@ -218,14 +262,20 @@
                     sourceId: participant.sourceId || ''
                 });
                 render();
+                return true;
             };
 
             addExisting?.addEventListener('click', () => {
                 const candidate = findCandidate(picker.value);
                 if (candidate) {
-                    addParticipant(candidate);
+                    addParticipant(candidate, { notify: true });
                     picker.value = '';
+                    clearInvalid(picker);
+                    return;
                 }
+
+                setInvalid(picker);
+                showToast('Select an existing employee/customer, or add a new person with name and email below.');
             });
 
             picker?.addEventListener('keydown', (event) => {
@@ -236,14 +286,49 @@
             });
 
             addManual?.addEventListener('click', () => {
-                addParticipant({
+                clearInvalid(manualName, manualEmail);
+                const name = manualName.value.trim();
+                const email = manualEmail.value.trim();
+                if (!name || !email || !isEmail(email)) {
+                    if (!name) {
+                        setInvalid(manualName);
+                    }
+
+                    if (!email || !isEmail(email)) {
+                        setInvalid(manualEmail);
+                    }
+
+                    showToast('For a new shared person, enter both name and a valid email before adding.');
+                    return;
+                }
+
+                const added = addParticipant({
                     name: manualName.value,
                     email: manualEmail.value,
                     sourceType: 'Manual',
                     sourceId: ''
-                });
-                manualName.value = '';
-                manualEmail.value = '';
+                }, { notify: true });
+                if (added) {
+                    manualName.value = '';
+                    manualEmail.value = '';
+                }
+            });
+
+            form?.addEventListener('submit', (event) => {
+                clearInvalid(picker, manualName, manualEmail);
+                const hasPendingManual = manualName.value.trim() || manualEmail.value.trim();
+                if (hasPendingManual) {
+                    event.preventDefault();
+                    setInvalid(manualName, manualEmail);
+                    showToast('Click Manual to add the new shared person before creating the mind map.');
+                    return;
+                }
+
+                if (participants.size === 0) {
+                    event.preventDefault();
+                    setInvalid(picker, manualName, manualEmail);
+                    showToast('Add at least one shared person before creating the mind map.');
+                }
             });
         })();
     </script>

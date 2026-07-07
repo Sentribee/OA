@@ -40,7 +40,7 @@
         </header>
         <div id="mindmap-share-overlay" class="mindmap-activity-overlay"></div>
         <main class="mindmap-share-main">
-            <section id="mindmap-share-canvas" class="mindmap-share-canvas"></section>
+            <div id="mindmap-share-canvas" class="mindmap-share-canvas"></div>
             <aside class="mindmap-share-side">
                 <h2>Recent changes</h2>
                 <div id="mindmap-share-activity-list" class="mindmap-side-list"></div>
@@ -82,7 +82,6 @@
             const buildDefaultData = () => {
                 const data = MindElixir.new(initialTitle || 'Product brainstorm');
                 data.nodeData.topic = initialTitle || 'Product brainstorm';
-                data.nodeData.root = true;
                 return data;
             };
 
@@ -93,7 +92,7 @@
 
                 data.nodeData.id = data.nodeData.id || `root-${Date.now()}`;
                 data.nodeData.topic = data.nodeData.topic || initialTitle || 'Product brainstorm';
-                data.nodeData.root = true;
+                delete data.nodeData.root;
                 if (!Array.isArray(data.nodeData.children)) {
                     data.nodeData.children = [];
                 }
@@ -132,6 +131,12 @@
                     mind.toCenter();
                 }
             });
+            window.setTimeout(() => {
+                window.dispatchEvent(new Event('resize'));
+                if (typeof mind.toCenter === 'function') {
+                    mind.toCenter();
+                }
+            }, 350);
 
             const getMapJson = () => typeof mind.getDataString === 'function'
                 ? mind.getDataString()
