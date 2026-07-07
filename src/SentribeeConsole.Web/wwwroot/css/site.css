@@ -24,6 +24,32 @@
   --bs-link-hover-color-rgb: 219, 182, 255;
 }
 
+.btn {
+  align-items: center;
+  display: inline-flex;
+  gap: .4rem;
+  justify-content: center;
+  line-height: 1.2;
+}
+
+.btn .material-symbols-rounded {
+  flex: 0 0 auto;
+  font-size: 1.12rem;
+  line-height: 1;
+}
+
+.btn-icon {
+  aspect-ratio: 1;
+  gap: 0;
+  padding-left: 0;
+  padding-right: 0;
+  width: 2.4rem;
+}
+
+.btn-sm.btn-icon {
+  width: 2.1rem;
+}
+
 .login-shell {
   background-color: #040811;
   background-image:
@@ -4478,6 +4504,11 @@ textarea,
 .mindmap-info-grid strong {
   font-weight: 600;
   text-align: right;
+}
+
+.mindmap-save-panel {
+  display: grid;
+  gap: .55rem;
 }
 
 .mindmap-side-list {

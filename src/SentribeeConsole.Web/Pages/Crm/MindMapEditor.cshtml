@@ -38,12 +38,6 @@
                         <h1>@Model.Map.Title</h1>
                     </div>
                 </div>
-                <div class="mindmap-editor-actions">
-                    <input id="mindmap-editor-state" class="form-control form-control-sm" readonly value="Loaded" />
-                    <button type="button" id="mindmap-editor-save" class="btn btn-primary btn-sm">
-                        <i class="material-symbols-rounded">save</i> Save
-                    </button>
-                </div>
             </header>
             @if (!string.IsNullOrWhiteSpace(Model.StatusMessage))
             {
@@ -71,6 +65,12 @@
                     <span>ID</span><strong>#@Model.Map.Id</strong>
                     <span>Created</span><strong>@Model.Map.CreatedAtUtc.ToString("yyyy-MM-dd HH:mm")</strong>
                     <span>Updated</span><strong>@Model.Map.UpdatedAtUtc.ToString("yyyy-MM-dd HH:mm")</strong>
+                </div>
+                <div class="mindmap-save-panel">
+                    <input id="mindmap-editor-state" class="form-control form-control-sm" readonly value="Loaded" />
+                    <button type="button" id="mindmap-editor-save" class="btn btn-primary w-100">
+                        <i class="material-symbols-rounded">save</i> Save
+                    </button>
                 </div>
                 <form method="post" asp-page-handler="Invite" asp-route-mapId="@Model.Map.Id">
                     @Html.AntiForgeryToken()
