@@ -31,6 +31,7 @@
         <nav class="crm-nav">
             <div class="crm-nav-section">我的工作</div>
             <a asp-page="/Crm/StaffDashboard" class="@(activeMenu == "StaffDashboard" ? "active" : null)"><i class="material-symbols-rounded">dashboard</i><span>Dashboard</span></a>
+            <a asp-page="/Crm/MindMaps" class="@(activeMenu == "MindMaps" ? "active" : null)"><i class="material-symbols-rounded">psychology_alt</i><span>Mind Maps</span></a>
             <a asp-page="/Crm/StaffAttendance" class="@(activeMenu == "StaffAttendance" ? "active" : null)"><i class="material-symbols-rounded">schedule</i><span>My Attendance</span></a>
             <a asp-page="/Crm/StaffLeave" class="@(activeMenu == "StaffLeave" ? "active" : null)"><i class="material-symbols-rounded">event_busy</i><span>My Leave</span></a>
             @if (staff?.CanApproveLeave == true)

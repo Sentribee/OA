@@ -361,7 +361,7 @@
                 activityList.appendChild(item);
             });
 
-            const newestRemote = activities.find(item => item.id > lastActivityId && item.actorEmail !== @Html.Raw(JsonSerializer.Serialize(Model.Merchant.Email)));
+            const newestRemote = activities.find(item => item.id > lastActivityId && item.actorEmail !== @Html.Raw(JsonSerializer.Serialize(Model.CurrentActorEmail)));
             if (newestRemote) {
                 overlay.innerHTML = `<span style="--tag-color:${newestRemote.colorTag || '#7c3aed'}"></span><strong>${newestRemote.actorName}</strong> ${newestRemote.summary}`;
                 overlay.classList.add('show');

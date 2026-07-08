@@ -2,7 +2,7 @@
 @model SentribeeConsole.Web.Pages.Crm.MindMapsModel
 @using System.Text.Json
 @{
-    Layout = "_CrmLayout";
+    Layout = Model.IsStaff ? "_CrmStaffLayout" : "_CrmLayout";
     var candidatesJson = JsonSerializer.Serialize(Model.Candidates.Select(item => new
     {
         sourceType = item.SourceType,

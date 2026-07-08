@@ -9,7 +9,9 @@ public class MindMapEditorModel(
     IConfiguration configuration,
     IConsoleEmailService emailService) : CrmMerchantPageModel(configuration)
 {
-    public CrmMerchantSession Merchant { get; private set; } = null!;
+    public CrmMindMapAccess Access { get; private set; } = null!;
+
+    public string CurrentActorEmail => Access?.ActorEmail ?? string.Empty;
 
     public CrmMindMapDetail Map { get; private set; } = null!;
 
@@ -21,35 +23,35 @@ public class MindMapEditorModel(
 
     public async Task<IActionResult> OnGetAsync(long mapId, CancellationToken cancellationToken)
     {
-        var merchant = await LoadCurrentMerchantAsync(cancellationToken);
-        if (merchant is null)
+        var access = await RequireAccessAsync(cancellationToken);
+        if (access.Result is not null)
         {
-            return RedirectToPage("/Crm/Login");
+            return access.Result;
         }
 
-        Merchant = merchant;
+        Access = access.Access!;
         SetViewData();
         StatusMessage = TempData["CrmMindMapsStatus"] as string;
 
         await using var connection = new MySqlConnection(ConnectionString);
         await connection.OpenAsync(cancellationToken);
         await MindMapsModel.EnsureMindMapTablesAsync(connection, cancellationToken);
-        var map = await MindMapStore.LoadMapAsync(connection, Merchant.Id, mapId, cancellationToken);
+        var map = await MindMapStore.LoadMapAsync(connection, Access.MerchantId, mapId, cancellationToken);
         if (map is null)
         {
             return NotFound();
         }
 
         Map = map;
-        Participants = await MindMapStore.LoadParticipantsAsync(connection, Merchant.Id, mapId, cancellationToken);
+        Participants = await MindMapStore.LoadParticipantsAsync(connection, Access.MerchantId, mapId, cancellationToken);
         Activities = await MindMapStore.LoadActivitiesAsync(connection, mapId, cancellationToken);
         return Page();
     }
 
     public async Task<IActionResult> OnGetDataAsync(long mapId, CancellationToken cancellationToken)
     {
-        var merchant = await LoadCurrentMerchantAsync(cancellationToken);
-        if (merchant is null)
+        var access = await LoadAccessAsync(cancellationToken);
+        if (access is null)
         {
             return new JsonResult(new { success = false, message = "Login required." }) { StatusCode = 401 };
         }
@@ -57,13 +59,13 @@ public class MindMapEditorModel(
         await using var connection = new MySqlConnection(ConnectionString);
         await connection.OpenAsync(cancellationToken);
         await MindMapsModel.EnsureMindMapTablesAsync(connection, cancellationToken);
-        var map = await MindMapStore.LoadMapAsync(connection, merchant.Id, mapId, cancellationToken);
+        var map = await MindMapStore.LoadMapAsync(connection, access.MerchantId, mapId, cancellationToken);
         if (map is null)
         {
             return new JsonResult(new { success = false, message = "Mind map was not found." }) { StatusCode = 404 };
         }
 
-        var participants = await MindMapStore.LoadParticipantsAsync(connection, merchant.Id, mapId, cancellationToken);
+        var participants = await MindMapStore.LoadParticipantsAsync(connection, access.MerchantId, mapId, cancellationToken);
         var activities = await MindMapStore.LoadActivitiesAsync(connection, mapId, cancellationToken);
         return new JsonResult(new
         {
@@ -87,8 +89,8 @@ public class MindMapEditorModel(
         string? nodeTopic,
         CancellationToken cancellationToken)
     {
-        var merchant = await LoadCurrentMerchantAsync(cancellationToken);
-        if (merchant is null)
+        var access = await LoadAccessAsync(cancellationToken);
+        if (access is null)
         {
             return new JsonResult(new { success = false, message = "Login required." }) { StatusCode = 401 };
         }
@@ -103,7 +105,7 @@ public class MindMapEditorModel(
         await using var connection = new MySqlConnection(ConnectionString);
         await connection.OpenAsync(cancellationToken);
         await MindMapsModel.EnsureMindMapTablesAsync(connection, cancellationToken);
-        var existingMap = await MindMapStore.LoadMapAsync(connection, merchant.Id, mapId, cancellationToken);
+        var existingMap = await MindMapStore.LoadMapAsync(connection, access.MerchantId, mapId, cancellationToken);
         if (existingMap is null)
         {
             return new JsonResult(new { success = false, message = "Mind map was not found." }) { StatusCode = 404 };
@@ -139,7 +141,7 @@ public class MindMapEditorModel(
             command.Parameters.Add("@MapStatus", MySqlDbType.VarChar, 40).Value = normalizedStatus;
             command.Parameters.Add("@MapJson", MySqlDbType.LongText).Value = normalizedJson;
             command.Parameters.Add("@MapId", MySqlDbType.Int64).Value = mapId;
-            command.Parameters.Add("@MerchantId", MySqlDbType.Int64).Value = merchant.Id;
+            command.Parameters.Add("@MerchantId", MySqlDbType.Int64).Value = access.MerchantId;
             var affected = await command.ExecuteNonQueryAsync(cancellationToken);
             if (affected == 0)
             {
@@ -152,8 +154,8 @@ public class MindMapEditorModel(
             transaction,
             mapId,
             null,
-            merchant.ContactName ?? merchant.BusinessName,
-            merchant.Email,
+            access.ActorName,
+            access.ActorEmail,
             "#111827",
             nodeId,
             nodeTopic,
@@ -161,10 +163,10 @@ public class MindMapEditorModel(
             cancellationToken);
 
         await transaction.CommitAsync(cancellationToken);
-        var participants = await MindMapStore.LoadParticipantsAsync(connection, merchant.Id, mapId, cancellationToken);
+        var participants = await MindMapStore.LoadParticipantsAsync(connection, access.MerchantId, mapId, cancellationToken);
         if (!string.Equals(existingMap.MapStatus, normalizedStatus, StringComparison.OrdinalIgnoreCase))
         {
-            await NotifyStatusChangedAsync(merchant, normalizedTitle, normalizedStatus, participants, cancellationToken);
+            await NotifyStatusChangedAsync(access, normalizedTitle, normalizedStatus, participants, cancellationToken);
         }
 
         var now = DateTime.UtcNow;
@@ -182,8 +184,8 @@ public class MindMapEditorModel(
         string? imageDataUrl,
         CancellationToken cancellationToken)
     {
-        var merchant = await LoadCurrentMerchantAsync(cancellationToken);
-        if (merchant is null)
+        var access = await LoadAccessAsync(cancellationToken);
+        if (access is null)
         {
             return new JsonResult(new { success = false, message = "Login required." }) { StatusCode = 401 };
         }
@@ -191,7 +193,7 @@ public class MindMapEditorModel(
         await using var connection = new MySqlConnection(ConnectionString);
         await connection.OpenAsync(cancellationToken);
         await MindMapsModel.EnsureMindMapTablesAsync(connection, cancellationToken);
-        var map = await MindMapStore.LoadMapAsync(connection, merchant.Id, mapId, cancellationToken);
+        var map = await MindMapStore.LoadMapAsync(connection, access.MerchantId, mapId, cancellationToken);
         if (map is null)
         {
             return new JsonResult(new { success = false, message = "Mind map was not found." }) { StatusCode = 404 };
@@ -202,7 +204,7 @@ public class MindMapEditorModel(
             return new JsonResult(new { success = false, message = "Set this mind map to Final before sending the final email." }) { StatusCode = 409 };
         }
 
-        var participants = await MindMapStore.LoadParticipantsAsync(connection, merchant.Id, mapId, cancellationToken);
+        var participants = await MindMapStore.LoadParticipantsAsync(connection, access.MerchantId, mapId, cancellationToken);
         if (participants.Count == 0)
         {
             return new JsonResult(new { success = false, message = "No shared people found." }) { StatusCode = 400 };
@@ -215,7 +217,7 @@ public class MindMapEditorModel(
         {
             var result = await emailService.SendMindMapFinalAsync(
                 participant.Email,
-                merchant.BusinessName,
+                access.BusinessName,
                 map.Title,
                 BuildParticipantShareUrl(participant.InviteToken),
                 outline,
@@ -233,7 +235,7 @@ public class MindMapEditorModel(
 
         if (sent > 0)
         {
-            await MindMapStore.MarkMapSentAsync(connection, merchant.Id, mapId, cancellationToken);
+            await MindMapStore.MarkMapSentAsync(connection, access.MerchantId, mapId, cancellationToken);
         }
 
         return new JsonResult(new
@@ -252,22 +254,22 @@ public class MindMapEditorModel(
         long? participantId,
         CancellationToken cancellationToken)
     {
-        var merchant = await LoadCurrentMerchantAsync(cancellationToken);
-        if (merchant is null)
+        var access = await RequireAccessAsync(cancellationToken);
+        if (access.Result is not null)
         {
-            return RedirectToPage("/Crm/Login");
+            return access.Result;
         }
 
         await using var connection = new MySqlConnection(ConnectionString);
         await connection.OpenAsync(cancellationToken);
         await MindMapsModel.EnsureMindMapTablesAsync(connection, cancellationToken);
-        var map = await MindMapStore.LoadMapAsync(connection, merchant.Id, mapId, cancellationToken);
+        var map = await MindMapStore.LoadMapAsync(connection, access.Access!.MerchantId, mapId, cancellationToken);
         if (map is null)
         {
             return NotFound();
         }
 
-        var participants = await MindMapStore.LoadParticipantsAsync(connection, merchant.Id, mapId, cancellationToken);
+        var participants = await MindMapStore.LoadParticipantsAsync(connection, access.Access.MerchantId, mapId, cancellationToken);
         var targets = participantId.HasValue
             ? participants.Where(item => item.Id == participantId.Value).ToList()
             : participants.ToList();
@@ -277,14 +279,14 @@ public class MindMapEditorModel(
         {
             var result = await emailService.SendMindMapInvitationAsync(
                 participant.Email,
-                merchant.BusinessName,
+                access.Access.BusinessName,
                 map.Title,
                 BuildParticipantShareUrl(participant.InviteToken),
                 cancellationToken);
             if (result.Success)
             {
                 sent++;
-                await MindMapStore.MarkParticipantInvitedAsync(connection, merchant.Id, participant.Id, cancellationToken);
+                await MindMapStore.MarkParticipantInvitedAsync(connection, access.Access.MerchantId, participant.Id, cancellationToken);
             }
             else
             {
@@ -373,14 +375,56 @@ public class MindMapEditorModel(
 
     private void SetViewData()
     {
-        ViewData["CrmMerchant"] = Merchant;
+        if (Access.Merchant is not null)
+        {
+            ViewData["CrmMerchant"] = Access.Merchant;
+        }
+
+        if (Access.Staff is not null)
+        {
+            ViewData["CrmEmployee"] = Access.Staff;
+        }
+
         ViewData["Title"] = "Mind Map Editor";
         ViewData["PageTitle"] = "Mind Map Editor";
         ViewData["ActiveMenu"] = "MindMaps";
     }
 
+    private async Task<(CrmMindMapAccess? Access, IActionResult? Result)> RequireAccessAsync(CancellationToken cancellationToken)
+    {
+        var merchant = await LoadCurrentMerchantAsync(cancellationToken);
+        if (merchant is not null)
+        {
+            return (CrmMindMapAccess.FromMerchant(merchant), null);
+        }
+
+        var staff = await LoadCurrentEmployeeAsync(cancellationToken);
+        if (staff is null)
+        {
+            return (null, RedirectToPage("/Crm/Login"));
+        }
+
+        if (staff.MustChangePassword)
+        {
+            return (null, RedirectToPage("/Crm/StaffChangePassword"));
+        }
+
+        if (!staff.ProfileCompletedAtUtc.HasValue)
+        {
+            return (null, RedirectToPage("/Crm/StaffProfile"));
+        }
+
+        return (CrmMindMapAccess.FromStaff(staff), null);
+    }
+
+    private async Task<CrmMindMapAccess?> LoadAccessAsync(CancellationToken cancellationToken)
+    {
+        var access = await RequireAccessAsync(cancellationToken);
+        return access.Result is null ? access.Access : null;
+    }
+
     private async Task NotifyStatusChangedAsync(
-        CrmMerchantSession merchant,
+        CrmMindMapAccess access,
         string mapTitle,
         string mapStatus,
         IReadOnlyList<CrmMindMapParticipant> participants,
@@ -390,7 +434,7 @@ public class MindMapEditorModel(
         {
             await emailService.SendMindMapStatusChangedAsync(
                 participant.Email,
-                merchant.BusinessName,
+                access.BusinessName,
                 mapTitle,
                 mapStatus,
                 BuildParticipantShareUrl(participant.InviteToken),

@@ -19,7 +19,9 @@ public class MindMapsModel(
         "#c026d3", "#2563eb", "#65a30d", "#be123c", "#0f766e"
     ];
 
-    public CrmMerchantSession Merchant { get; private set; } = null!;
+    public CrmMindMapAccess Access { get; private set; } = null!;
+
+    public bool IsStaff => Access?.IsStaff == true;
 
     public IReadOnlyList<CrmMindMapRow> Maps { get; private set; } = [];
 
@@ -29,13 +31,13 @@ public class MindMapsModel(
 
     public async Task<IActionResult> OnGetAsync(CancellationToken cancellationToken)
     {
-        var merchant = await LoadCurrentMerchantAsync(cancellationToken);
-        if (merchant is null)
+        var access = await RequireAccessAsync(cancellationToken);
+        if (access.Result is not null)
         {
-            return RedirectToPage("/Crm/Login");
+            return access.Result;
         }
 
-        Merchant = merchant;
+        Access = access.Access!;
         SetViewData();
         StatusMessage = TempData["CrmMindMapsStatus"] as string;
 
@@ -56,13 +58,13 @@ public class MindMapsModel(
         long?[]? participantSourceId,
         CancellationToken cancellationToken)
     {
-        var merchant = await LoadCurrentMerchantAsync(cancellationToken);
-        if (merchant is null)
+        var access = await RequireAccessAsync(cancellationToken);
+        if (access.Result is not null)
         {
-            return RedirectToPage("/Crm/Login");
+            return access.Result;
         }
 
-        Merchant = merchant;
+        Access = access.Access!;
         var normalizedTitle = NormalizeTitle(title);
         var names = participantName ?? Array.Empty<string>();
         var emails = participantEmail ?? Array.Empty<string>();
@@ -87,8 +89,8 @@ public class MindMapsModel(
             SELECT LAST_INSERT_ID();
             """;
         await using var command = new MySqlCommand(sql, connection, transaction);
-        command.Parameters.Add("@ProjectId", MySqlDbType.Int32).Value = Merchant.ProjectId;
-        command.Parameters.Add("@MerchantId", MySqlDbType.Int64).Value = Merchant.Id;
+        command.Parameters.Add("@ProjectId", MySqlDbType.Int32).Value = Access.ProjectId;
+        command.Parameters.Add("@MerchantId", MySqlDbType.Int64).Value = Access.MerchantId;
         command.Parameters.Add("@Title", MySqlDbType.VarChar, 180).Value = normalizedTitle;
         command.Parameters.Add("@MapStatus", MySqlDbType.VarChar, 40).Value = NormalizeMapStatus(mapStatus);
         command.Parameters.Add("@MapJson", MySqlDbType.LongText).Value = BuildDefaultMapJson(normalizedTitle);
@@ -98,8 +100,8 @@ public class MindMapsModel(
         await SaveParticipantsAsync(
             connection,
             transaction,
-            Merchant.ProjectId,
-            Merchant.Id,
+            Access.ProjectId,
+            Access.MerchantId,
             mapId,
             names,
             emails,
@@ -117,24 +119,24 @@ public class MindMapsModel(
         long? participantId,
         CancellationToken cancellationToken)
     {
-        var merchant = await LoadCurrentMerchantAsync(cancellationToken);
-        if (merchant is null)
+        var access = await RequireAccessAsync(cancellationToken);
+        if (access.Result is not null)
         {
-            return RedirectToPage("/Crm/Login");
+            return access.Result;
         }
 
-        Merchant = merchant;
+        Access = access.Access!;
         await using var connection = new MySqlConnection(ConnectionString);
         await connection.OpenAsync(cancellationToken);
         await EnsureMindMapTablesAsync(connection, cancellationToken);
-        var map = await MindMapStore.LoadMapAsync(connection, Merchant.Id, mapId, cancellationToken);
+        var map = await MindMapStore.LoadMapAsync(connection, Access.MerchantId, mapId, cancellationToken);
         if (map is null)
         {
             TempData["CrmMindMapsStatus"] = "Mind map was not found.";
             return RedirectToPage("/Crm/MindMaps");
         }
 
-        var participants = await MindMapStore.LoadParticipantsAsync(connection, Merchant.Id, mapId, cancellationToken);
+        var participants = await MindMapStore.LoadParticipantsAsync(connection, Access.MerchantId, mapId, cancellationToken);
         var targets = participantId.HasValue
             ? participants.Where(item => item.Id == participantId.Value).ToList()
             : participants.ToList();
@@ -155,14 +157,14 @@ public class MindMapsModel(
 
             var result = await emailService.SendMindMapInvitationAsync(
                 participant.Email,
-                Merchant.BusinessName,
+                Access.BusinessName,
                 map.Title,
                 BuildParticipantShareUrl(participant.InviteToken),
                 cancellationToken);
             if (result.Success)
             {
                 sent++;
-                await MindMapStore.MarkParticipantInvitedAsync(connection, Merchant.Id, participant.Id, cancellationToken);
+                await MindMapStore.MarkParticipantInvitedAsync(connection, Access.MerchantId, participant.Id, cancellationToken);
             }
             else
             {
@@ -178,10 +180,46 @@ public class MindMapsModel(
 
     private void SetViewData()
     {
-        ViewData["CrmMerchant"] = Merchant;
+        if (Access.Merchant is not null)
+        {
+            ViewData["CrmMerchant"] = Access.Merchant;
+        }
+
+        if (Access.Staff is not null)
+        {
+            ViewData["CrmEmployee"] = Access.Staff;
+        }
+
         ViewData["Title"] = "Mind Maps";
         ViewData["PageTitle"] = "Mind Maps";
         ViewData["ActiveMenu"] = "MindMaps";
+    }
+
+    private async Task<(CrmMindMapAccess? Access, IActionResult? Result)> RequireAccessAsync(CancellationToken cancellationToken)
+    {
+        var merchant = await LoadCurrentMerchantAsync(cancellationToken);
+        if (merchant is not null)
+        {
+            return (CrmMindMapAccess.FromMerchant(merchant), null);
+        }
+
+        var staff = await LoadCurrentEmployeeAsync(cancellationToken);
+        if (staff is null)
+        {
+            return (null, RedirectToPage("/Crm/Login"));
+        }
+
+        if (staff.MustChangePassword)
+        {
+            return (null, RedirectToPage("/Crm/StaffChangePassword"));
+        }
+
+        if (!staff.ProfileCompletedAtUtc.HasValue)
+        {
+            return (null, RedirectToPage("/Crm/StaffProfile"));
+        }
+
+        return (CrmMindMapAccess.FromStaff(staff), null);
     }
 
     private async Task LoadMapsAsync(MySqlConnection connection, CancellationToken cancellationToken)
@@ -198,7 +236,7 @@ public class MindMapsModel(
             LIMIT 120;
             """;
         await using var command = new MySqlCommand(sql, connection);
-        command.Parameters.Add("@MerchantId", MySqlDbType.Int64).Value = Merchant.Id;
+        command.Parameters.Add("@MerchantId", MySqlDbType.Int64).Value = Access.MerchantId;
         await using var reader = await command.ExecuteReaderAsync(cancellationToken);
         var rows = new List<CrmMindMapRow>();
         while (await reader.ReadAsync(cancellationToken))
@@ -240,7 +278,7 @@ public class MindMapsModel(
             LIMIT 200;
             """;
         await using var command = new MySqlCommand(sql, connection);
-        command.Parameters.Add("@MerchantId", MySqlDbType.Int64).Value = Merchant.Id;
+        command.Parameters.Add("@MerchantId", MySqlDbType.Int64).Value = Access.MerchantId;
         await using var reader = await command.ExecuteReaderAsync(cancellationToken);
         var rows = new List<CrmMindMapCandidate>();
         while (await reader.ReadAsync(cancellationToken))
@@ -502,6 +540,45 @@ public class MindMapsModel(
         {
             AppendNode(builder, child, depth + 1);
         }
+    }
+}
+
+public sealed record CrmMindMapAccess(
+    long MerchantId,
+    int ProjectId,
+    string BusinessName,
+    string ActorName,
+    string ActorEmail,
+    CrmMerchantSession? Merchant,
+    CrmEmployeeSession? Staff)
+{
+    public bool IsStaff => Staff is not null;
+
+    public static CrmMindMapAccess FromMerchant(CrmMerchantSession merchant)
+    {
+        return new CrmMindMapAccess(
+            merchant.Id,
+            merchant.ProjectId,
+            merchant.BusinessName,
+            string.IsNullOrWhiteSpace(merchant.ContactName) ? merchant.BusinessName : merchant.ContactName,
+            merchant.Email,
+            merchant,
+            null);
+    }
+
+    public static CrmMindMapAccess FromStaff(CrmEmployeeSession staff)
+    {
+        var displayName = !string.IsNullOrWhiteSpace(staff.PreferredName)
+            ? staff.PreferredName
+            : !string.IsNullOrWhiteSpace(staff.RealName) ? staff.RealName : staff.WorkEmail;
+        return new CrmMindMapAccess(
+            staff.MerchantId,
+            staff.ProjectId,
+            staff.BusinessName,
+            displayName,
+            staff.WorkEmail,
+            null,
+            staff);
     }
 }
 
