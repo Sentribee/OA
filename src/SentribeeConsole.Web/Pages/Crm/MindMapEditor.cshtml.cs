@@ -125,6 +125,8 @@ public class MindMapEditorModel(
             { StatusCode = 409 };
         }
 
+        var nowUtc = DateTime.UtcNow;
+        var savedAtUtc = new DateTime(nowUtc.Ticks - nowUtc.Ticks % 10, DateTimeKind.Unspecified);
         await using var transaction = await connection.BeginTransactionAsync(cancellationToken);
 
         const string updateSql = """
@@ -132,7 +134,7 @@ public class MindMapEditorModel(
             SET Title = @Title,
                 MapStatus = @MapStatus,
                 MapJson = @MapJson,
-                UpdatedAtUtc = UTC_TIMESTAMP(6)
+                UpdatedAtUtc = @UpdatedAtUtc
             WHERE id = @MapId AND MerchantId = @MerchantId AND Status = 'Active';
             """;
         await using (var command = new MySqlCommand(updateSql, connection, transaction))
@@ -140,6 +142,7 @@ public class MindMapEditorModel(
             command.Parameters.Add("@Title", MySqlDbType.VarChar, 180).Value = normalizedTitle;
             command.Parameters.Add("@MapStatus", MySqlDbType.VarChar, 40).Value = normalizedStatus;
             command.Parameters.Add("@MapJson", MySqlDbType.LongText).Value = normalizedJson;
+            command.Parameters.Add("@UpdatedAtUtc", MySqlDbType.DateTime).Value = savedAtUtc;
             command.Parameters.Add("@MapId", MySqlDbType.Int64).Value = mapId;
             command.Parameters.Add("@MerchantId", MySqlDbType.Int64).Value = access.MerchantId;
             var affected = await command.ExecuteNonQueryAsync(cancellationToken);
@@ -169,12 +172,11 @@ public class MindMapEditorModel(
             await NotifyStatusChangedAsync(access, normalizedTitle, normalizedStatus, participants, cancellationToken);
         }
 
-        var now = DateTime.UtcNow;
         return new JsonResult(new
         {
             success = true,
-            savedAt = now.ToString("yyyy-MM-dd HH:mm:ss"),
-            updatedAtUtc = now.ToString("O"),
+            savedAt = savedAtUtc.ToString("yyyy-MM-dd HH:mm:ss"),
+            updatedAtUtc = savedAtUtc.ToString("O"),
             mapStatus = normalizedStatus
         });
     }

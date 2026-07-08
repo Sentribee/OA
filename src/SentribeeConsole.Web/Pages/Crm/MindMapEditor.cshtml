@@ -168,6 +168,8 @@
         let lastOperation = null;
         let currentMapStatus = initialMapStatus || 'Draft';
         let lastSerializedMap = '';
+        let isComposing = false;
+        let pendingAutoSave = false;
 
         const buildDefaultData = () => {
             const data = MindElixir.new(initialTitle || 'Product brainstorm');
@@ -239,6 +241,23 @@
             state.value = value;
         };
 
+        const isEditableElement = (element) => {
+            if (!element) {
+                return false;
+            }
+
+            const tagName = element.tagName?.toLowerCase();
+            return element.isContentEditable ||
+                tagName === 'input' ||
+                tagName === 'textarea' ||
+                tagName === 'select';
+        };
+
+        const isEditingMapNode = () => {
+            const activeElement = document.activeElement;
+            return Boolean(activeElement && canvas.contains(activeElement) && isEditableElement(activeElement));
+        };
+
         const isFinalLocked = () => currentMapStatus === 'Final' && statusInput.value === 'Final';
 
         const applyLockState = () => {
@@ -268,8 +287,16 @@
             nodeTopic: operation?.obj?.topic || operation?.node?.topic || operation?.topic || ''
         });
 
-        const saveMap = async () => {
+        const saveMap = async (force = false) => {
             if (saving) {
+                return;
+            }
+
+            if (!force && (isComposing || isEditingMapNode())) {
+                pendingAutoSave = true;
+                window.clearTimeout(saveTimer);
+                setState('Editing...');
+                saveTimer = window.setTimeout(() => saveMap(false), 1500);
                 return;
             }
 
@@ -302,6 +329,7 @@
                 const result = await response.json();
                 if (result.success) {
                     dirty = false;
+                    pendingAutoSave = false;
                     lastUpdatedAt = result.updatedAtUtc || result.UpdatedAtUtc;
                     currentMapStatus = result.mapStatus || result.MapStatus || statusInput.value || currentMapStatus;
                     lastSerializedMap = getMapJson();
@@ -327,8 +355,14 @@
             lastOperation = operation || lastOperation;
             dirty = true;
             window.clearTimeout(saveTimer);
+            if (isComposing) {
+                pendingAutoSave = true;
+                setState('Editing...');
+                return;
+            }
+
             setState('Unsaved changes');
-            saveTimer = window.setTimeout(saveMap, 1500);
+            saveTimer = window.setTimeout(() => saveMap(false), 1500);
         };
 
         const renderParticipants = () => {
@@ -390,7 +424,8 @@
                 renderParticipants();
                 renderActivities();
                 applyLockState();
-                if (refreshMap && !dirty && nextUpdatedAt && nextUpdatedAt !== lastUpdatedAt) {
+                const canRefreshMap = refreshMap && !dirty && !isComposing && !isEditingMapNode();
+                if (canRefreshMap && nextUpdatedAt && nextUpdatedAt !== lastUpdatedAt) {
                     lastUpdatedAt = nextUpdatedAt;
                     if (typeof mind.refresh === 'function') {
                         mind.refresh(parseData(nextMapJson));
@@ -422,7 +457,7 @@
             }
 
             if (dirty) {
-                await saveMap();
+                await saveMap(true);
             }
 
             setState('Preparing final email...');
@@ -447,7 +482,7 @@
         };
 
         const watchSerializedChanges = () => {
-            if (saving || isFinalLocked()) {
+            if (saving || isFinalLocked() || isComposing) {
                 return;
             }
 
@@ -458,7 +493,33 @@
             }
         };
 
-        saveButton.addEventListener('click', saveMap);
+        canvas.addEventListener('compositionstart', () => {
+            isComposing = true;
+            pendingAutoSave = true;
+            window.clearTimeout(saveTimer);
+            setState('Editing...');
+        });
+        canvas.addEventListener('compositionend', () => {
+            isComposing = false;
+            window.setTimeout(() => {
+                watchSerializedChanges();
+                if (dirty || pendingAutoSave) {
+                    scheduleSave(lastOperation);
+                }
+            }, 80);
+        });
+        canvas.addEventListener('focusout', () => {
+            if (isComposing) {
+                return;
+            }
+
+            if (dirty || pendingAutoSave) {
+                pendingAutoSave = false;
+                window.clearTimeout(saveTimer);
+                saveTimer = window.setTimeout(() => saveMap(false), 250);
+            }
+        });
+        saveButton.addEventListener('click', () => saveMap(true));
         finalEmailButton?.addEventListener('click', sendFinalEmail);
         titleInput.addEventListener('input', () => scheduleSave());
         statusInput.addEventListener('change', () => {
