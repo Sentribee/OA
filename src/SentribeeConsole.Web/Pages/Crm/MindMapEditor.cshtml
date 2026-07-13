@@ -38,6 +38,26 @@
                         <h1>@Model.Map.Title</h1>
                     </div>
                 </div>
+                <div class="mindmap-editor-toolbar" role="toolbar" aria-label="Mind map tools">
+                    <button type="button" id="mindmap-undo-local" class="btn btn-icon btn-outline-secondary" title="Undo local change" disabled>
+                        <i class="material-symbols-rounded">undo</i>
+                    </button>
+                    <button type="button" id="mindmap-line-break" class="btn btn-icon btn-outline-secondary" title="Line break">
+                        <i class="material-symbols-rounded">keyboard_return</i>
+                    </button>
+                    <button type="button" id="mindmap-pan-mode" class="btn btn-icon btn-outline-secondary" title="Pan canvas">
+                        <i class="material-symbols-rounded">pan_tool</i>
+                    </button>
+                    <button type="button" id="mindmap-zoom-out" class="btn btn-icon btn-outline-secondary" title="Zoom out">
+                        <i class="material-symbols-rounded">zoom_out</i>
+                    </button>
+                    <button type="button" id="mindmap-zoom-in" class="btn btn-icon btn-outline-secondary" title="Zoom in">
+                        <i class="material-symbols-rounded">zoom_in</i>
+                    </button>
+                    <button type="button" id="mindmap-center" class="btn btn-icon btn-outline-secondary" title="Center canvas">
+                        <i class="material-symbols-rounded">filter_center_focus</i>
+                    </button>
+                </div>
             </header>
             @if (!string.IsNullOrWhiteSpace(Model.StatusMessage))
             {
@@ -73,8 +93,15 @@
                 </div>
                 <div class="mindmap-save-panel">
                     <input id="mindmap-editor-state" class="form-control form-control-sm" readonly value="Loaded" />
+                    <label class="mindmap-sync-toggle" for="mindmap-live-sync">
+                        <input type="checkbox" id="mindmap-live-sync" checked />
+                        <span>
+                            <strong>Live sync</strong>
+                            <small>Share autosaves with the team</small>
+                        </span>
+                    </label>
                     <button type="button" id="mindmap-editor-save" class="btn btn-primary w-100">
-                        <i class="material-symbols-rounded">save</i> Save
+                        <i class="material-symbols-rounded">cloud_sync</i> Save &amp; Sync
                     </button>
                     <button type="button" id="mindmap-final-email" class="btn btn-outline-secondary w-100 @(Model.Map.MapStatus == "Final" ? null : "d-none")">
                         <i class="material-symbols-rounded">mark_email_read</i> Send Final Email
@@ -127,6 +154,7 @@
         const rawMapJson = @Html.Raw(JsonSerializer.Serialize(Model.Map.MapJson));
         const initialTitle = @Html.Raw(JsonSerializer.Serialize(Model.Map.Title));
         const initialMapStatus = @Html.Raw(JsonSerializer.Serialize(Model.Map.MapStatus));
+        const actorEmail = @Html.Raw(JsonSerializer.Serialize(Model.CurrentActorEmail));
         const normalizeParticipant = (item) => ({
             id: item.id ?? item.Id,
             displayName: item.displayName ?? item.DisplayName,
@@ -157,6 +185,13 @@
         const state = document.getElementById('mindmap-editor-state');
         const saveButton = document.getElementById('mindmap-editor-save');
         const finalEmailButton = document.getElementById('mindmap-final-email');
+        const liveSyncInput = document.getElementById('mindmap-live-sync');
+        const undoButton = document.getElementById('mindmap-undo-local');
+        const lineBreakButton = document.getElementById('mindmap-line-break');
+        const panModeButton = document.getElementById('mindmap-pan-mode');
+        const zoomOutButton = document.getElementById('mindmap-zoom-out');
+        const zoomInButton = document.getElementById('mindmap-zoom-in');
+        const centerButton = document.getElementById('mindmap-center');
         const token = document.querySelector('input[name="__RequestVerificationToken"]')?.value || '';
         const activityList = document.getElementById('mindmap-activity-list');
         const participantList = document.getElementById('mindmap-participant-list');
@@ -170,6 +205,17 @@
         let lastSerializedMap = '';
         let isComposing = false;
         let pendingAutoSave = false;
+        let liveSync = true;
+        let restoredLocalDraft = false;
+        let panMode = false;
+        let isPanning = false;
+        let lastPanPoint = null;
+        let restoringSnapshot = false;
+        const undoStack = [];
+        const maxUndoSnapshots = 30;
+        const storageScope = `${mapId}:${(actorEmail || 'user').toLowerCase()}`;
+        const draftKey = `sentribee:mindmap:draft:${storageScope}`;
+        const syncKey = `sentribee:mindmap:live-sync:${storageScope}`;
 
         const buildDefaultData = () => {
             const data = MindElixir.new(initialTitle || 'Product brainstorm');
@@ -205,6 +251,50 @@
             return buildDefaultData();
         };
 
+        const readStorage = (key) => {
+            try {
+                return window.localStorage.getItem(key);
+            } catch {
+                return null;
+            }
+        };
+
+        const writeStorage = (key, value) => {
+            try {
+                window.localStorage.setItem(key, value);
+            } catch {
+                // Local drafts are best-effort only.
+            }
+        };
+
+        const removeStorage = (key) => {
+            try {
+                window.localStorage.removeItem(key);
+            } catch {
+                // Ignore storage cleanup failures.
+            }
+        };
+
+        const readLocalDraft = () => {
+            const rawDraft = readStorage(draftKey);
+            if (!rawDraft) {
+                return null;
+            }
+
+            try {
+                const draft = JSON.parse(rawDraft);
+                return draft?.mapJson ? draft : null;
+            } catch {
+                return null;
+            }
+        };
+
+        const storedSync = readStorage(syncKey);
+        liveSync = storedSync !== 'local';
+        const localDraft = readLocalDraft();
+        const initialMapJson = !liveSync && localDraft?.mapJson ? localDraft.mapJson : rawMapJson;
+        restoredLocalDraft = initialMapJson !== rawMapJson;
+
         const mind = new MindElixir({
             el: canvas,
             direction: MindElixir.SIDE,
@@ -216,7 +306,7 @@
             locale: 'en',
             overflowHidden: false
         });
-        mind.init(parseData(rawMapJson));
+        mind.init(parseData(initialMapJson));
         statusInput.value = statusInput.dataset.currentStatus || 'Draft';
         requestAnimationFrame(() => {
             window.dispatchEvent(new Event('resize'));
@@ -239,6 +329,68 @@
 
         const setState = (value) => {
             state.value = value;
+        };
+
+        const updateUndoButton = () => {
+            if (undoButton) {
+                undoButton.disabled = undoStack.length === 0;
+            }
+        };
+
+        const pushUndoSnapshot = (snapshot = lastSerializedMap) => {
+            if (!snapshot) {
+                return;
+            }
+
+            if (undoStack[undoStack.length - 1] === snapshot) {
+                return;
+            }
+
+            undoStack.push(snapshot);
+            while (undoStack.length > maxUndoSnapshots) {
+                undoStack.shift();
+            }
+
+            updateUndoButton();
+        };
+
+        const saveLocalDraft = (message = 'Local draft saved') => {
+            const draft = {
+                mapJson: getMapJson(),
+                title: titleInput.value || initialTitle || 'Product brainstorm',
+                mapStatus: statusInput.value || currentMapStatus || 'Draft',
+                updatedAtUtc: new Date().toISOString()
+            };
+            writeStorage(draftKey, JSON.stringify(draft));
+            dirty = false;
+            pendingAutoSave = false;
+            lastSerializedMap = draft.mapJson;
+            setState(message);
+        };
+
+        const updateSyncUi = () => {
+            if (liveSyncInput) {
+                liveSyncInput.checked = liveSync;
+            }
+
+            saveButton.innerHTML = liveSync
+                ? '<i class="material-symbols-rounded">cloud_sync</i> Save &amp; Sync'
+                : '<i class="material-symbols-rounded">save</i> Save Local';
+            canvas.classList.toggle('local-sync', !liveSync);
+        };
+
+        const setLiveSync = (enabled, { announce = true } = {}) => {
+            liveSync = enabled;
+            writeStorage(syncKey, enabled ? 'live' : 'local');
+            updateSyncUi();
+            if (!enabled) {
+                saveLocalDraft(announce ? 'Local mode on. Autosaves stay in this browser.' : 'Local draft saved');
+                return;
+            }
+
+            if (announce) {
+                setState('Live sync on. Save to publish this view.');
+            }
         };
 
         const isEditableElement = (element) => {
@@ -292,6 +444,11 @@
                 return;
             }
 
+            if (!liveSync) {
+                saveLocalDraft(force ? 'Local draft saved' : 'Autosaved locally');
+                return;
+            }
+
             if (!force && (isComposing || isEditingMapNode())) {
                 pendingAutoSave = true;
                 window.clearTimeout(saveTimer);
@@ -312,6 +469,7 @@
             body.set('title', titleInput.value || 'Product brainstorm');
             body.set('mapStatus', statusInput.value || 'Draft');
             body.set('mapJson', getMapJson());
+            body.set('baseUpdatedAtUtc', lastUpdatedAt || '');
             body.set('operationSummary', operationSummary(lastOperation));
             body.set('nodeId', node.nodeId);
             body.set('nodeTopic', node.nodeTopic);
@@ -330,12 +488,17 @@
                 if (result.success) {
                     dirty = false;
                     pendingAutoSave = false;
+                    removeStorage(draftKey);
                     lastUpdatedAt = result.updatedAtUtc || result.UpdatedAtUtc;
                     currentMapStatus = result.mapStatus || result.MapStatus || statusInput.value || currentMapStatus;
                     lastSerializedMap = getMapJson();
                     applyLockState();
                     setState(`Saved ${result.savedAt}`);
                     await pollData(false);
+                } else if (result.conflict) {
+                    setLiveSync(false, { announce: false });
+                    saveLocalDraft(result.message || 'Shared version changed. Local draft kept.');
+                    lastUpdatedAt = result.latestUpdatedAtUtc || result.LatestUpdatedAtUtc || lastUpdatedAt;
                 } else {
                     setState(result.message || 'Save failed');
                 }
@@ -355,6 +518,12 @@
             lastOperation = operation || lastOperation;
             dirty = true;
             window.clearTimeout(saveTimer);
+            if (!liveSync) {
+                setState('Unsaved local changes');
+                saveTimer = window.setTimeout(() => saveLocalDraft('Autosaved locally'), 800);
+                return;
+            }
+
             if (isComposing) {
                 pendingAutoSave = true;
                 setState('Editing...');
@@ -424,7 +593,7 @@
                 renderParticipants();
                 renderActivities();
                 applyLockState();
-                const canRefreshMap = refreshMap && !dirty && !isComposing && !isEditingMapNode();
+                const canRefreshMap = liveSync && refreshMap && !dirty && !isComposing && !isEditingMapNode();
                 if (canRefreshMap && nextUpdatedAt && nextUpdatedAt !== lastUpdatedAt) {
                     lastUpdatedAt = nextUpdatedAt;
                     if (typeof mind.refresh === 'function') {
@@ -456,6 +625,11 @@
                 return;
             }
 
+            if (!liveSync) {
+                setState('Turn on Live sync and Save & Sync before final email');
+                return;
+            }
+
             if (dirty) {
                 await saveMap(true);
             }
@@ -482,15 +656,113 @@
         };
 
         const watchSerializedChanges = () => {
-            if (saving || isFinalLocked() || isComposing) {
+            if (saving || restoringSnapshot || isFinalLocked() || isComposing) {
                 return;
             }
 
             const currentSerialized = getMapJson();
             if (currentSerialized !== lastSerializedMap) {
+                pushUndoSnapshot(lastSerializedMap);
                 lastSerializedMap = currentSerialized;
                 scheduleSave({ name: 'undo/redo' });
             }
+        };
+
+        const selectNodeById = (nodeId) => {
+            if (!nodeId || typeof mind.findEle !== 'function') {
+                return;
+            }
+
+            const node = mind.findEle(nodeId);
+            if (node && typeof mind.selectNode === 'function') {
+                mind.selectNode(node, true);
+            }
+        };
+
+        const refreshFromJson = (json, selectedNodeId = '') => {
+            restoringSnapshot = true;
+            mind.refresh(parseData(json));
+            lastSerializedMap = getMapJson();
+            restoringSnapshot = false;
+            if (selectedNodeId) {
+                window.setTimeout(() => selectNodeById(selectedNodeId), 0);
+            }
+        };
+
+        const undoLocalChange = () => {
+            const previous = undoStack.pop();
+            updateUndoButton();
+            if (!previous) {
+                return;
+            }
+
+            setLiveSync(false, { announce: false });
+            refreshFromJson(previous);
+            dirty = true;
+            saveLocalDraft('Undone locally. Live sync is off.');
+        };
+
+        const getActiveNode = () => {
+            return mind.currentNode || mind.currentNodes?.[0] || canvas.querySelector('me-tpc.selected');
+        };
+
+        const insertLineBreak = () => {
+            const inputBox = canvas.querySelector('#input-box');
+            if (inputBox) {
+                inputBox.focus();
+                document.execCommand?.('insertLineBreak');
+                pendingAutoSave = true;
+                dirty = true;
+                scheduleSave({ name: 'line break' });
+                return;
+            }
+
+            const node = getActiveNode();
+            if (!node?.nodeObj) {
+                setState('Select a node first');
+                return;
+            }
+
+            pushUndoSnapshot(getMapJson());
+            const nodeId = node.nodeObj.id;
+            node.nodeObj.topic = `${node.nodeObj.topic || ''}\n`;
+            refreshFromJson(getMapJson(), nodeId);
+            dirty = true;
+            scheduleSave({ name: 'line break', obj: node.nodeObj });
+        };
+
+        const installLineBreakMenu = () => {
+            const menu = canvas.querySelector('.context-menu .menu-list') || document.querySelector('.context-menu .menu-list');
+            if (!menu || menu.querySelector('#cm-line_break')) {
+                return;
+            }
+
+            const item = document.createElement('li');
+            item.id = 'cm-line_break';
+            item.innerHTML = '<span>Line break</span><span class="key">Shift Enter</span>';
+            item.addEventListener('click', (event) => {
+                event.preventDefault();
+                event.stopPropagation();
+                insertLineBreak();
+                menu.closest('.context-menu')?.remove();
+            });
+            menu.insertBefore(item, menu.children[3] || null);
+        };
+
+        const zoomCanvas = (step, origin = null) => {
+            if (typeof mind.scale !== 'function') {
+                return;
+            }
+
+            mind.scale(mind.scaleVal + step, origin || undefined);
+        };
+
+        const setPanMode = (enabled) => {
+            panMode = enabled;
+            panModeButton?.classList.toggle('active', enabled);
+            panModeButton?.setAttribute('aria-pressed', String(enabled));
+            canvas.classList.toggle('pan-mode', enabled);
+            setState(enabled ? 'Pan mode on' : liveSync ? 'Live sync on' : 'Local mode on');
         };
 
         canvas.addEventListener('compositionstart', () => {
@@ -519,8 +791,62 @@
                 saveTimer = window.setTimeout(() => saveMap(false), 250);
             }
         });
+        canvas.addEventListener('wheel', (event) => {
+            if (isEditingMapNode()) {
+                return;
+            }
+
+            event.preventDefault();
+            event.stopPropagation();
+            const step = event.deltaY > 0 ? -mind.scaleSensitivity : mind.scaleSensitivity;
+            zoomCanvas(step, { x: event.clientX, y: event.clientY });
+        }, { passive: false, capture: true });
+        canvas.addEventListener('pointerdown', (event) => {
+            if (!panMode || event.button !== 0 || isEditableElement(event.target)) {
+                return;
+            }
+
+            event.preventDefault();
+            event.stopPropagation();
+            isPanning = true;
+            lastPanPoint = { x: event.clientX, y: event.clientY };
+            canvas.setPointerCapture?.(event.pointerId);
+        });
+        canvas.addEventListener('pointermove', (event) => {
+            if (!isPanning || !lastPanPoint) {
+                return;
+            }
+
+            event.preventDefault();
+            const dx = event.clientX - lastPanPoint.x;
+            const dy = event.clientY - lastPanPoint.y;
+            lastPanPoint = { x: event.clientX, y: event.clientY };
+            if (typeof mind.move === 'function') {
+                mind.move(dx, dy);
+            }
+        });
+        canvas.addEventListener('pointerup', (event) => {
+            if (!isPanning) {
+                return;
+            }
+
+            isPanning = false;
+            lastPanPoint = null;
+            canvas.releasePointerCapture?.(event.pointerId);
+        });
+        canvas.addEventListener('pointercancel', () => {
+            isPanning = false;
+            lastPanPoint = null;
+        });
         saveButton.addEventListener('click', () => saveMap(true));
         finalEmailButton?.addEventListener('click', sendFinalEmail);
+        liveSyncInput?.addEventListener('change', () => setLiveSync(liveSyncInput.checked));
+        undoButton?.addEventListener('click', undoLocalChange);
+        lineBreakButton?.addEventListener('click', insertLineBreak);
+        panModeButton?.addEventListener('click', () => setPanMode(!panMode));
+        zoomOutButton?.addEventListener('click', () => zoomCanvas(-mind.scaleSensitivity));
+        zoomInButton?.addEventListener('click', () => zoomCanvas(mind.scaleSensitivity));
+        centerButton?.addEventListener('click', () => mind.toCenter?.());
         titleInput.addEventListener('input', () => scheduleSave());
         statusInput.addEventListener('change', () => {
             applyLockState();
@@ -528,11 +854,26 @@
         });
         document.addEventListener('keydown', (event) => {
             const key = event.key.toLowerCase();
-            if ((event.ctrlKey || event.metaKey) && (key === 'z' || key === 'y')) {
-                window.setTimeout(watchSerializedChanges, 120);
+            const eventIsInCanvas = canvas.contains(event.target) || canvas.contains(document.activeElement);
+            if (eventIsInCanvas && (event.ctrlKey || event.metaKey) && key === 'z') {
+                if (isEditableElement(event.target)) {
+                    return;
+                }
+
+                event.preventDefault();
+                event.stopPropagation();
+                undoLocalChange();
             }
-        });
+        }, true);
         mind.bus.addListener('operation', scheduleSave);
+        mind.bus.addListener('showContextMenu', () => window.setTimeout(installLineBreakMenu, 0));
+        updateSyncUi();
+        updateUndoButton();
+        if (restoredLocalDraft) {
+            setState('Local draft restored');
+        } else if (!liveSync) {
+            setState('Local mode on');
+        }
         applyLockState();
         renderParticipants();
         renderActivities();

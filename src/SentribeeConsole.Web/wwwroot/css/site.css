@@ -4442,6 +4442,20 @@ textarea,
   margin: 0;
 }
 
+.mindmap-editor-toolbar {
+  align-items: center;
+  display: flex;
+  flex-wrap: wrap;
+  gap: .45rem;
+  justify-content: flex-end;
+}
+
+.mindmap-editor-toolbar .btn.active {
+  background: #111827;
+  border-color: #111827;
+  color: #fff;
+}
+
 .mindmap-editor-actions,
 .mindmap-share-actions {
   align-items: center;
@@ -4466,6 +4480,20 @@ textarea,
   height: calc(100vh - 4.5rem);
   min-height: 34rem;
   overflow: hidden;
+}
+
+.mindmap-editor-canvas.local-sync {
+  box-shadow: inset 0 0 0 2px rgba(245, 158, 11, .28);
+}
+
+.mindmap-editor-canvas.pan-mode,
+.mindmap-editor-canvas.pan-mode .map-container {
+  cursor: grab;
+}
+
+.mindmap-editor-canvas.pan-mode:active,
+.mindmap-editor-canvas.pan-mode:active .map-container {
+  cursor: grabbing;
 }
 
 .mindmap-editor-canvas.locked,
@@ -4543,6 +4571,39 @@ textarea,
 .mindmap-save-panel {
   display: grid;
   gap: .55rem;
+}
+
+.mindmap-sync-toggle {
+  align-items: center;
+  border: 1px solid rgba(148, 163, 184, .26);
+  border-radius: .55rem;
+  cursor: pointer;
+  display: grid;
+  gap: .65rem;
+  grid-template-columns: auto minmax(0, 1fr);
+  margin: 0;
+  padding: .65rem .75rem;
+}
+
+.mindmap-sync-toggle input {
+  height: 1.05rem;
+  margin: 0;
+  width: 1.05rem;
+}
+
+.mindmap-sync-toggle span {
+  display: grid;
+  gap: .1rem;
+}
+
+.mindmap-sync-toggle strong {
+  font-size: .85rem;
+}
+
+.mindmap-sync-toggle small {
+  color: #64748b;
+  font-size: .74rem;
+  line-height: 1.2;
 }
 
 .mindmap-side-list {

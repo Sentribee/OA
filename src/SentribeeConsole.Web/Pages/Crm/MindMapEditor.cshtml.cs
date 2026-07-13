@@ -84,6 +84,7 @@ public class MindMapEditorModel(
         string? title,
         string? mapStatus,
         string? mapJson,
+        string? baseUpdatedAtUtc,
         string? operationSummary,
         string? nodeId,
         string? nodeTopic,
@@ -109,6 +110,20 @@ public class MindMapEditorModel(
         if (existingMap is null)
         {
             return new JsonResult(new { success = false, message = "Mind map was not found." }) { StatusCode = 404 };
+        }
+
+        var existingUpdatedAt = existingMap.UpdatedAtUtc.ToString("O");
+        if (!string.IsNullOrWhiteSpace(baseUpdatedAtUtc) &&
+            !string.Equals(existingUpdatedAt, baseUpdatedAtUtc.Trim(), StringComparison.Ordinal))
+        {
+            return new JsonResult(new
+            {
+                success = false,
+                conflict = true,
+                latestUpdatedAtUtc = existingUpdatedAt,
+                message = "The shared mind map changed before your save. Your work was kept as a local draft."
+            })
+            { StatusCode = 409 };
         }
 
         var normalizedStatus = MindMapsModel.NormalizeMapStatus(mapStatus);
