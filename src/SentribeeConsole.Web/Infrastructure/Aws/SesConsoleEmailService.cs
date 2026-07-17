@@ -49,6 +49,19 @@ public sealed class SesConsoleEmailService(
         return SendEmailAsync(email, subject, html, text, cancellationToken);
     }
 
+    public Task<ConsoleEmailResult> SendEmployeePasswordResetAsync(
+        string email,
+        string companyName,
+        string displayName,
+        string resetUrl,
+        CancellationToken cancellationToken)
+    {
+        var subject = $"Reset your {companyName} Sentribee OA password";
+        var html = BuildEmployeePasswordResetHtml(companyName, displayName, resetUrl);
+        var text = BuildEmployeePasswordResetText(companyName, displayName, resetUrl);
+        return SendEmailAsync(email, subject, html, text, cancellationToken);
+    }
+
     public Task<ConsoleEmailResult> SendMindMapSummaryAsync(
         string email,
         string companyName,
@@ -411,6 +424,51 @@ public sealed class SesConsoleEmailService(
     private static string BuildEmployeeWelcomeText(string companyName, string loginUrl, string temporaryPassword)
     {
         return $"{companyName} created a Sentribee OA staff account for you. Login: {loginUrl}. Temporary password: {temporaryPassword}. On first login, change the password and complete your staff profile.";
+    }
+
+    private static string BuildEmployeePasswordResetHtml(string companyName, string displayName, string resetUrl)
+    {
+        var encodedCompanyName = WebUtility.HtmlEncode(companyName);
+        var encodedDisplayName = WebUtility.HtmlEncode(displayName);
+        var encodedUrl = WebUtility.HtmlEncode(resetUrl);
+        return $$"""
+            <!doctype html>
+            <html>
+            <body style="margin:0;background:#f6f7fb;font-family:Arial,Helvetica,sans-serif;color:#172033;">
+              <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="background:#f6f7fb;padding:32px 12px;">
+                <tr>
+                  <td align="center">
+                    <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="max-width:560px;background:#ffffff;border:1px solid #e5e7eb;border-radius:14px;overflow:hidden;">
+                      <tr>
+                        <td style="padding:30px 34px 16px;">
+                          <div style="font-size:13px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:#6d28d9;">Sentribee OA</div>
+                          <h1 style="margin:14px 0 10px;font-size:24px;line-height:1.25;color:#111827;">Reset your password</h1>
+                          <p style="margin:0;color:#4b5563;font-size:15px;line-height:1.6;">Hi {{encodedDisplayName}}, use this secure link to reset your {{encodedCompanyName}} OA staff password.</p>
+                        </td>
+                      </tr>
+                      <tr>
+                        <td style="padding:14px 34px 8px;">
+                          <a href="{{encodedUrl}}" style="display:inline-block;background:#6d28d9;color:#ffffff;text-decoration:none;font-weight:700;border-radius:10px;padding:13px 20px;">Reset password</a>
+                        </td>
+                      </tr>
+                      <tr>
+                        <td style="padding:18px 34px 30px;">
+                          <p style="margin:0 0 10px;color:#6b7280;font-size:13px;line-height:1.6;">This link expires in 1 hour and can be used once. If you did not request a password reset, you can ignore this email.</p>
+                          <p style="margin:0;color:#4f46e5;font-size:13px;line-height:1.6;word-break:break-all;">{{encodedUrl}}</p>
+                        </td>
+                      </tr>
+                    </table>
+                  </td>
+                </tr>
+              </table>
+            </body>
+            </html>
+            """;
+    }
+
+    private static string BuildEmployeePasswordResetText(string companyName, string displayName, string resetUrl)
+    {
+        return $"Hi {displayName}, reset your {companyName} Sentribee OA staff password here: {resetUrl}. This link expires in 1 hour and can be used once. If you did not request this, ignore this email.";
     }
 
     private static string BuildMindMapSummaryHtml(string companyName, string mapTitle, string shareUrl, string outlineText)

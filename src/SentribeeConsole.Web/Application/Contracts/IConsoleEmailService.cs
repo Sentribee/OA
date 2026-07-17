@@ -20,6 +20,13 @@ public interface IConsoleEmailService
         string temporaryPassword,
         CancellationToken cancellationToken);
 
+    Task<ConsoleEmailResult> SendEmployeePasswordResetAsync(
+        string email,
+        string companyName,
+        string displayName,
+        string resetUrl,
+        CancellationToken cancellationToken);
+
     Task<ConsoleEmailResult> SendMindMapSummaryAsync(
         string email,
         string companyName,
