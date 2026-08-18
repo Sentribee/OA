@@ -1,0 +1,380 @@
+@page "/oa/FarmerSurvey"
+@model SentribeeConsole.Web.Pages.Crm.FarmerSurveyModel
+@{
+    Layout = null;
+    ViewData["Title"] = "New Zealand Livestock Farm Operations Survey";
+
+    string[] roleOptions = ["Farm Owner", "Farm Manager", "Sharemilker", "Farm Worker", "Other"];
+    string[] regionOptions = ["Northland", "Auckland", "Waikato", "Bay of Plenty", "Gisborne", "Hawke's Bay", "Taranaki", "Manawatū-Whanganui", "Wellington", "Tasman / Nelson", "Marlborough", "Canterbury", "West Coast", "Otago", "Southland", "Other"];
+    string[] operationOptions = ["Dairy cattle", "Beef cattle", "Sheep", "Dairy + Beef", "Beef + Sheep", "Dairy + Sheep", "Mixed cattle and sheep", "Other"];
+    string[] cattleOptions = ["None", "Less than 200", "200–500", "501–800", "801–1,000", "1,001–2,000", "More than 2,000"];
+    string[] sheepOptions = ["None", "Less than 500", "500–1,000", "1,001–2,000", "2,001–5,000", "More than 5,000"];
+    string[] areaOptions = ["Less than 100 ha", "100–300 ha", "301–500 ha", "501–1,000 ha", "More than 1,000 ha"];
+    string[] staffOptions = ["1–2", "3–5", "6–10", "11–20", "More than 20"];
+    string[] challengeOptions = ["Labour availability / staff shortage", "Labour costs", "Animal health", "Animal mortality", "Reproduction performance", "Grazing / pasture management", "Finding or monitoring individual animals", "Moving livestock", "Fencing and infrastructure", "Feed costs / feed management", "Weather and climate conditions", "Biosecurity", "Compliance and reporting", "Farm data management", "Overall operating costs", "Other"];
+    string[] activityOptions = ["Checking / inspecting livestock", "Finding individual animals", "Moving livestock", "Feeding", "Animal health treatment", "Reproduction management", "Pasture management", "Fencing / infrastructure maintenance", "Record keeping / administration", "Compliance / reporting", "Equipment maintenance", "Other"];
+    string[] financialOptions = ["Animal disease / health issues", "Animal mortality", "Labour costs", "Feed costs", "Reproduction performance", "Milk production", "Weight gain / growth performance", "Weather / environmental conditions", "Compliance costs", "Other"];
+    string[] monitoringOptions = ["Visual inspection by staff", "Electronic ID / RFID tags", "Smart collars / wearable devices", "Cameras", "Milking system data", "Weighing systems", "Veterinary checks", "Farm management software", "Other"];
+    string[] inspectionOptions = ["Multiple times per day", "Daily", "Several times per week", "Weekly", "Less frequently", "Mainly when a problem is noticed"];
+    string[] monitoringDifficultyOptions = ["Large farm area", "Large number of animals", "Animals spread across multiple paddocks / blocks", "Limited staff availability", "Difficult terrain", "Weather conditions", "Difficult to identify or locate individual animals", "Existing technology does not provide enough information", "Individual animal monitoring is not a major challenge", "Other"];
+    string[] detectionOptions = ["Visual observation by staff", "Change in behaviour", "Change in milk production", "Wearable device / sensor alert", "Camera / monitoring system", "During milking", "During routine handling", "Veterinary examination", "Other"];
+    string[] technologyOptions = ["Electronic ID / RFID", "Smart collars / wearable devices", "GPS livestock tracking", "Virtual fencing", "Cameras / computer vision", "Automatic milking systems", "Automated weighing systems", "Drones", "Farm management software", "Animal health monitoring systems", "None", "Other"];
+    string[] satisfactionOptions = ["Very satisfied", "Satisfied", "Neutral", "Dissatisfied", "Very dissatisfied", "Not applicable"];
+    string[] limitationOptions = ["Too expensive", "Difficult to use", "Requires too much maintenance", "Limited coverage / connectivity", "Too many false alerts", "Does not provide enough useful information", "Different systems do not work well together", "Does not reduce enough manual work", "Other", "Not applicable"];
+    string[] improvementOptions = ["Reduce labour requirements", "Animal health monitoring", "Earlier detection of animal problems", "Finding / locating animals", "Livestock movement", "Reproduction management", "Grazing / pasture management", "Animal growth / productivity", "Farm planning", "Record keeping and administration", "Compliance and reporting", "Better use of existing farm data", "Recommendations for farm management", "Other"];
+    string[] followUpOptions = ["Yes", "Maybe — I would like to know more", "No"];
+}
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="description" content="Sentribee New Zealand Livestock Farm Operations Survey." />
+    <title>@ViewData["Title"]</title>
+    <link rel="icon" href="~/favicon.ico" />
+    <link rel="stylesheet" href="~/css/farmer-survey.css" asp-append-version="true" />
+    <script src="~/js/farmer-survey.js" asp-append-version="true" defer></script>
+</head>
+<body>
+    <header class="survey-header">
+        <a class="survey-brand" href="https://sentribee.ai" aria-label="Sentribee home">
+            <img src="~/images/sentribee-mark.png" alt="" width="42" height="42" />
+            <span>Sentribee</span>
+        </a>
+        <div class="survey-progress" aria-label="Survey progress">
+            <div class="survey-progress__meta"><span>Survey progress</span><strong data-progress-label>0%</strong></div>
+            <div class="survey-progress__track"><span data-progress-bar></span></div>
+        </div>
+    </header>
+
+    <main>
+        @if (!string.IsNullOrWhiteSpace(Model.SubmissionReference))
+        {
+            <section class="confirmation-card" aria-labelledby="confirmation-title">
+                <div class="confirmation-icon" aria-hidden="true">✓</div>
+                <p class="eyebrow">Response received</p>
+                <h1 id="confirmation-title">Thank you for sharing your farm experience.</h1>
+                <p>Your response has been recorded and will help Sentribee better understand the needs and challenges of New Zealand livestock farmers.</p>
+                <div class="confirmation-reference">
+                    <span>Submission reference</span>
+                    <code>@Model.SubmissionReference</code>
+                </div>
+                <a class="button button--secondary" href="/FarmerSurvey">Submit another response</a>
+            </section>
+        }
+        else
+        {
+            <section class="survey-hero" aria-labelledby="survey-title">
+                <p class="eyebrow">New Zealand farm research · 4–5 minutes</p>
+                <h1 id="survey-title">New Zealand Livestock Farm Operations Survey</h1>
+                <p class="survey-hero__lead">Understanding current farm challenges and future technology needs.</p>
+                <p>We are researching the day-to-day challenges livestock farmers face, how technology is currently used on farms, and where future services could create the most value.</p>
+                <div class="survey-hero__note"><strong>Your experience matters.</strong> Your feedback will help us explore practical ways to improve productivity, animal management and operational efficiency.</div>
+            </section>
+
+            <details class="privacy-card">
+                <summary>Privacy statement</summary>
+                <p>Participation is voluntary. Your responses will be used by Sentribee for research, product development and market analysis. Any contact details you choose to provide will be kept confidential and will not be sold or shared with third parties for marketing purposes. Survey findings may be analysed in aggregated or anonymised form.</p>
+                <p>By submitting this survey, you consent to Sentribee using your responses for the purposes described above.</p>
+            </details>
+
+            <form method="post" class="survey-form" data-survey-form novalidate>
+                <input asp-for="Input.CompanyWebsite" class="survey-trap" tabindex="-1" autocomplete="off" aria-hidden="true" />
+                <div asp-validation-summary="ModelOnly" class="validation-summary" role="alert"></div>
+
+                <fieldset class="survey-section">
+                    <legend><span>01</span> Farm Profile</legend>
+
+                    <div class="question optional" data-question>
+                        <label class="question__title" asp-for="Input.FarmName"><span>1</span> Farm Name</label>
+                        <p class="question__hint">Optional</p>
+                        <input asp-for="Input.FarmName" class="text-input" autocomplete="organization" placeholder="Your farm name" />
+                        <span asp-validation-for="Input.FarmName" class="field-error"></span>
+                    </div>
+
+                    <div class="question" data-question>
+                        <p class="question__title"><span>2</span> What is your role on the farm?</p>
+                        <div class="choice-grid choice-grid--compact">
+                            @for (var i = 0; i < roleOptions.Length; i++)
+                            {
+                                var option = roleOptions[i];
+                                <label class="choice" for="role-@i"><input asp-for="Input.Role" id="role-@i" type="radio" value="@option" data-other-toggle="role-other" /><span>@option</span></label>
+                            }
+                        </div>
+                        <input asp-for="Input.RoleOther" id="role-other" class="text-input other-input" placeholder="Please describe your role" data-other-input />
+                        <span asp-validation-for="Input.Role" class="field-error"></span>
+                        <span asp-validation-for="Input.RoleOther" class="field-error"></span>
+                    </div>
+
+                    <div class="question" data-question>
+                        <p class="question__title"><span>3</span> Which region is your farm located in?</p>
+                        <div class="choice-grid choice-grid--compact">
+                            @for (var i = 0; i < regionOptions.Length; i++)
+                            {
+                                var option = regionOptions[i];
+                                <label class="choice" for="region-@i"><input asp-for="Input.Region" id="region-@i" type="radio" value="@option" data-other-toggle="region-other" /><span>@option</span></label>
+                            }
+                        </div>
+                        <input asp-for="Input.RegionOther" id="region-other" class="text-input other-input" placeholder="Please enter your region" data-other-input />
+                        <span asp-validation-for="Input.Region" class="field-error"></span>
+                        <span asp-validation-for="Input.RegionOther" class="field-error"></span>
+                    </div>
+
+                    <div class="question" data-question>
+                        <p class="question__title"><span>4</span> What type of livestock operation do you primarily run?</p>
+                        <div class="choice-grid">
+                            @for (var i = 0; i < operationOptions.Length; i++)
+                            {
+                                var option = operationOptions[i];
+                                <label class="choice" for="operation-@i"><input asp-for="Input.LivestockOperation" id="operation-@i" type="radio" value="@option" data-other-toggle="operation-other" /><span>@option</span></label>
+                            }
+                        </div>
+                        <input asp-for="Input.LivestockOperationOther" id="operation-other" class="text-input other-input" placeholder="Please describe your operation" data-other-input />
+                        <span asp-validation-for="Input.LivestockOperation" class="field-error"></span>
+                        <span asp-validation-for="Input.LivestockOperationOther" class="field-error"></span>
+                    </div>
+
+                    <div class="question" data-question>
+                        <p class="question__title"><span>5</span> Approximately how many cattle do you currently manage?</p>
+                        <div class="choice-grid choice-grid--compact">
+                            @for (var i = 0; i < cattleOptions.Length; i++) { var option = cattleOptions[i]; <label class="choice" for="cattle-@i"><input asp-for="Input.CattleCount" id="cattle-@i" type="radio" value="@option" /><span>@option</span></label> }
+                        </div>
+                        <span asp-validation-for="Input.CattleCount" class="field-error"></span>
+                    </div>
+
+                    <div class="question" data-question>
+                        <p class="question__title"><span>6</span> Approximately how many sheep do you currently manage?</p>
+                        <div class="choice-grid choice-grid--compact">
+                            @for (var i = 0; i < sheepOptions.Length; i++) { var option = sheepOptions[i]; <label class="choice" for="sheep-@i"><input asp-for="Input.SheepCount" id="sheep-@i" type="radio" value="@option" /><span>@option</span></label> }
+                        </div>
+                        <span asp-validation-for="Input.SheepCount" class="field-error"></span>
+                    </div>
+
+                    <div class="question" data-question>
+                        <p class="question__title"><span>7</span> Approximately how large is your farming operation?</p>
+                        <div class="choice-grid choice-grid--compact">
+                            @for (var i = 0; i < areaOptions.Length; i++) { var option = areaOptions[i]; <label class="choice" for="area-@i"><input asp-for="Input.FarmArea" id="area-@i" type="radio" value="@option" /><span>@option</span></label> }
+                        </div>
+                        <span asp-validation-for="Input.FarmArea" class="field-error"></span>
+                    </div>
+
+                    <div class="question" data-question>
+                        <p class="question__title"><span>8</span> Approximately how many people regularly work on the farm?</p>
+                        <div class="choice-grid choice-grid--compact">
+                            @for (var i = 0; i < staffOptions.Length; i++) { var option = staffOptions[i]; <label class="choice" for="staff-@i"><input asp-for="Input.StaffCount" id="staff-@i" type="radio" value="@option" /><span>@option</span></label> }
+                        </div>
+                        <span asp-validation-for="Input.StaffCount" class="field-error"></span>
+                    </div>
+                </fieldset>
+
+                <fieldset class="survey-section">
+                    <legend><span>02</span> Farm Operations &amp; Challenges</legend>
+
+                    <div class="question" data-question data-max-selected="3">
+                        <p class="question__title"><span>9</span> What are the biggest challenges you currently face in running your farm?</p>
+                        <p class="question__hint">Select up to three.</p>
+                        <div class="choice-grid">
+                            @for (var i = 0; i < challengeOptions.Length; i++) { var option = challengeOptions[i]; <label class="choice" for="challenge-@i"><input id="challenge-@i" type="checkbox" name="Input.Challenges" value="@option" checked="@Model.Input.Challenges.Contains(option)" data-other-toggle="challenge-other" /><span>@option</span></label> }
+                        </div>
+                        <input asp-for="Input.ChallengesOther" id="challenge-other" class="text-input other-input" placeholder="Please describe the other challenge" data-other-input />
+                        <span asp-validation-for="Input.Challenges" class="field-error"></span>
+                        <span asp-validation-for="Input.ChallengesOther" class="field-error"></span>
+                    </div>
+
+                    <div class="question" data-question data-max-selected="3">
+                        <p class="question__title"><span>10</span> Which activities currently take up the most staff time?</p>
+                        <p class="question__hint">Select up to three.</p>
+                        <div class="choice-grid">
+                            @for (var i = 0; i < activityOptions.Length; i++) { var option = activityOptions[i]; <label class="choice" for="activity-@i"><input id="activity-@i" type="checkbox" name="Input.TimeConsumingActivities" value="@option" checked="@Model.Input.TimeConsumingActivities.Contains(option)" data-other-toggle="activity-other" /><span>@option</span></label> }
+                        </div>
+                        <input asp-for="Input.TimeConsumingActivitiesOther" id="activity-other" class="text-input other-input" placeholder="Please describe the other activity" data-other-input />
+                        <span asp-validation-for="Input.TimeConsumingActivities" class="field-error"></span>
+                        <span asp-validation-for="Input.TimeConsumingActivitiesOther" class="field-error"></span>
+                    </div>
+
+                    <div class="question" data-question data-max-selected="3">
+                        <p class="question__title"><span>11</span> Which areas have the greatest impact on the financial performance of your farm?</p>
+                        <p class="question__hint">Select up to three.</p>
+                        <div class="choice-grid">
+                            @for (var i = 0; i < financialOptions.Length; i++) { var option = financialOptions[i]; <label class="choice" for="financial-@i"><input id="financial-@i" type="checkbox" name="Input.FinancialImpacts" value="@option" checked="@Model.Input.FinancialImpacts.Contains(option)" data-other-toggle="financial-other" /><span>@option</span></label> }
+                        </div>
+                        <input asp-for="Input.FinancialImpactsOther" id="financial-other" class="text-input other-input" placeholder="Please describe the other financial impact" data-other-input />
+                        <span asp-validation-for="Input.FinancialImpacts" class="field-error"></span>
+                        <span asp-validation-for="Input.FinancialImpactsOther" class="field-error"></span>
+                    </div>
+
+                    <div class="question optional" data-question>
+                        <label class="question__title" asp-for="Input.RoutineTask"><span>12</span> Is there any routine farm task that you find particularly time-consuming, repetitive or difficult?</label>
+                        <p class="question__hint">Optional</p>
+                        <textarea asp-for="Input.RoutineTask" class="text-input" rows="4" placeholder="Tell us about the task and what makes it difficult"></textarea>
+                        <span asp-validation-for="Input.RoutineTask" class="field-error"></span>
+                    </div>
+                </fieldset>
+
+                <fieldset class="survey-section">
+                    <legend><span>03</span> Animal Monitoring &amp; Management</legend>
+
+                    <div class="question" data-question>
+                        <p class="question__title"><span>13</span> How do you currently monitor the condition of individual animals?</p>
+                        <p class="question__hint">Select all that apply.</p>
+                        <div class="choice-grid">
+                            @for (var i = 0; i < monitoringOptions.Length; i++) { var option = monitoringOptions[i]; <label class="choice" for="monitoring-@i"><input id="monitoring-@i" type="checkbox" name="Input.MonitoringMethods" value="@option" checked="@Model.Input.MonitoringMethods.Contains(option)" data-other-toggle="monitoring-other" /><span>@option</span></label> }
+                        </div>
+                        <input asp-for="Input.MonitoringMethodsOther" id="monitoring-other" class="text-input other-input" placeholder="Please describe the other monitoring method" data-other-input />
+                        <span asp-validation-for="Input.MonitoringMethods" class="field-error"></span>
+                        <span asp-validation-for="Input.MonitoringMethodsOther" class="field-error"></span>
+                    </div>
+
+                    <div class="question" data-question>
+                        <p class="question__title"><span>14</span> How often are individual animals closely inspected?</p>
+                        <div class="choice-grid">
+                            @for (var i = 0; i < inspectionOptions.Length; i++) { var option = inspectionOptions[i]; <label class="choice" for="inspection-@i"><input asp-for="Input.InspectionFrequency" id="inspection-@i" type="radio" value="@option" /><span>@option</span></label> }
+                        </div>
+                        <span asp-validation-for="Input.InspectionFrequency" class="field-error"></span>
+                    </div>
+
+                    <div class="question" data-question>
+                        <p class="question__title"><span>15</span> What makes individual animal monitoring difficult on your farm?</p>
+                        <p class="question__hint">Select all that apply.</p>
+                        <div class="choice-grid">
+                            @for (var i = 0; i < monitoringDifficultyOptions.Length; i++) { var option = monitoringDifficultyOptions[i]; <label class="choice" for="difficulty-@i"><input id="difficulty-@i" type="checkbox" name="Input.MonitoringDifficulties" value="@option" checked="@Model.Input.MonitoringDifficulties.Contains(option)" data-other-toggle="difficulty-other" /><span>@option</span></label> }
+                        </div>
+                        <input asp-for="Input.MonitoringDifficultiesOther" id="difficulty-other" class="text-input other-input" placeholder="Please describe the other difficulty" data-other-input />
+                        <span asp-validation-for="Input.MonitoringDifficulties" class="field-error"></span>
+                        <span asp-validation-for="Input.MonitoringDifficultiesOther" class="field-error"></span>
+                    </div>
+
+                    <div class="question" data-question>
+                        <p class="question__title"><span>16</span> When an animal develops a health or behaviour problem, how is it usually first detected?</p>
+                        <div class="choice-grid">
+                            @for (var i = 0; i < detectionOptions.Length; i++) { var option = detectionOptions[i]; <label class="choice" for="detection-@i"><input asp-for="Input.ProblemDetection" id="detection-@i" type="radio" value="@option" data-other-toggle="detection-other" /><span>@option</span></label> }
+                        </div>
+                        <input asp-for="Input.ProblemDetectionOther" id="detection-other" class="text-input other-input" placeholder="Please describe how it is detected" data-other-input />
+                        <span asp-validation-for="Input.ProblemDetection" class="field-error"></span>
+                        <span asp-validation-for="Input.ProblemDetectionOther" class="field-error"></span>
+                    </div>
+
+                    <div class="question optional" data-question>
+                        <label class="question__title" asp-for="Input.HealthIssues"><span>17</span> What are the most common animal health or welfare issues you deal with on your farm?</label>
+                        <p class="question__hint">Optional</p>
+                        <textarea asp-for="Input.HealthIssues" class="text-input" rows="4" placeholder="Share any recurring animal health or welfare issues"></textarea>
+                        <span asp-validation-for="Input.HealthIssues" class="field-error"></span>
+                    </div>
+                </fieldset>
+
+                <fieldset class="survey-section">
+                    <legend><span>04</span> Current Technology</legend>
+
+                    <div class="question" data-question>
+                        <p class="question__title"><span>18</span> Which farm technologies or systems do you currently use?</p>
+                        <p class="question__hint">Select all that apply.</p>
+                        <div class="choice-grid">
+                            @for (var i = 0; i < technologyOptions.Length; i++) { var option = technologyOptions[i]; <label class="choice" for="technology-@i"><input id="technology-@i" type="checkbox" name="Input.CurrentTechnologies" value="@option" checked="@Model.Input.CurrentTechnologies.Contains(option)" data-other-toggle="technology-other" data-exclusive="@(option == "None" ? "true" : null)" /><span>@option</span></label> }
+                        </div>
+                        <input asp-for="Input.CurrentTechnologiesOther" id="technology-other" class="text-input other-input" placeholder="Please describe the other technology" data-other-input />
+                        <span asp-validation-for="Input.CurrentTechnologies" class="field-error"></span>
+                        <span asp-validation-for="Input.CurrentTechnologiesOther" class="field-error"></span>
+                    </div>
+
+                    <div class="question optional" data-question>
+                        <label class="question__title" asp-for="Input.TechnologyBrands"><span>19</span> If applicable, which brands or products are you currently using?</label>
+                        <p class="question__hint">Optional</p>
+                        <input asp-for="Input.TechnologyBrands" class="text-input" placeholder="Brand or product names" />
+                        <span asp-validation-for="Input.TechnologyBrands" class="field-error"></span>
+                    </div>
+
+                    <div class="question" data-question>
+                        <p class="question__title"><span>20</span> Overall, how satisfied are you with the technologies you currently use?</p>
+                        <div class="choice-grid choice-grid--compact">
+                            @for (var i = 0; i < satisfactionOptions.Length; i++) { var option = satisfactionOptions[i]; <label class="choice" for="satisfaction-@i"><input asp-for="Input.TechnologySatisfaction" id="satisfaction-@i" type="radio" value="@option" /><span>@option</span></label> }
+                        </div>
+                        <span asp-validation-for="Input.TechnologySatisfaction" class="field-error"></span>
+                    </div>
+
+                    <div class="question" data-question>
+                        <p class="question__title"><span>21</span> What is the biggest limitation of your current farm technology?</p>
+                        <div class="choice-grid">
+                            @for (var i = 0; i < limitationOptions.Length; i++) { var option = limitationOptions[i]; <label class="choice" for="limitation-@i"><input asp-for="Input.TechnologyLimitation" id="limitation-@i" type="radio" value="@option" data-other-toggle="limitation-other" /><span>@option</span></label> }
+                        </div>
+                        <input asp-for="Input.TechnologyLimitationOther" id="limitation-other" class="text-input other-input" placeholder="Please describe the other limitation" data-other-input />
+                        <span asp-validation-for="Input.TechnologyLimitation" class="field-error"></span>
+                        <span asp-validation-for="Input.TechnologyLimitationOther" class="field-error"></span>
+                    </div>
+                </fieldset>
+
+                <fieldset class="survey-section">
+                    <legend><span>05</span> Future Technology Needs</legend>
+
+                    <div class="question" data-question data-max-selected="3">
+                        <p class="question__title"><span>22</span> If new farm technologies became available, which areas would you most like them to improve?</p>
+                        <p class="question__hint">Select up to three.</p>
+                        <div class="choice-grid">
+                            @for (var i = 0; i < improvementOptions.Length; i++) { var option = improvementOptions[i]; <label class="choice" for="improvement-@i"><input id="improvement-@i" type="checkbox" name="Input.ImprovementAreas" value="@option" checked="@Model.Input.ImprovementAreas.Contains(option)" data-other-toggle="improvement-other" /><span>@option</span></label> }
+                        </div>
+                        <input asp-for="Input.ImprovementAreasOther" id="improvement-other" class="text-input other-input" placeholder="Please describe the other improvement area" data-other-input />
+                        <span asp-validation-for="Input.ImprovementAreas" class="field-error"></span>
+                        <span asp-validation-for="Input.ImprovementAreasOther" class="field-error"></span>
+                    </div>
+
+                    <div class="question" data-question>
+                        <label class="question__title" asp-for="Input.PriorityImprovement"><span>23</span> If technology could significantly improve one area of your farm operation, what would you choose?</label>
+                        <textarea asp-for="Input.PriorityImprovement" class="text-input" rows="4" placeholder="Describe the one improvement that would create the most value"></textarea>
+                        <span asp-validation-for="Input.PriorityImprovement" class="field-error"></span>
+                    </div>
+                </fieldset>
+
+                <fieldset class="survey-section">
+                    <legend><span>06</span> Follow-up &amp; Research Participation</legend>
+
+                    <div class="question" data-question>
+                        <p class="question__title"><span>24</span> Would you be open to participating in an on-farm research visit, where the Sentribee team could better understand your day-to-day operations and challenges?</p>
+                        <div class="choice-grid">
+                            @for (var i = 0; i < followUpOptions.Length; i++) { var option = followUpOptions[i]; <label class="choice" for="visit-@i"><input asp-for="Input.ResearchVisit" id="visit-@i" type="radio" value="@option" /><span>@option</span></label> }
+                        </div>
+                        <span asp-validation-for="Input.ResearchVisit" class="field-error"></span>
+                    </div>
+
+                    <div class="question" data-question>
+                        <p class="question__title"><span>25</span> Would you be interested in participating in future farm technology trials or pilot programmes?</p>
+                        <div class="choice-grid">
+                            @for (var i = 0; i < followUpOptions.Length; i++) { var option = followUpOptions[i]; <label class="choice" for="trials-@i"><input asp-for="Input.TechnologyTrials" id="trials-@i" type="radio" value="@option" /><span>@option</span></label> }
+                        </div>
+                        <span asp-validation-for="Input.TechnologyTrials" class="field-error"></span>
+                    </div>
+
+                    <div class="question optional" data-question>
+                        <p class="question__title"><span>26–28</span> Contact details</p>
+                        <p class="question__hint">Optional — provide these only if you are comfortable being contacted about research or trials.</p>
+                        <div class="contact-grid">
+                            <div><label asp-for="Input.ContactName">Name</label><input asp-for="Input.ContactName" class="text-input" autocomplete="name" /></div>
+                            <div><label asp-for="Input.ContactPhone">Phone</label><input asp-for="Input.ContactPhone" class="text-input" autocomplete="tel" inputmode="tel" /></div>
+                            <div><label asp-for="Input.ContactEmail">Email</label><input asp-for="Input.ContactEmail" class="text-input" autocomplete="email" inputmode="email" /></div>
+                        </div>
+                        <span asp-validation-for="Input.ContactName" class="field-error"></span>
+                        <span asp-validation-for="Input.ContactPhone" class="field-error"></span>
+                        <span asp-validation-for="Input.ContactEmail" class="field-error"></span>
+                    </div>
+
+                    <div class="question optional" data-question>
+                        <label class="question__title" asp-for="Input.AdditionalComments"><span>29</span> Is there anything else you would like future farm technology providers to understand about the challenges of running your farm?</label>
+                        <p class="question__hint">Optional</p>
+                        <textarea asp-for="Input.AdditionalComments" class="text-input" rows="5" placeholder="Share anything else you think technology providers should know"></textarea>
+                        <span asp-validation-for="Input.AdditionalComments" class="field-error"></span>
+                    </div>
+                </fieldset>
+
+                <section class="submit-card">
+                    <div>
+                        <p class="eyebrow">Ready to submit?</p>
+                        <h2>Thank you for helping shape practical farm technology.</h2>
+                        <p>By submitting, you confirm that you have read the privacy statement above.</p>
+                    </div>
+                    <button class="button" type="submit" data-submit-button>Submit survey <span aria-hidden="true">→</span></button>
+                </section>
+            </form>
+        }
+    </main>
+
+    <footer>© @DateTime.UtcNow.Year Sentribee · New Zealand livestock research</footer>
+</body>
+</html>

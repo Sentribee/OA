@@ -118,8 +118,30 @@ public sealed class SesConsoleEmailService(
         return SendEmailAsync(email, subject, html, text, cancellationToken);
     }
 
+    public Task<ConsoleEmailResult> SendFarmerSurveyReportAsync(
+        string email,
+        string ccEmail,
+        string subject,
+        string html,
+        string text,
+        CancellationToken cancellationToken)
+    {
+        return SendEmailAsync(email, ccEmail, subject, html, text, cancellationToken);
+    }
+
     private async Task<ConsoleEmailResult> SendEmailAsync(
         string email,
+        string subject,
+        string html,
+        string text,
+        CancellationToken cancellationToken)
+    {
+        return await SendEmailAsync(email, null, subject, html, text, cancellationToken);
+    }
+
+    private async Task<ConsoleEmailResult> SendEmailAsync(
+        string email,
+        string? ccEmail,
         string subject,
         string html,
         string text,
@@ -159,7 +181,11 @@ public sealed class SesConsoleEmailService(
         var payload = new
         {
             FromEmailAddress = fromAddress,
-            Destination = new { ToAddresses = new[] { email } },
+            Destination = new
+            {
+                ToAddresses = new[] { email },
+                CcAddresses = string.IsNullOrWhiteSpace(ccEmail) ? Array.Empty<string>() : new[] { ccEmail.Trim() }
+            },
             Content = new
             {
                 Simple = new

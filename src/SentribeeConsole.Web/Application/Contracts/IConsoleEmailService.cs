@@ -58,6 +58,14 @@ public interface IConsoleEmailService
         string outlineText,
         string? imageDataUrl,
         CancellationToken cancellationToken);
+
+    Task<ConsoleEmailResult> SendFarmerSurveyReportAsync(
+        string email,
+        string ccEmail,
+        string subject,
+        string html,
+        string text,
+        CancellationToken cancellationToken);
 }
 
 public sealed record ConsoleEmailResult(
