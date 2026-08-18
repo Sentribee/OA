@@ -2,7 +2,7 @@
 @model SentribeeConsole.Web.Pages.Crm.FarmerSurveyModel
 @{
     Layout = null;
-    ViewData["Title"] = "New Zealand Livestock Farm Operations Survey | 新西兰畜牧农场运营调查";
+    ViewData["Title"] = "New Zealand Livestock Farm Operations Survey";
 
     string[] roleOptions = ["Farm Owner", "Farm Manager", "Sharemilker", "Farm Worker", "Other"];
     string[] regionOptions = ["Northland", "Auckland", "Waikato", "Bay of Plenty", "Gisborne", "Hawke's Bay", "Taranaki", "Manawatū-Whanganui", "Wellington", "Tasman / Nelson", "Marlborough", "Canterbury", "West Coast", "Otago", "Southland", "Other"];
@@ -53,21 +53,27 @@
 <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <meta name="description" content="Sentribee New Zealand Livestock Farm Operations Survey | 新西兰畜牧农场运营调查" />
+    <meta name="description" content="Sentribee New Zealand Livestock Farm Operations Survey" />
     <title>@ViewData["Title"]</title>
     <link rel="icon" href="~/favicon.ico" />
     <link rel="stylesheet" href="~/css/farmer-survey.css" asp-append-version="true" />
     <script src="~/js/farmer-survey.js" asp-append-version="true" defer></script>
 </head>
-<body>
+<body class="lang-en">
     <header class="survey-header">
         <a class="survey-brand" href="https://sentribee.ai" aria-label="Sentribee home">
             <img src="~/images/sentribee-mark.png" alt="" width="42" height="42" />
             <span>Sentribee</span>
         </a>
-        <div class="survey-progress" aria-label="Survey progress / 问卷进度">
-            <div class="survey-progress__meta"><span>Survey progress · 问卷进度</span><strong data-progress-label>0%</strong></div>
-            <div class="survey-progress__track"><span data-progress-bar></span></div>
+        <div class="header-actions">
+            <div class="survey-progress" data-aria-label-en="Survey progress" data-aria-label-zh="问卷进度" aria-label="Survey progress">
+                <div class="survey-progress__meta"><span data-i18n-en="Survey progress" data-i18n-zh="问卷进度">Survey progress</span><strong data-progress-label>0%</strong></div>
+                <div class="survey-progress__track"><span data-progress-bar></span></div>
+            </div>
+            <div class="language-switch" role="group" aria-label="Language">
+                <button type="button" data-language-option="en" aria-pressed="true">EN</button>
+                <button type="button" data-language-option="zh" aria-pressed="false">中文</button>
+            </div>
         </div>
     </header>
 
@@ -76,28 +82,28 @@
         {
             <section class="confirmation-card" aria-labelledby="confirmation-title">
                 <div class="confirmation-icon" aria-hidden="true">✓</div>
-                <p class="eyebrow">Response received · 已收到您的答卷</p>
+                <p class="eyebrow" data-i18n-en="Response received" data-i18n-zh="已收到您的答卷">Response received</p>
                 <h1 id="confirmation-title">Thank you for sharing your farm experience.<small class="hero-zh">感谢您分享农场运营经验。</small></h1>
                 <p>Your response has been recorded and will help Sentribee better understand the needs and challenges of New Zealand livestock farmers.<span class="body-zh">您的回答已被记录，将帮助 Sentribee 更深入地了解新西兰畜牧农场经营者的需求与挑战。</span></p>
                 <div class="confirmation-reference">
-                    <span>Submission reference · 提交编号</span>
+                    <span data-i18n-en="Submission reference" data-i18n-zh="提交编号">Submission reference</span>
                     <code>@Model.SubmissionReference</code>
                 </div>
-                <a class="button button--secondary" href="/FarmerSurvey">Submit another response · 再次填写</a>
+                <a class="button button--secondary" href="/FarmerSurvey" data-i18n-en="Submit another response" data-i18n-zh="再次填写">Submit another response</a>
             </section>
         }
         else
         {
             <section class="survey-hero" aria-labelledby="survey-title">
-                <p class="eyebrow">New Zealand farm research · 新西兰农场调研 · 4–5 minutes／分钟</p>
+                <p class="eyebrow" data-i18n-en="New Zealand farm research · 4–5 minutes" data-i18n-zh="新西兰农场调研 · 4–5 分钟">New Zealand farm research · 4–5 minutes</p>
                 <h1 id="survey-title">New Zealand Livestock Farm Operations Survey<small class="hero-zh">新西兰畜牧农场运营调查</small></h1>
-                <p class="survey-hero__lead">Understanding current farm challenges and future technology needs.<span>了解当前农场经营挑战与未来技术需求。</span></p>
+                <p class="survey-hero__lead">Understanding current farm challenges and future technology needs.<span class="body-zh">了解当前农场经营挑战与未来技术需求。</span></p>
                 <p>We are researching the day-to-day challenges livestock farmers face, how technology is currently used on farms, and where future services could create the most value.<span class="body-zh">我们正在调研畜牧农场日常经营中的实际挑战、目前的技术应用情况，以及未来技术与服务最能创造价值的领域。</span></p>
-                <div class="survey-hero__note"><strong>Your experience matters. · 您的经验非常重要。</strong> Your feedback will help us explore practical ways to improve productivity, animal management and operational efficiency.<span class="body-zh">您的反馈将帮助我们探索提升生产力、动物管理和运营效率的切实方法。</span></div>
+                <div class="survey-hero__note"><strong data-i18n-en="Your experience matters." data-i18n-zh="您的经验非常重要。">Your experience matters.</strong> Your feedback will help us explore practical ways to improve productivity, animal management and operational efficiency.<span class="body-zh">您的反馈将帮助我们探索提升生产力、动物管理和运营效率的切实方法。</span></div>
             </section>
 
             <details class="privacy-card">
-                <summary>Privacy statement · 隐私声明</summary>
+                <summary data-i18n-en="Privacy statement" data-i18n-zh="隐私声明">Privacy statement</summary>
                 <p>Participation is voluntary. Your responses will be used by Sentribee for research, product development and market analysis. Any contact details you choose to provide will be kept confidential and will not be sold or shared with third parties for marketing purposes. Survey findings may be analysed in aggregated or anonymised form.<span class="body-zh">参与本调查完全自愿。您的回答将由 Sentribee 用于研究、产品开发和市场分析。您自愿提供的联系方式将被严格保密，不会出售或提供给第三方用于营销。调查结果可能会以汇总或匿名形式进行分析。</span></p>
                 <p>By submitting this survey, you consent to Sentribee using your responses for the purposes described above.<span class="body-zh">提交本问卷即表示您同意 Sentribee 按上述用途使用您的回答。</span></p>
             </details>
@@ -111,7 +117,7 @@
 
                     <div class="question optional" data-question>
                         <label class="question__title" asp-for="Input.FarmName"><span>1</span> Farm Name<small class="question-zh">农场名称</small></label>
-                        <p class="question__hint">Optional · 选填</p>
+                        <p class="question__hint" data-i18n-en="Optional" data-i18n-zh="选填">Optional</p>
                         <input asp-for="Input.FarmName" class="text-input" autocomplete="organization" placeholder="Your farm name / 农场名称" />
                         <span asp-validation-for="Input.FarmName" class="field-error"></span>
                     </div>
@@ -196,7 +202,7 @@
 
                     <div class="question" data-question data-max-selected="3">
                         <p class="question__title"><span>9</span> What are the biggest challenges you currently face in running your farm?<small class="question-zh">您目前经营农场面临的最大挑战是什么？</small></p>
-                        <p class="question__hint">Select up to three. · 最多选择三项。</p>
+                        <p class="question__hint" data-i18n-en="Select up to three." data-i18n-zh="最多选择三项。">Select up to three.</p>
                         <div class="choice-grid">
                             @for (var i = 0; i < challengeOptions.Length; i++) { var option = challengeOptions[i]; <label class="choice" for="challenge-@i"><input id="challenge-@i" type="checkbox" name="Input.Challenges" value="@option" checked="@Model.Input.Challenges.Contains(option)" data-other-toggle="challenge-other" /><span data-zh="@Zh(option)">@option</span></label> }
                         </div>
@@ -207,7 +213,7 @@
 
                     <div class="question" data-question data-max-selected="3">
                         <p class="question__title"><span>10</span> Which activities currently take up the most staff time?<small class="question-zh">目前哪些工作占用员工最多时间？</small></p>
-                        <p class="question__hint">Select up to three. · 最多选择三项。</p>
+                        <p class="question__hint" data-i18n-en="Select up to three." data-i18n-zh="最多选择三项。">Select up to three.</p>
                         <div class="choice-grid">
                             @for (var i = 0; i < activityOptions.Length; i++) { var option = activityOptions[i]; <label class="choice" for="activity-@i"><input id="activity-@i" type="checkbox" name="Input.TimeConsumingActivities" value="@option" checked="@Model.Input.TimeConsumingActivities.Contains(option)" data-other-toggle="activity-other" /><span data-zh="@Zh(option)">@option</span></label> }
                         </div>
@@ -218,7 +224,7 @@
 
                     <div class="question" data-question data-max-selected="3">
                         <p class="question__title"><span>11</span> Which areas have the greatest impact on the financial performance of your farm?<small class="question-zh">哪些方面对农场财务表现影响最大？</small></p>
-                        <p class="question__hint">Select up to three. · 最多选择三项。</p>
+                        <p class="question__hint" data-i18n-en="Select up to three." data-i18n-zh="最多选择三项。">Select up to three.</p>
                         <div class="choice-grid">
                             @for (var i = 0; i < financialOptions.Length; i++) { var option = financialOptions[i]; <label class="choice" for="financial-@i"><input id="financial-@i" type="checkbox" name="Input.FinancialImpacts" value="@option" checked="@Model.Input.FinancialImpacts.Contains(option)" data-other-toggle="financial-other" /><span data-zh="@Zh(option)">@option</span></label> }
                         </div>
@@ -229,7 +235,7 @@
 
                     <div class="question optional" data-question>
                         <label class="question__title" asp-for="Input.RoutineTask"><span>12</span> Is there any routine farm task that you find particularly time-consuming, repetitive or difficult?<small class="question-zh">是否有特别耗时、重复或困难的日常农场工作？</small></label>
-                        <p class="question__hint">Optional · 选填</p>
+                        <p class="question__hint" data-i18n-en="Optional" data-i18n-zh="选填">Optional</p>
                         <textarea asp-for="Input.RoutineTask" class="text-input" rows="4" placeholder="Tell us about the task / 请描述这项工作及其困难之处"></textarea>
                         <span asp-validation-for="Input.RoutineTask" class="field-error"></span>
                     </div>
@@ -240,7 +246,7 @@
 
                     <div class="question" data-question>
                         <p class="question__title"><span>13</span> How do you currently monitor the condition of individual animals?<small class="question-zh">您目前如何监测个体动物的状况？</small></p>
-                        <p class="question__hint">Select all that apply. · 可多选。</p>
+                        <p class="question__hint" data-i18n-en="Select all that apply." data-i18n-zh="可多选。">Select all that apply.</p>
                         <div class="choice-grid">
                             @for (var i = 0; i < monitoringOptions.Length; i++) { var option = monitoringOptions[i]; <label class="choice" for="monitoring-@i"><input id="monitoring-@i" type="checkbox" name="Input.MonitoringMethods" value="@option" checked="@Model.Input.MonitoringMethods.Contains(option)" data-other-toggle="monitoring-other" /><span data-zh="@Zh(option)">@option</span></label> }
                         </div>
@@ -259,7 +265,7 @@
 
                     <div class="question" data-question>
                         <p class="question__title"><span>15</span> What makes individual animal monitoring difficult on your farm?<small class="question-zh">哪些因素使个体动物监测变得困难？</small></p>
-                        <p class="question__hint">Select all that apply. · 可多选。</p>
+                        <p class="question__hint" data-i18n-en="Select all that apply." data-i18n-zh="可多选。">Select all that apply.</p>
                         <div class="choice-grid">
                             @for (var i = 0; i < monitoringDifficultyOptions.Length; i++) { var option = monitoringDifficultyOptions[i]; <label class="choice" for="difficulty-@i"><input id="difficulty-@i" type="checkbox" name="Input.MonitoringDifficulties" value="@option" checked="@Model.Input.MonitoringDifficulties.Contains(option)" data-other-toggle="difficulty-other" /><span data-zh="@Zh(option)">@option</span></label> }
                         </div>
@@ -280,7 +286,7 @@
 
                     <div class="question optional" data-question>
                         <label class="question__title" asp-for="Input.HealthIssues"><span>17</span> What are the most common animal health or welfare issues you deal with on your farm?<small class="question-zh">您的农场最常遇到哪些动物健康或福利问题？</small></label>
-                        <p class="question__hint">Optional · 选填</p>
+                        <p class="question__hint" data-i18n-en="Optional" data-i18n-zh="选填">Optional</p>
                         <textarea asp-for="Input.HealthIssues" class="text-input" rows="4" placeholder="Share recurring issues / 请说明经常出现的动物健康或福利问题"></textarea>
                         <span asp-validation-for="Input.HealthIssues" class="field-error"></span>
                     </div>
@@ -291,7 +297,7 @@
 
                     <div class="question" data-question>
                         <p class="question__title"><span>18</span> Which farm technologies or systems do you currently use?<small class="question-zh">您目前使用哪些农场技术或系统？</small></p>
-                        <p class="question__hint">Select all that apply. · 可多选。</p>
+                        <p class="question__hint" data-i18n-en="Select all that apply." data-i18n-zh="可多选。">Select all that apply.</p>
                         <div class="choice-grid">
                             @for (var i = 0; i < technologyOptions.Length; i++) { var option = technologyOptions[i]; <label class="choice" for="technology-@i"><input id="technology-@i" type="checkbox" name="Input.CurrentTechnologies" value="@option" checked="@Model.Input.CurrentTechnologies.Contains(option)" data-other-toggle="technology-other" data-exclusive="@(option == "None" ? "true" : null)" /><span data-zh="@Zh(option)">@option</span></label> }
                         </div>
@@ -302,7 +308,7 @@
 
                     <div class="question optional" data-question>
                         <label class="question__title" asp-for="Input.TechnologyBrands"><span>19</span> If applicable, which brands or products are you currently using?<small class="question-zh">如适用，您目前使用哪些品牌或产品？</small></label>
-                        <p class="question__hint">Optional · 选填</p>
+                        <p class="question__hint" data-i18n-en="Optional" data-i18n-zh="选填">Optional</p>
                         <input asp-for="Input.TechnologyBrands" class="text-input" placeholder="Brand or product names / 品牌或产品名称" />
                         <span asp-validation-for="Input.TechnologyBrands" class="field-error"></span>
                     </div>
@@ -331,7 +337,7 @@
 
                     <div class="question" data-question data-max-selected="3">
                         <p class="question__title"><span>22</span> If new farm technologies became available, which areas would you most like them to improve?<small class="question-zh">如果有新的农场技术，您最希望它改善哪些方面？</small></p>
-                        <p class="question__hint">Select up to three. · 最多选择三项。</p>
+                        <p class="question__hint" data-i18n-en="Select up to three." data-i18n-zh="最多选择三项。">Select up to three.</p>
                         <div class="choice-grid">
                             @for (var i = 0; i < improvementOptions.Length; i++) { var option = improvementOptions[i]; <label class="choice" for="improvement-@i"><input id="improvement-@i" type="checkbox" name="Input.ImprovementAreas" value="@option" checked="@Model.Input.ImprovementAreas.Contains(option)" data-other-toggle="improvement-other" /><span data-zh="@Zh(option)">@option</span></label> }
                         </div>
@@ -368,11 +374,11 @@
 
                     <div class="question optional" data-question>
                         <p class="question__title"><span>26–28</span> Contact details<small class="question-zh">联系方式</small></p>
-                        <p class="question__hint">Optional — provide these only if you are comfortable being contacted about research or trials. · 选填——仅在您愿意就研究或试验项目接受联系时填写。</p>
+                        <p class="question__hint" data-i18n-en="Optional — provide these only if you are comfortable being contacted about research or trials." data-i18n-zh="选填——仅在您愿意就研究或试验项目接受联系时填写。">Optional — provide these only if you are comfortable being contacted about research or trials.</p>
                         <div class="contact-grid">
-                            <div><label asp-for="Input.ContactName">Name · 姓名</label><input asp-for="Input.ContactName" class="text-input" autocomplete="name" /></div>
-                            <div><label asp-for="Input.ContactPhone">Phone · 电话</label><input asp-for="Input.ContactPhone" class="text-input" autocomplete="tel" inputmode="tel" /></div>
-                            <div><label asp-for="Input.ContactEmail">Email · 邮箱</label><input asp-for="Input.ContactEmail" class="text-input" autocomplete="email" inputmode="email" /></div>
+                            <div><label asp-for="Input.ContactName" data-i18n-en="Name" data-i18n-zh="姓名">Name</label><input asp-for="Input.ContactName" class="text-input" autocomplete="name" /></div>
+                            <div><label asp-for="Input.ContactPhone" data-i18n-en="Phone" data-i18n-zh="电话">Phone</label><input asp-for="Input.ContactPhone" class="text-input" autocomplete="tel" inputmode="tel" /></div>
+                            <div><label asp-for="Input.ContactEmail" data-i18n-en="Email" data-i18n-zh="邮箱">Email</label><input asp-for="Input.ContactEmail" class="text-input" autocomplete="email" inputmode="email" /></div>
                         </div>
                         <span asp-validation-for="Input.ContactName" class="field-error"></span>
                         <span asp-validation-for="Input.ContactPhone" class="field-error"></span>
@@ -381,7 +387,7 @@
 
                     <div class="question optional" data-question>
                         <label class="question__title" asp-for="Input.AdditionalComments"><span>29</span> Is there anything else you would like future farm technology providers to understand about the challenges of running your farm?<small class="question-zh">关于经营农场的挑战，您还希望未来的农场技术提供商了解什么？</small></label>
-                        <p class="question__hint">Optional · 选填</p>
+                        <p class="question__hint" data-i18n-en="Optional" data-i18n-zh="选填">Optional</p>
                         <textarea asp-for="Input.AdditionalComments" class="text-input" rows="5" placeholder="Anything else providers should know / 其他希望技术提供商了解的内容"></textarea>
                         <span asp-validation-for="Input.AdditionalComments" class="field-error"></span>
                     </div>
@@ -389,16 +395,16 @@
 
                 <section class="submit-card">
                     <div>
-                        <p class="eyebrow">Ready to submit? · 准备提交了吗？</p>
+                        <p class="eyebrow" data-i18n-en="Ready to submit?" data-i18n-zh="准备提交了吗？">Ready to submit?</p>
                         <h2>Thank you for helping shape practical farm technology.<small class="submit-zh">感谢您帮助我们推动更实用的农场技术。</small></h2>
                         <p>By submitting, you confirm that you have read the privacy statement above.<span class="body-zh">提交即表示您已阅读上述隐私声明。</span></p>
                     </div>
-                    <button class="button" type="submit" data-submit-button>Submit survey · 提交问卷 <span aria-hidden="true">→</span></button>
+                    <button class="button" type="submit" data-submit-button><span data-submit-label data-i18n-en="Submit survey" data-i18n-zh="提交问卷">Submit survey</span><span aria-hidden="true">→</span></button>
                 </section>
             </form>
         }
     </main>
 
-    <footer>© @DateTime.UtcNow.Year Sentribee · New Zealand livestock research · 新西兰畜牧业调研</footer>
+    <footer><span>© @DateTime.UtcNow.Year Sentribee · </span><span data-i18n-en="New Zealand livestock research" data-i18n-zh="新西兰畜牧业调研">New Zealand livestock research</span></footer>
 </body>
 </html>

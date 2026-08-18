@@ -458,11 +458,11 @@ public sealed class FarmerSurveyInput : IValidatableObject
     [StringLength(160)]
     public string? ContactName { get; set; }
 
-    [Phone]
+    [Phone(ErrorMessage = "Enter a valid phone number. / 请输入有效的电话号码。")]
     [StringLength(80)]
     public string? ContactPhone { get; set; }
 
-    [EmailAddress]
+    [EmailAddress(ErrorMessage = "Enter a valid email address. / 请输入有效的电子邮箱地址。")]
     [StringLength(180)]
     public string? ContactEmail { get; set; }
 
