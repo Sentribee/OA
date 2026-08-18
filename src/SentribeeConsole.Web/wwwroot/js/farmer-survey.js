@@ -5,7 +5,7 @@
 
   if (!form) {
     if (progressBar) progressBar.style.width = "100%";
-    if (progressLabel) progressLabel.textContent = "Complete";
+    if (progressLabel) progressLabel.textContent = "Complete / 已完成";
     return;
   }
 
@@ -80,7 +80,7 @@
     const button = form.querySelector("[data-submit-button]");
     if (button) {
       button.disabled = true;
-      button.textContent = "Submitting…";
+      button.textContent = "Submitting… / 正在提交…";
     }
   });
 

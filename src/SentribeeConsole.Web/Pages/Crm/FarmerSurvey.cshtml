@@ -2,7 +2,7 @@
 @model SentribeeConsole.Web.Pages.Crm.FarmerSurveyModel
 @{
     Layout = null;
-    ViewData["Title"] = "New Zealand Livestock Farm Operations Survey";
+    ViewData["Title"] = "New Zealand Livestock Farm Operations Survey | 新西兰畜牧农场运营调查";
 
     string[] roleOptions = ["Farm Owner", "Farm Manager", "Sharemilker", "Farm Worker", "Other"];
     string[] regionOptions = ["Northland", "Auckland", "Waikato", "Bay of Plenty", "Gisborne", "Hawke's Bay", "Taranaki", "Manawatū-Whanganui", "Wellington", "Tasman / Nelson", "Marlborough", "Canterbury", "West Coast", "Otago", "Southland", "Other"];
@@ -23,13 +23,37 @@
     string[] limitationOptions = ["Too expensive", "Difficult to use", "Requires too much maintenance", "Limited coverage / connectivity", "Too many false alerts", "Does not provide enough useful information", "Different systems do not work well together", "Does not reduce enough manual work", "Other", "Not applicable"];
     string[] improvementOptions = ["Reduce labour requirements", "Animal health monitoring", "Earlier detection of animal problems", "Finding / locating animals", "Livestock movement", "Reproduction management", "Grazing / pasture management", "Animal growth / productivity", "Farm planning", "Record keeping and administration", "Compliance and reporting", "Better use of existing farm data", "Recommendations for farm management", "Other"];
     string[] followUpOptions = ["Yes", "Maybe — I would like to know more", "No"];
+
+    var optionZh = new Dictionary<string, string>(StringComparer.Ordinal)
+    {
+        ["Farm Owner"] = "农场主", ["Farm Manager"] = "农场经理", ["Sharemilker"] = "分成制奶农", ["Farm Worker"] = "农场工作人员", ["Other"] = "其他",
+        ["Northland"] = "北地大区", ["Auckland"] = "奥克兰大区", ["Waikato"] = "怀卡托大区", ["Bay of Plenty"] = "丰盛湾大区", ["Gisborne"] = "吉斯伯恩大区", ["Hawke's Bay"] = "霍克斯湾大区", ["Taranaki"] = "塔拉纳基大区", ["Manawatū-Whanganui"] = "马纳瓦图－旺格努伊大区", ["Wellington"] = "惠灵顿大区", ["Tasman / Nelson"] = "塔斯曼／尼尔森", ["Marlborough"] = "马尔堡大区", ["Canterbury"] = "坎特伯雷大区", ["West Coast"] = "西海岸大区", ["Otago"] = "奥塔哥大区", ["Southland"] = "南地大区",
+        ["Dairy cattle"] = "奶牛", ["Beef cattle"] = "肉牛", ["Sheep"] = "绵羊", ["Dairy + Beef"] = "奶牛＋肉牛", ["Beef + Sheep"] = "肉牛＋绵羊", ["Dairy + Sheep"] = "奶牛＋绵羊", ["Mixed cattle and sheep"] = "牛羊混合养殖",
+        ["None"] = "无", ["Less than 200"] = "少于 200 头", ["200–500"] = "200–500 头", ["501–800"] = "501–800 头", ["801–1,000"] = "801–1,000 头", ["1,001–2,000"] = "1,001–2,000 头", ["More than 2,000"] = "超过 2,000 头",
+        ["Less than 500"] = "少于 500 只", ["500–1,000"] = "500–1,000 只", ["2,001–5,000"] = "2,001–5,000 只", ["More than 5,000"] = "超过 5,000 只",
+        ["Less than 100 ha"] = "少于 100 公顷", ["100–300 ha"] = "100–300 公顷", ["301–500 ha"] = "301–500 公顷", ["501–1,000 ha"] = "501–1,000 公顷", ["More than 1,000 ha"] = "超过 1,000 公顷",
+        ["1–2"] = "1–2 人", ["3–5"] = "3–5 人", ["6–10"] = "6–10 人", ["11–20"] = "11–20 人", ["More than 20"] = "超过 20 人",
+        ["Labour availability / staff shortage"] = "劳动力不足／员工短缺", ["Labour costs"] = "人工成本", ["Animal health"] = "动物健康", ["Animal mortality"] = "动物死亡率", ["Reproduction performance"] = "繁殖表现", ["Grazing / pasture management"] = "放牧／牧场管理", ["Finding or monitoring individual animals"] = "寻找或监测个体动物", ["Moving livestock"] = "转移动物", ["Fencing and infrastructure"] = "围栏与基础设施", ["Feed costs / feed management"] = "饲料成本／饲料管理", ["Weather and climate conditions"] = "天气与气候条件", ["Biosecurity"] = "生物安全", ["Compliance and reporting"] = "合规与报告", ["Farm data management"] = "农场数据管理", ["Overall operating costs"] = "整体运营成本",
+        ["Checking / inspecting livestock"] = "检查／巡视牲畜", ["Finding individual animals"] = "寻找个体动物", ["Feeding"] = "饲喂", ["Animal health treatment"] = "动物健康治疗", ["Reproduction management"] = "繁殖管理", ["Pasture management"] = "牧场管理", ["Fencing / infrastructure maintenance"] = "围栏／基础设施维护", ["Record keeping / administration"] = "记录／行政工作", ["Compliance / reporting"] = "合规／报告", ["Equipment maintenance"] = "设备维护",
+        ["Animal disease / health issues"] = "动物疾病／健康问题", ["Feed costs"] = "饲料成本", ["Milk production"] = "产奶量", ["Weight gain / growth performance"] = "增重／生长表现", ["Weather / environmental conditions"] = "天气／环境条件", ["Compliance costs"] = "合规成本",
+        ["Visual inspection by staff"] = "员工目视检查", ["Electronic ID / RFID tags"] = "电子识别／RFID 标签", ["Smart collars / wearable devices"] = "智能项圈／可穿戴设备", ["Cameras"] = "摄像头", ["Milking system data"] = "挤奶系统数据", ["Weighing systems"] = "称重系统", ["Veterinary checks"] = "兽医检查", ["Farm management software"] = "农场管理软件",
+        ["Multiple times per day"] = "每天多次", ["Daily"] = "每天", ["Several times per week"] = "每周数次", ["Weekly"] = "每周", ["Less frequently"] = "频率更低", ["Mainly when a problem is noticed"] = "主要在发现问题时",
+        ["Large farm area"] = "农场面积大", ["Large number of animals"] = "动物数量多", ["Animals spread across multiple paddocks / blocks"] = "动物分散在多个牧区／地块", ["Limited staff availability"] = "可用员工有限", ["Difficult terrain"] = "地形复杂", ["Weather conditions"] = "天气条件", ["Difficult to identify or locate individual animals"] = "难以识别或定位个体动物", ["Existing technology does not provide enough information"] = "现有技术提供的信息不足", ["Individual animal monitoring is not a major challenge"] = "个体动物监测并非主要难题",
+        ["Visual observation by staff"] = "员工目视观察", ["Change in behaviour"] = "行为变化", ["Change in milk production"] = "产奶量变化", ["Wearable device / sensor alert"] = "可穿戴设备／传感器警报", ["Camera / monitoring system"] = "摄像头／监测系统", ["During milking"] = "挤奶过程中", ["During routine handling"] = "日常操作过程中", ["Veterinary examination"] = "兽医检查",
+        ["Electronic ID / RFID"] = "电子识别／RFID", ["GPS livestock tracking"] = "GPS 牲畜追踪", ["Virtual fencing"] = "虚拟围栏", ["Cameras / computer vision"] = "摄像头／计算机视觉", ["Automatic milking systems"] = "自动挤奶系统", ["Automated weighing systems"] = "自动称重系统", ["Drones"] = "无人机", ["Animal health monitoring systems"] = "动物健康监测系统",
+        ["Very satisfied"] = "非常满意", ["Satisfied"] = "满意", ["Neutral"] = "一般", ["Dissatisfied"] = "不满意", ["Very dissatisfied"] = "非常不满意", ["Not applicable"] = "不适用",
+        ["Too expensive"] = "价格过高", ["Difficult to use"] = "使用困难", ["Requires too much maintenance"] = "维护需求过多", ["Limited coverage / connectivity"] = "覆盖范围／连接受限", ["Too many false alerts"] = "误报过多", ["Does not provide enough useful information"] = "无法提供足够的有用信息", ["Different systems do not work well together"] = "不同系统之间兼容性差", ["Does not reduce enough manual work"] = "无法充分减少人工工作",
+        ["Reduce labour requirements"] = "减少人工需求", ["Animal health monitoring"] = "动物健康监测", ["Earlier detection of animal problems"] = "更早发现动物问题", ["Finding / locating animals"] = "寻找／定位动物", ["Livestock movement"] = "牲畜转移", ["Animal growth / productivity"] = "动物生长／生产力", ["Farm planning"] = "农场规划", ["Record keeping and administration"] = "记录与行政管理", ["Better use of existing farm data"] = "更好地利用现有农场数据", ["Recommendations for farm management"] = "提供农场管理建议",
+        ["Yes"] = "是", ["Maybe — I would like to know more"] = "可能——我想了解更多", ["No"] = "否"
+    };
+    string Zh(string option) => optionZh.TryGetValue(option, out var translation) ? translation : option;
 }
 <!doctype html>
-<html lang="en">
+<html lang="en-NZ">
 <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <meta name="description" content="Sentribee New Zealand Livestock Farm Operations Survey." />
+    <meta name="description" content="Sentribee New Zealand Livestock Farm Operations Survey | 新西兰畜牧农场运营调查" />
     <title>@ViewData["Title"]</title>
     <link rel="icon" href="~/favicon.ico" />
     <link rel="stylesheet" href="~/css/farmer-survey.css" asp-append-version="true" />
@@ -41,8 +65,8 @@
             <img src="~/images/sentribee-mark.png" alt="" width="42" height="42" />
             <span>Sentribee</span>
         </a>
-        <div class="survey-progress" aria-label="Survey progress">
-            <div class="survey-progress__meta"><span>Survey progress</span><strong data-progress-label>0%</strong></div>
+        <div class="survey-progress" aria-label="Survey progress / 问卷进度">
+            <div class="survey-progress__meta"><span>Survey progress · 问卷进度</span><strong data-progress-label>0%</strong></div>
             <div class="survey-progress__track"><span data-progress-bar></span></div>
         </div>
     </header>
@@ -52,30 +76,30 @@
         {
             <section class="confirmation-card" aria-labelledby="confirmation-title">
                 <div class="confirmation-icon" aria-hidden="true">✓</div>
-                <p class="eyebrow">Response received</p>
-                <h1 id="confirmation-title">Thank you for sharing your farm experience.</h1>
-                <p>Your response has been recorded and will help Sentribee better understand the needs and challenges of New Zealand livestock farmers.</p>
+                <p class="eyebrow">Response received · 已收到您的答卷</p>
+                <h1 id="confirmation-title">Thank you for sharing your farm experience.<small class="hero-zh">感谢您分享农场运营经验。</small></h1>
+                <p>Your response has been recorded and will help Sentribee better understand the needs and challenges of New Zealand livestock farmers.<span class="body-zh">您的回答已被记录，将帮助 Sentribee 更深入地了解新西兰畜牧农场经营者的需求与挑战。</span></p>
                 <div class="confirmation-reference">
-                    <span>Submission reference</span>
+                    <span>Submission reference · 提交编号</span>
                     <code>@Model.SubmissionReference</code>
                 </div>
-                <a class="button button--secondary" href="/FarmerSurvey">Submit another response</a>
+                <a class="button button--secondary" href="/FarmerSurvey">Submit another response · 再次填写</a>
             </section>
         }
         else
         {
             <section class="survey-hero" aria-labelledby="survey-title">
-                <p class="eyebrow">New Zealand farm research · 4–5 minutes</p>
-                <h1 id="survey-title">New Zealand Livestock Farm Operations Survey</h1>
-                <p class="survey-hero__lead">Understanding current farm challenges and future technology needs.</p>
-                <p>We are researching the day-to-day challenges livestock farmers face, how technology is currently used on farms, and where future services could create the most value.</p>
-                <div class="survey-hero__note"><strong>Your experience matters.</strong> Your feedback will help us explore practical ways to improve productivity, animal management and operational efficiency.</div>
+                <p class="eyebrow">New Zealand farm research · 新西兰农场调研 · 4–5 minutes／分钟</p>
+                <h1 id="survey-title">New Zealand Livestock Farm Operations Survey<small class="hero-zh">新西兰畜牧农场运营调查</small></h1>
+                <p class="survey-hero__lead">Understanding current farm challenges and future technology needs.<span>了解当前农场经营挑战与未来技术需求。</span></p>
+                <p>We are researching the day-to-day challenges livestock farmers face, how technology is currently used on farms, and where future services could create the most value.<span class="body-zh">我们正在调研畜牧农场日常经营中的实际挑战、目前的技术应用情况，以及未来技术与服务最能创造价值的领域。</span></p>
+                <div class="survey-hero__note"><strong>Your experience matters. · 您的经验非常重要。</strong> Your feedback will help us explore practical ways to improve productivity, animal management and operational efficiency.<span class="body-zh">您的反馈将帮助我们探索提升生产力、动物管理和运营效率的切实方法。</span></div>
             </section>
 
             <details class="privacy-card">
-                <summary>Privacy statement</summary>
-                <p>Participation is voluntary. Your responses will be used by Sentribee for research, product development and market analysis. Any contact details you choose to provide will be kept confidential and will not be sold or shared with third parties for marketing purposes. Survey findings may be analysed in aggregated or anonymised form.</p>
-                <p>By submitting this survey, you consent to Sentribee using your responses for the purposes described above.</p>
+                <summary>Privacy statement · 隐私声明</summary>
+                <p>Participation is voluntary. Your responses will be used by Sentribee for research, product development and market analysis. Any contact details you choose to provide will be kept confidential and will not be sold or shared with third parties for marketing purposes. Survey findings may be analysed in aggregated or anonymised form.<span class="body-zh">参与本调查完全自愿。您的回答将由 Sentribee 用于研究、产品开发和市场分析。您自愿提供的联系方式将被严格保密，不会出售或提供给第三方用于营销。调查结果可能会以汇总或匿名形式进行分析。</span></p>
+                <p>By submitting this survey, you consent to Sentribee using your responses for the purposes described above.<span class="body-zh">提交本问卷即表示您同意 Sentribee 按上述用途使用您的回答。</span></p>
             </details>
 
             <form method="post" class="survey-form" data-survey-form novalidate>
@@ -83,272 +107,272 @@
                 <div asp-validation-summary="ModelOnly" class="validation-summary" role="alert"></div>
 
                 <fieldset class="survey-section">
-                    <legend><span>01</span> Farm Profile</legend>
+                    <legend><span>01</span><span class="legend-copy">Farm Profile<small>农场概况</small></span></legend>
 
                     <div class="question optional" data-question>
-                        <label class="question__title" asp-for="Input.FarmName"><span>1</span> Farm Name</label>
-                        <p class="question__hint">Optional</p>
-                        <input asp-for="Input.FarmName" class="text-input" autocomplete="organization" placeholder="Your farm name" />
+                        <label class="question__title" asp-for="Input.FarmName"><span>1</span> Farm Name<small class="question-zh">农场名称</small></label>
+                        <p class="question__hint">Optional · 选填</p>
+                        <input asp-for="Input.FarmName" class="text-input" autocomplete="organization" placeholder="Your farm name / 农场名称" />
                         <span asp-validation-for="Input.FarmName" class="field-error"></span>
                     </div>
 
                     <div class="question" data-question>
-                        <p class="question__title"><span>2</span> What is your role on the farm?</p>
+                        <p class="question__title"><span>2</span> What is your role on the farm?<small class="question-zh">您在农场担任什么角色？</small></p>
                         <div class="choice-grid choice-grid--compact">
                             @for (var i = 0; i < roleOptions.Length; i++)
                             {
                                 var option = roleOptions[i];
-                                <label class="choice" for="role-@i"><input asp-for="Input.Role" id="role-@i" type="radio" value="@option" data-other-toggle="role-other" /><span>@option</span></label>
+                                <label class="choice" for="role-@i"><input asp-for="Input.Role" id="role-@i" type="radio" value="@option" data-other-toggle="role-other" /><span data-zh="@Zh(option)">@option</span></label>
                             }
                         </div>
-                        <input asp-for="Input.RoleOther" id="role-other" class="text-input other-input" placeholder="Please describe your role" data-other-input />
+                        <input asp-for="Input.RoleOther" id="role-other" class="text-input other-input" placeholder="Please describe your role / 请说明您的角色" data-other-input />
                         <span asp-validation-for="Input.Role" class="field-error"></span>
                         <span asp-validation-for="Input.RoleOther" class="field-error"></span>
                     </div>
 
                     <div class="question" data-question>
-                        <p class="question__title"><span>3</span> Which region is your farm located in?</p>
+                        <p class="question__title"><span>3</span> Which region is your farm located in?<small class="question-zh">您的农场位于哪个地区？</small></p>
                         <div class="choice-grid choice-grid--compact">
                             @for (var i = 0; i < regionOptions.Length; i++)
                             {
                                 var option = regionOptions[i];
-                                <label class="choice" for="region-@i"><input asp-for="Input.Region" id="region-@i" type="radio" value="@option" data-other-toggle="region-other" /><span>@option</span></label>
+                                <label class="choice" for="region-@i"><input asp-for="Input.Region" id="region-@i" type="radio" value="@option" data-other-toggle="region-other" /><span data-zh="@Zh(option)">@option</span></label>
                             }
                         </div>
-                        <input asp-for="Input.RegionOther" id="region-other" class="text-input other-input" placeholder="Please enter your region" data-other-input />
+                        <input asp-for="Input.RegionOther" id="region-other" class="text-input other-input" placeholder="Please enter your region / 请输入所在地区" data-other-input />
                         <span asp-validation-for="Input.Region" class="field-error"></span>
                         <span asp-validation-for="Input.RegionOther" class="field-error"></span>
                     </div>
 
                     <div class="question" data-question>
-                        <p class="question__title"><span>4</span> What type of livestock operation do you primarily run?</p>
+                        <p class="question__title"><span>4</span> What type of livestock operation do you primarily run?<small class="question-zh">您的农场主要从事哪种畜牧经营？</small></p>
                         <div class="choice-grid">
                             @for (var i = 0; i < operationOptions.Length; i++)
                             {
                                 var option = operationOptions[i];
-                                <label class="choice" for="operation-@i"><input asp-for="Input.LivestockOperation" id="operation-@i" type="radio" value="@option" data-other-toggle="operation-other" /><span>@option</span></label>
+                                <label class="choice" for="operation-@i"><input asp-for="Input.LivestockOperation" id="operation-@i" type="radio" value="@option" data-other-toggle="operation-other" /><span data-zh="@Zh(option)">@option</span></label>
                             }
                         </div>
-                        <input asp-for="Input.LivestockOperationOther" id="operation-other" class="text-input other-input" placeholder="Please describe your operation" data-other-input />
+                        <input asp-for="Input.LivestockOperationOther" id="operation-other" class="text-input other-input" placeholder="Please describe your operation / 请说明经营类型" data-other-input />
                         <span asp-validation-for="Input.LivestockOperation" class="field-error"></span>
                         <span asp-validation-for="Input.LivestockOperationOther" class="field-error"></span>
                     </div>
 
                     <div class="question" data-question>
-                        <p class="question__title"><span>5</span> Approximately how many cattle do you currently manage?</p>
+                        <p class="question__title"><span>5</span> Approximately how many cattle do you currently manage?<small class="question-zh">您目前大约管理多少头牛？</small></p>
                         <div class="choice-grid choice-grid--compact">
-                            @for (var i = 0; i < cattleOptions.Length; i++) { var option = cattleOptions[i]; <label class="choice" for="cattle-@i"><input asp-for="Input.CattleCount" id="cattle-@i" type="radio" value="@option" /><span>@option</span></label> }
+                            @for (var i = 0; i < cattleOptions.Length; i++) { var option = cattleOptions[i]; <label class="choice" for="cattle-@i"><input asp-for="Input.CattleCount" id="cattle-@i" type="radio" value="@option" /><span data-zh="@Zh(option)">@option</span></label> }
                         </div>
                         <span asp-validation-for="Input.CattleCount" class="field-error"></span>
                     </div>
 
                     <div class="question" data-question>
-                        <p class="question__title"><span>6</span> Approximately how many sheep do you currently manage?</p>
+                        <p class="question__title"><span>6</span> Approximately how many sheep do you currently manage?<small class="question-zh">您目前大约管理多少只羊？</small></p>
                         <div class="choice-grid choice-grid--compact">
-                            @for (var i = 0; i < sheepOptions.Length; i++) { var option = sheepOptions[i]; <label class="choice" for="sheep-@i"><input asp-for="Input.SheepCount" id="sheep-@i" type="radio" value="@option" /><span>@option</span></label> }
+                            @for (var i = 0; i < sheepOptions.Length; i++) { var option = sheepOptions[i]; var sheepZh = option == "1,001–2,000" ? "1,001–2,000 只" : Zh(option); <label class="choice" for="sheep-@i"><input asp-for="Input.SheepCount" id="sheep-@i" type="radio" value="@option" /><span data-zh="@sheepZh">@option</span></label> }
                         </div>
                         <span asp-validation-for="Input.SheepCount" class="field-error"></span>
                     </div>
 
                     <div class="question" data-question>
-                        <p class="question__title"><span>7</span> Approximately how large is your farming operation?</p>
+                        <p class="question__title"><span>7</span> Approximately how large is your farming operation?<small class="question-zh">您的农场经营面积大约有多大？</small></p>
                         <div class="choice-grid choice-grid--compact">
-                            @for (var i = 0; i < areaOptions.Length; i++) { var option = areaOptions[i]; <label class="choice" for="area-@i"><input asp-for="Input.FarmArea" id="area-@i" type="radio" value="@option" /><span>@option</span></label> }
+                            @for (var i = 0; i < areaOptions.Length; i++) { var option = areaOptions[i]; <label class="choice" for="area-@i"><input asp-for="Input.FarmArea" id="area-@i" type="radio" value="@option" /><span data-zh="@Zh(option)">@option</span></label> }
                         </div>
                         <span asp-validation-for="Input.FarmArea" class="field-error"></span>
                     </div>
 
                     <div class="question" data-question>
-                        <p class="question__title"><span>8</span> Approximately how many people regularly work on the farm?</p>
+                        <p class="question__title"><span>8</span> Approximately how many people regularly work on the farm?<small class="question-zh">农场通常有多少人固定工作？</small></p>
                         <div class="choice-grid choice-grid--compact">
-                            @for (var i = 0; i < staffOptions.Length; i++) { var option = staffOptions[i]; <label class="choice" for="staff-@i"><input asp-for="Input.StaffCount" id="staff-@i" type="radio" value="@option" /><span>@option</span></label> }
+                            @for (var i = 0; i < staffOptions.Length; i++) { var option = staffOptions[i]; <label class="choice" for="staff-@i"><input asp-for="Input.StaffCount" id="staff-@i" type="radio" value="@option" /><span data-zh="@Zh(option)">@option</span></label> }
                         </div>
                         <span asp-validation-for="Input.StaffCount" class="field-error"></span>
                     </div>
                 </fieldset>
 
                 <fieldset class="survey-section">
-                    <legend><span>02</span> Farm Operations &amp; Challenges</legend>
+                    <legend><span>02</span><span class="legend-copy">Farm Operations &amp; Challenges<small>农场运营与挑战</small></span></legend>
 
                     <div class="question" data-question data-max-selected="3">
-                        <p class="question__title"><span>9</span> What are the biggest challenges you currently face in running your farm?</p>
-                        <p class="question__hint">Select up to three.</p>
+                        <p class="question__title"><span>9</span> What are the biggest challenges you currently face in running your farm?<small class="question-zh">您目前经营农场面临的最大挑战是什么？</small></p>
+                        <p class="question__hint">Select up to three. · 最多选择三项。</p>
                         <div class="choice-grid">
-                            @for (var i = 0; i < challengeOptions.Length; i++) { var option = challengeOptions[i]; <label class="choice" for="challenge-@i"><input id="challenge-@i" type="checkbox" name="Input.Challenges" value="@option" checked="@Model.Input.Challenges.Contains(option)" data-other-toggle="challenge-other" /><span>@option</span></label> }
+                            @for (var i = 0; i < challengeOptions.Length; i++) { var option = challengeOptions[i]; <label class="choice" for="challenge-@i"><input id="challenge-@i" type="checkbox" name="Input.Challenges" value="@option" checked="@Model.Input.Challenges.Contains(option)" data-other-toggle="challenge-other" /><span data-zh="@Zh(option)">@option</span></label> }
                         </div>
-                        <input asp-for="Input.ChallengesOther" id="challenge-other" class="text-input other-input" placeholder="Please describe the other challenge" data-other-input />
+                        <input asp-for="Input.ChallengesOther" id="challenge-other" class="text-input other-input" placeholder="Please describe the other challenge / 请说明其他挑战" data-other-input />
                         <span asp-validation-for="Input.Challenges" class="field-error"></span>
                         <span asp-validation-for="Input.ChallengesOther" class="field-error"></span>
                     </div>
 
                     <div class="question" data-question data-max-selected="3">
-                        <p class="question__title"><span>10</span> Which activities currently take up the most staff time?</p>
-                        <p class="question__hint">Select up to three.</p>
+                        <p class="question__title"><span>10</span> Which activities currently take up the most staff time?<small class="question-zh">目前哪些工作占用员工最多时间？</small></p>
+                        <p class="question__hint">Select up to three. · 最多选择三项。</p>
                         <div class="choice-grid">
-                            @for (var i = 0; i < activityOptions.Length; i++) { var option = activityOptions[i]; <label class="choice" for="activity-@i"><input id="activity-@i" type="checkbox" name="Input.TimeConsumingActivities" value="@option" checked="@Model.Input.TimeConsumingActivities.Contains(option)" data-other-toggle="activity-other" /><span>@option</span></label> }
+                            @for (var i = 0; i < activityOptions.Length; i++) { var option = activityOptions[i]; <label class="choice" for="activity-@i"><input id="activity-@i" type="checkbox" name="Input.TimeConsumingActivities" value="@option" checked="@Model.Input.TimeConsumingActivities.Contains(option)" data-other-toggle="activity-other" /><span data-zh="@Zh(option)">@option</span></label> }
                         </div>
-                        <input asp-for="Input.TimeConsumingActivitiesOther" id="activity-other" class="text-input other-input" placeholder="Please describe the other activity" data-other-input />
+                        <input asp-for="Input.TimeConsumingActivitiesOther" id="activity-other" class="text-input other-input" placeholder="Please describe the other activity / 请说明其他工作" data-other-input />
                         <span asp-validation-for="Input.TimeConsumingActivities" class="field-error"></span>
                         <span asp-validation-for="Input.TimeConsumingActivitiesOther" class="field-error"></span>
                     </div>
 
                     <div class="question" data-question data-max-selected="3">
-                        <p class="question__title"><span>11</span> Which areas have the greatest impact on the financial performance of your farm?</p>
-                        <p class="question__hint">Select up to three.</p>
+                        <p class="question__title"><span>11</span> Which areas have the greatest impact on the financial performance of your farm?<small class="question-zh">哪些方面对农场财务表现影响最大？</small></p>
+                        <p class="question__hint">Select up to three. · 最多选择三项。</p>
                         <div class="choice-grid">
-                            @for (var i = 0; i < financialOptions.Length; i++) { var option = financialOptions[i]; <label class="choice" for="financial-@i"><input id="financial-@i" type="checkbox" name="Input.FinancialImpacts" value="@option" checked="@Model.Input.FinancialImpacts.Contains(option)" data-other-toggle="financial-other" /><span>@option</span></label> }
+                            @for (var i = 0; i < financialOptions.Length; i++) { var option = financialOptions[i]; <label class="choice" for="financial-@i"><input id="financial-@i" type="checkbox" name="Input.FinancialImpacts" value="@option" checked="@Model.Input.FinancialImpacts.Contains(option)" data-other-toggle="financial-other" /><span data-zh="@Zh(option)">@option</span></label> }
                         </div>
-                        <input asp-for="Input.FinancialImpactsOther" id="financial-other" class="text-input other-input" placeholder="Please describe the other financial impact" data-other-input />
+                        <input asp-for="Input.FinancialImpactsOther" id="financial-other" class="text-input other-input" placeholder="Please describe the other financial impact / 请说明其他财务影响" data-other-input />
                         <span asp-validation-for="Input.FinancialImpacts" class="field-error"></span>
                         <span asp-validation-for="Input.FinancialImpactsOther" class="field-error"></span>
                     </div>
 
                     <div class="question optional" data-question>
-                        <label class="question__title" asp-for="Input.RoutineTask"><span>12</span> Is there any routine farm task that you find particularly time-consuming, repetitive or difficult?</label>
-                        <p class="question__hint">Optional</p>
-                        <textarea asp-for="Input.RoutineTask" class="text-input" rows="4" placeholder="Tell us about the task and what makes it difficult"></textarea>
+                        <label class="question__title" asp-for="Input.RoutineTask"><span>12</span> Is there any routine farm task that you find particularly time-consuming, repetitive or difficult?<small class="question-zh">是否有特别耗时、重复或困难的日常农场工作？</small></label>
+                        <p class="question__hint">Optional · 选填</p>
+                        <textarea asp-for="Input.RoutineTask" class="text-input" rows="4" placeholder="Tell us about the task / 请描述这项工作及其困难之处"></textarea>
                         <span asp-validation-for="Input.RoutineTask" class="field-error"></span>
                     </div>
                 </fieldset>
 
                 <fieldset class="survey-section">
-                    <legend><span>03</span> Animal Monitoring &amp; Management</legend>
+                    <legend><span>03</span><span class="legend-copy">Animal Monitoring &amp; Management<small>动物监测与管理</small></span></legend>
 
                     <div class="question" data-question>
-                        <p class="question__title"><span>13</span> How do you currently monitor the condition of individual animals?</p>
-                        <p class="question__hint">Select all that apply.</p>
+                        <p class="question__title"><span>13</span> How do you currently monitor the condition of individual animals?<small class="question-zh">您目前如何监测个体动物的状况？</small></p>
+                        <p class="question__hint">Select all that apply. · 可多选。</p>
                         <div class="choice-grid">
-                            @for (var i = 0; i < monitoringOptions.Length; i++) { var option = monitoringOptions[i]; <label class="choice" for="monitoring-@i"><input id="monitoring-@i" type="checkbox" name="Input.MonitoringMethods" value="@option" checked="@Model.Input.MonitoringMethods.Contains(option)" data-other-toggle="monitoring-other" /><span>@option</span></label> }
+                            @for (var i = 0; i < monitoringOptions.Length; i++) { var option = monitoringOptions[i]; <label class="choice" for="monitoring-@i"><input id="monitoring-@i" type="checkbox" name="Input.MonitoringMethods" value="@option" checked="@Model.Input.MonitoringMethods.Contains(option)" data-other-toggle="monitoring-other" /><span data-zh="@Zh(option)">@option</span></label> }
                         </div>
-                        <input asp-for="Input.MonitoringMethodsOther" id="monitoring-other" class="text-input other-input" placeholder="Please describe the other monitoring method" data-other-input />
+                        <input asp-for="Input.MonitoringMethodsOther" id="monitoring-other" class="text-input other-input" placeholder="Please describe the other method / 请说明其他监测方式" data-other-input />
                         <span asp-validation-for="Input.MonitoringMethods" class="field-error"></span>
                         <span asp-validation-for="Input.MonitoringMethodsOther" class="field-error"></span>
                     </div>
 
                     <div class="question" data-question>
-                        <p class="question__title"><span>14</span> How often are individual animals closely inspected?</p>
+                        <p class="question__title"><span>14</span> How often are individual animals closely inspected?<small class="question-zh">您多久对个体动物进行一次仔细检查？</small></p>
                         <div class="choice-grid">
-                            @for (var i = 0; i < inspectionOptions.Length; i++) { var option = inspectionOptions[i]; <label class="choice" for="inspection-@i"><input asp-for="Input.InspectionFrequency" id="inspection-@i" type="radio" value="@option" /><span>@option</span></label> }
+                            @for (var i = 0; i < inspectionOptions.Length; i++) { var option = inspectionOptions[i]; <label class="choice" for="inspection-@i"><input asp-for="Input.InspectionFrequency" id="inspection-@i" type="radio" value="@option" /><span data-zh="@Zh(option)">@option</span></label> }
                         </div>
                         <span asp-validation-for="Input.InspectionFrequency" class="field-error"></span>
                     </div>
 
                     <div class="question" data-question>
-                        <p class="question__title"><span>15</span> What makes individual animal monitoring difficult on your farm?</p>
-                        <p class="question__hint">Select all that apply.</p>
+                        <p class="question__title"><span>15</span> What makes individual animal monitoring difficult on your farm?<small class="question-zh">哪些因素使个体动物监测变得困难？</small></p>
+                        <p class="question__hint">Select all that apply. · 可多选。</p>
                         <div class="choice-grid">
-                            @for (var i = 0; i < monitoringDifficultyOptions.Length; i++) { var option = monitoringDifficultyOptions[i]; <label class="choice" for="difficulty-@i"><input id="difficulty-@i" type="checkbox" name="Input.MonitoringDifficulties" value="@option" checked="@Model.Input.MonitoringDifficulties.Contains(option)" data-other-toggle="difficulty-other" /><span>@option</span></label> }
+                            @for (var i = 0; i < monitoringDifficultyOptions.Length; i++) { var option = monitoringDifficultyOptions[i]; <label class="choice" for="difficulty-@i"><input id="difficulty-@i" type="checkbox" name="Input.MonitoringDifficulties" value="@option" checked="@Model.Input.MonitoringDifficulties.Contains(option)" data-other-toggle="difficulty-other" /><span data-zh="@Zh(option)">@option</span></label> }
                         </div>
-                        <input asp-for="Input.MonitoringDifficultiesOther" id="difficulty-other" class="text-input other-input" placeholder="Please describe the other difficulty" data-other-input />
+                        <input asp-for="Input.MonitoringDifficultiesOther" id="difficulty-other" class="text-input other-input" placeholder="Please describe the other difficulty / 请说明其他困难" data-other-input />
                         <span asp-validation-for="Input.MonitoringDifficulties" class="field-error"></span>
                         <span asp-validation-for="Input.MonitoringDifficultiesOther" class="field-error"></span>
                     </div>
 
                     <div class="question" data-question>
-                        <p class="question__title"><span>16</span> When an animal develops a health or behaviour problem, how is it usually first detected?</p>
+                        <p class="question__title"><span>16</span> When an animal develops a health or behaviour problem, how is it usually first detected?<small class="question-zh">动物出现健康或行为问题时，通常最先通过什么方式发现？</small></p>
                         <div class="choice-grid">
-                            @for (var i = 0; i < detectionOptions.Length; i++) { var option = detectionOptions[i]; <label class="choice" for="detection-@i"><input asp-for="Input.ProblemDetection" id="detection-@i" type="radio" value="@option" data-other-toggle="detection-other" /><span>@option</span></label> }
+                            @for (var i = 0; i < detectionOptions.Length; i++) { var option = detectionOptions[i]; <label class="choice" for="detection-@i"><input asp-for="Input.ProblemDetection" id="detection-@i" type="radio" value="@option" data-other-toggle="detection-other" /><span data-zh="@Zh(option)">@option</span></label> }
                         </div>
-                        <input asp-for="Input.ProblemDetectionOther" id="detection-other" class="text-input other-input" placeholder="Please describe how it is detected" data-other-input />
+                        <input asp-for="Input.ProblemDetectionOther" id="detection-other" class="text-input other-input" placeholder="Please describe how it is detected / 请说明发现方式" data-other-input />
                         <span asp-validation-for="Input.ProblemDetection" class="field-error"></span>
                         <span asp-validation-for="Input.ProblemDetectionOther" class="field-error"></span>
                     </div>
 
                     <div class="question optional" data-question>
-                        <label class="question__title" asp-for="Input.HealthIssues"><span>17</span> What are the most common animal health or welfare issues you deal with on your farm?</label>
-                        <p class="question__hint">Optional</p>
-                        <textarea asp-for="Input.HealthIssues" class="text-input" rows="4" placeholder="Share any recurring animal health or welfare issues"></textarea>
+                        <label class="question__title" asp-for="Input.HealthIssues"><span>17</span> What are the most common animal health or welfare issues you deal with on your farm?<small class="question-zh">您的农场最常遇到哪些动物健康或福利问题？</small></label>
+                        <p class="question__hint">Optional · 选填</p>
+                        <textarea asp-for="Input.HealthIssues" class="text-input" rows="4" placeholder="Share recurring issues / 请说明经常出现的动物健康或福利问题"></textarea>
                         <span asp-validation-for="Input.HealthIssues" class="field-error"></span>
                     </div>
                 </fieldset>
 
                 <fieldset class="survey-section">
-                    <legend><span>04</span> Current Technology</legend>
+                    <legend><span>04</span><span class="legend-copy">Current Technology<small>当前技术应用</small></span></legend>
 
                     <div class="question" data-question>
-                        <p class="question__title"><span>18</span> Which farm technologies or systems do you currently use?</p>
-                        <p class="question__hint">Select all that apply.</p>
+                        <p class="question__title"><span>18</span> Which farm technologies or systems do you currently use?<small class="question-zh">您目前使用哪些农场技术或系统？</small></p>
+                        <p class="question__hint">Select all that apply. · 可多选。</p>
                         <div class="choice-grid">
-                            @for (var i = 0; i < technologyOptions.Length; i++) { var option = technologyOptions[i]; <label class="choice" for="technology-@i"><input id="technology-@i" type="checkbox" name="Input.CurrentTechnologies" value="@option" checked="@Model.Input.CurrentTechnologies.Contains(option)" data-other-toggle="technology-other" data-exclusive="@(option == "None" ? "true" : null)" /><span>@option</span></label> }
+                            @for (var i = 0; i < technologyOptions.Length; i++) { var option = technologyOptions[i]; <label class="choice" for="technology-@i"><input id="technology-@i" type="checkbox" name="Input.CurrentTechnologies" value="@option" checked="@Model.Input.CurrentTechnologies.Contains(option)" data-other-toggle="technology-other" data-exclusive="@(option == "None" ? "true" : null)" /><span data-zh="@Zh(option)">@option</span></label> }
                         </div>
-                        <input asp-for="Input.CurrentTechnologiesOther" id="technology-other" class="text-input other-input" placeholder="Please describe the other technology" data-other-input />
+                        <input asp-for="Input.CurrentTechnologiesOther" id="technology-other" class="text-input other-input" placeholder="Please describe the other technology / 请说明其他技术" data-other-input />
                         <span asp-validation-for="Input.CurrentTechnologies" class="field-error"></span>
                         <span asp-validation-for="Input.CurrentTechnologiesOther" class="field-error"></span>
                     </div>
 
                     <div class="question optional" data-question>
-                        <label class="question__title" asp-for="Input.TechnologyBrands"><span>19</span> If applicable, which brands or products are you currently using?</label>
-                        <p class="question__hint">Optional</p>
-                        <input asp-for="Input.TechnologyBrands" class="text-input" placeholder="Brand or product names" />
+                        <label class="question__title" asp-for="Input.TechnologyBrands"><span>19</span> If applicable, which brands or products are you currently using?<small class="question-zh">如适用，您目前使用哪些品牌或产品？</small></label>
+                        <p class="question__hint">Optional · 选填</p>
+                        <input asp-for="Input.TechnologyBrands" class="text-input" placeholder="Brand or product names / 品牌或产品名称" />
                         <span asp-validation-for="Input.TechnologyBrands" class="field-error"></span>
                     </div>
 
                     <div class="question" data-question>
-                        <p class="question__title"><span>20</span> Overall, how satisfied are you with the technologies you currently use?</p>
+                        <p class="question__title"><span>20</span> Overall, how satisfied are you with the technologies you currently use?<small class="question-zh">总体而言，您对目前使用的技术满意吗？</small></p>
                         <div class="choice-grid choice-grid--compact">
-                            @for (var i = 0; i < satisfactionOptions.Length; i++) { var option = satisfactionOptions[i]; <label class="choice" for="satisfaction-@i"><input asp-for="Input.TechnologySatisfaction" id="satisfaction-@i" type="radio" value="@option" /><span>@option</span></label> }
+                            @for (var i = 0; i < satisfactionOptions.Length; i++) { var option = satisfactionOptions[i]; <label class="choice" for="satisfaction-@i"><input asp-for="Input.TechnologySatisfaction" id="satisfaction-@i" type="radio" value="@option" /><span data-zh="@Zh(option)">@option</span></label> }
                         </div>
                         <span asp-validation-for="Input.TechnologySatisfaction" class="field-error"></span>
                     </div>
 
                     <div class="question" data-question>
-                        <p class="question__title"><span>21</span> What is the biggest limitation of your current farm technology?</p>
+                        <p class="question__title"><span>21</span> What is the biggest limitation of your current farm technology?<small class="question-zh">目前农场技术最大的局限是什么？</small></p>
                         <div class="choice-grid">
-                            @for (var i = 0; i < limitationOptions.Length; i++) { var option = limitationOptions[i]; <label class="choice" for="limitation-@i"><input asp-for="Input.TechnologyLimitation" id="limitation-@i" type="radio" value="@option" data-other-toggle="limitation-other" /><span>@option</span></label> }
+                            @for (var i = 0; i < limitationOptions.Length; i++) { var option = limitationOptions[i]; <label class="choice" for="limitation-@i"><input asp-for="Input.TechnologyLimitation" id="limitation-@i" type="radio" value="@option" data-other-toggle="limitation-other" /><span data-zh="@Zh(option)">@option</span></label> }
                         </div>
-                        <input asp-for="Input.TechnologyLimitationOther" id="limitation-other" class="text-input other-input" placeholder="Please describe the other limitation" data-other-input />
+                        <input asp-for="Input.TechnologyLimitationOther" id="limitation-other" class="text-input other-input" placeholder="Please describe the other limitation / 请说明其他局限" data-other-input />
                         <span asp-validation-for="Input.TechnologyLimitation" class="field-error"></span>
                         <span asp-validation-for="Input.TechnologyLimitationOther" class="field-error"></span>
                     </div>
                 </fieldset>
 
                 <fieldset class="survey-section">
-                    <legend><span>05</span> Future Technology Needs</legend>
+                    <legend><span>05</span><span class="legend-copy">Future Technology Needs<small>未来技术需求</small></span></legend>
 
                     <div class="question" data-question data-max-selected="3">
-                        <p class="question__title"><span>22</span> If new farm technologies became available, which areas would you most like them to improve?</p>
-                        <p class="question__hint">Select up to three.</p>
+                        <p class="question__title"><span>22</span> If new farm technologies became available, which areas would you most like them to improve?<small class="question-zh">如果有新的农场技术，您最希望它改善哪些方面？</small></p>
+                        <p class="question__hint">Select up to three. · 最多选择三项。</p>
                         <div class="choice-grid">
-                            @for (var i = 0; i < improvementOptions.Length; i++) { var option = improvementOptions[i]; <label class="choice" for="improvement-@i"><input id="improvement-@i" type="checkbox" name="Input.ImprovementAreas" value="@option" checked="@Model.Input.ImprovementAreas.Contains(option)" data-other-toggle="improvement-other" /><span>@option</span></label> }
+                            @for (var i = 0; i < improvementOptions.Length; i++) { var option = improvementOptions[i]; <label class="choice" for="improvement-@i"><input id="improvement-@i" type="checkbox" name="Input.ImprovementAreas" value="@option" checked="@Model.Input.ImprovementAreas.Contains(option)" data-other-toggle="improvement-other" /><span data-zh="@Zh(option)">@option</span></label> }
                         </div>
-                        <input asp-for="Input.ImprovementAreasOther" id="improvement-other" class="text-input other-input" placeholder="Please describe the other improvement area" data-other-input />
+                        <input asp-for="Input.ImprovementAreasOther" id="improvement-other" class="text-input other-input" placeholder="Please describe the other area / 请说明其他改善领域" data-other-input />
                         <span asp-validation-for="Input.ImprovementAreas" class="field-error"></span>
                         <span asp-validation-for="Input.ImprovementAreasOther" class="field-error"></span>
                     </div>
 
                     <div class="question" data-question>
-                        <label class="question__title" asp-for="Input.PriorityImprovement"><span>23</span> If technology could significantly improve one area of your farm operation, what would you choose?</label>
-                        <textarea asp-for="Input.PriorityImprovement" class="text-input" rows="4" placeholder="Describe the one improvement that would create the most value"></textarea>
+                        <label class="question__title" asp-for="Input.PriorityImprovement"><span>23</span> If technology could significantly improve one area of your farm operation, what would you choose?<small class="question-zh">如果技术能显著改善农场运营的一个方面，您会选择什么？</small></label>
+                        <textarea asp-for="Input.PriorityImprovement" class="text-input" rows="4" placeholder="Describe the most valuable improvement / 请描述最有价值的一项改善"></textarea>
                         <span asp-validation-for="Input.PriorityImprovement" class="field-error"></span>
                     </div>
                 </fieldset>
 
                 <fieldset class="survey-section">
-                    <legend><span>06</span> Follow-up &amp; Research Participation</legend>
+                    <legend><span>06</span><span class="legend-copy">Follow-up &amp; Research Participation<small>后续联系与研究参与</small></span></legend>
 
                     <div class="question" data-question>
-                        <p class="question__title"><span>24</span> Would you be open to participating in an on-farm research visit, where the Sentribee team could better understand your day-to-day operations and challenges?</p>
+                        <p class="question__title"><span>24</span> Would you be open to participating in an on-farm research visit, where the Sentribee team could better understand your day-to-day operations and challenges?<small class="question-zh">您是否愿意参加农场实地调研，让 Sentribee 团队进一步了解您的日常运营和挑战？</small></p>
                         <div class="choice-grid">
-                            @for (var i = 0; i < followUpOptions.Length; i++) { var option = followUpOptions[i]; <label class="choice" for="visit-@i"><input asp-for="Input.ResearchVisit" id="visit-@i" type="radio" value="@option" /><span>@option</span></label> }
+                            @for (var i = 0; i < followUpOptions.Length; i++) { var option = followUpOptions[i]; <label class="choice" for="visit-@i"><input asp-for="Input.ResearchVisit" id="visit-@i" type="radio" value="@option" /><span data-zh="@Zh(option)">@option</span></label> }
                         </div>
                         <span asp-validation-for="Input.ResearchVisit" class="field-error"></span>
                     </div>
 
                     <div class="question" data-question>
-                        <p class="question__title"><span>25</span> Would you be interested in participating in future farm technology trials or pilot programmes?</p>
+                        <p class="question__title"><span>25</span> Would you be interested in participating in future farm technology trials or pilot programmes?<small class="question-zh">您是否有兴趣参与未来的农场技术试验或试点项目？</small></p>
                         <div class="choice-grid">
-                            @for (var i = 0; i < followUpOptions.Length; i++) { var option = followUpOptions[i]; <label class="choice" for="trials-@i"><input asp-for="Input.TechnologyTrials" id="trials-@i" type="radio" value="@option" /><span>@option</span></label> }
+                            @for (var i = 0; i < followUpOptions.Length; i++) { var option = followUpOptions[i]; <label class="choice" for="trials-@i"><input asp-for="Input.TechnologyTrials" id="trials-@i" type="radio" value="@option" /><span data-zh="@Zh(option)">@option</span></label> }
                         </div>
                         <span asp-validation-for="Input.TechnologyTrials" class="field-error"></span>
                     </div>
 
                     <div class="question optional" data-question>
-                        <p class="question__title"><span>26–28</span> Contact details</p>
-                        <p class="question__hint">Optional — provide these only if you are comfortable being contacted about research or trials.</p>
+                        <p class="question__title"><span>26–28</span> Contact details<small class="question-zh">联系方式</small></p>
+                        <p class="question__hint">Optional — provide these only if you are comfortable being contacted about research or trials. · 选填——仅在您愿意就研究或试验项目接受联系时填写。</p>
                         <div class="contact-grid">
-                            <div><label asp-for="Input.ContactName">Name</label><input asp-for="Input.ContactName" class="text-input" autocomplete="name" /></div>
-                            <div><label asp-for="Input.ContactPhone">Phone</label><input asp-for="Input.ContactPhone" class="text-input" autocomplete="tel" inputmode="tel" /></div>
-                            <div><label asp-for="Input.ContactEmail">Email</label><input asp-for="Input.ContactEmail" class="text-input" autocomplete="email" inputmode="email" /></div>
+                            <div><label asp-for="Input.ContactName">Name · 姓名</label><input asp-for="Input.ContactName" class="text-input" autocomplete="name" /></div>
+                            <div><label asp-for="Input.ContactPhone">Phone · 电话</label><input asp-for="Input.ContactPhone" class="text-input" autocomplete="tel" inputmode="tel" /></div>
+                            <div><label asp-for="Input.ContactEmail">Email · 邮箱</label><input asp-for="Input.ContactEmail" class="text-input" autocomplete="email" inputmode="email" /></div>
                         </div>
                         <span asp-validation-for="Input.ContactName" class="field-error"></span>
                         <span asp-validation-for="Input.ContactPhone" class="field-error"></span>
@@ -356,25 +380,25 @@
                     </div>
 
                     <div class="question optional" data-question>
-                        <label class="question__title" asp-for="Input.AdditionalComments"><span>29</span> Is there anything else you would like future farm technology providers to understand about the challenges of running your farm?</label>
-                        <p class="question__hint">Optional</p>
-                        <textarea asp-for="Input.AdditionalComments" class="text-input" rows="5" placeholder="Share anything else you think technology providers should know"></textarea>
+                        <label class="question__title" asp-for="Input.AdditionalComments"><span>29</span> Is there anything else you would like future farm technology providers to understand about the challenges of running your farm?<small class="question-zh">关于经营农场的挑战，您还希望未来的农场技术提供商了解什么？</small></label>
+                        <p class="question__hint">Optional · 选填</p>
+                        <textarea asp-for="Input.AdditionalComments" class="text-input" rows="5" placeholder="Anything else providers should know / 其他希望技术提供商了解的内容"></textarea>
                         <span asp-validation-for="Input.AdditionalComments" class="field-error"></span>
                     </div>
                 </fieldset>
 
                 <section class="submit-card">
                     <div>
-                        <p class="eyebrow">Ready to submit?</p>
-                        <h2>Thank you for helping shape practical farm technology.</h2>
-                        <p>By submitting, you confirm that you have read the privacy statement above.</p>
+                        <p class="eyebrow">Ready to submit? · 准备提交了吗？</p>
+                        <h2>Thank you for helping shape practical farm technology.<small class="submit-zh">感谢您帮助我们推动更实用的农场技术。</small></h2>
+                        <p>By submitting, you confirm that you have read the privacy statement above.<span class="body-zh">提交即表示您已阅读上述隐私声明。</span></p>
                     </div>
-                    <button class="button" type="submit" data-submit-button>Submit survey <span aria-hidden="true">→</span></button>
+                    <button class="button" type="submit" data-submit-button>Submit survey · 提交问卷 <span aria-hidden="true">→</span></button>
                 </section>
             </form>
         }
     </main>
 
-    <footer>© @DateTime.UtcNow.Year Sentribee · New Zealand livestock research</footer>
+    <footer>© @DateTime.UtcNow.Year Sentribee · New Zealand livestock research · 新西兰畜牧业调研</footer>
 </body>
 </html>

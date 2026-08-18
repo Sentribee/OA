@@ -353,34 +353,34 @@ public sealed class FarmerSurveyInput : IValidatableObject
     [StringLength(180)]
     public string? FarmName { get; set; }
 
-    [Required(ErrorMessage = "Select your role on the farm.")]
+    [Required(ErrorMessage = "Select your role on the farm. / 请选择您在农场的角色。")]
     public string Role { get; set; } = string.Empty;
 
     [StringLength(120)]
     public string? RoleOther { get; set; }
 
-    [Required(ErrorMessage = "Select your region.")]
+    [Required(ErrorMessage = "Select your region. / 请选择农场所在地区。")]
     public string Region { get; set; } = string.Empty;
 
     [StringLength(120)]
     public string? RegionOther { get; set; }
 
-    [Required(ErrorMessage = "Select your primary livestock operation.")]
+    [Required(ErrorMessage = "Select your primary livestock operation. / 请选择主要畜牧经营类型。")]
     public string LivestockOperation { get; set; } = string.Empty;
 
     [StringLength(140)]
     public string? LivestockOperationOther { get; set; }
 
-    [Required(ErrorMessage = "Select the number of cattle you manage.")]
+    [Required(ErrorMessage = "Select the number of cattle you manage. / 请选择管理的牛只数量。")]
     public string CattleCount { get; set; } = string.Empty;
 
-    [Required(ErrorMessage = "Select the number of sheep you manage.")]
+    [Required(ErrorMessage = "Select the number of sheep you manage. / 请选择管理的羊只数量。")]
     public string SheepCount { get; set; } = string.Empty;
 
-    [Required(ErrorMessage = "Select the size of your farming operation.")]
+    [Required(ErrorMessage = "Select the size of your farming operation. / 请选择农场经营面积。")]
     public string FarmArea { get; set; } = string.Empty;
 
-    [Required(ErrorMessage = "Select how many people regularly work on the farm.")]
+    [Required(ErrorMessage = "Select how many people regularly work on the farm. / 请选择固定工作人员数量。")]
     public string StaffCount { get; set; } = string.Empty;
 
     public List<string> Challenges { get; set; } = [];
@@ -406,7 +406,7 @@ public sealed class FarmerSurveyInput : IValidatableObject
     [StringLength(180)]
     public string? MonitoringMethodsOther { get; set; }
 
-    [Required(ErrorMessage = "Select how often individual animals are closely inspected.")]
+    [Required(ErrorMessage = "Select how often individual animals are closely inspected. / 请选择个体动物的检查频率。")]
     public string InspectionFrequency { get; set; } = string.Empty;
 
     public List<string> MonitoringDifficulties { get; set; } = [];
@@ -414,7 +414,7 @@ public sealed class FarmerSurveyInput : IValidatableObject
     [StringLength(180)]
     public string? MonitoringDifficultiesOther { get; set; }
 
-    [Required(ErrorMessage = "Select how animal problems are usually first detected.")]
+    [Required(ErrorMessage = "Select how animal problems are usually first detected. / 请选择通常如何最先发现动物问题。")]
     public string ProblemDetection { get; set; } = string.Empty;
 
     [StringLength(180)]
@@ -431,10 +431,10 @@ public sealed class FarmerSurveyInput : IValidatableObject
     [StringLength(500)]
     public string? TechnologyBrands { get; set; }
 
-    [Required(ErrorMessage = "Select your overall satisfaction with current technologies.")]
+    [Required(ErrorMessage = "Select your overall satisfaction with current technologies. / 请选择您对现有技术的满意程度。")]
     public string TechnologySatisfaction { get; set; } = string.Empty;
 
-    [Required(ErrorMessage = "Select the biggest limitation of your current farm technology.")]
+    [Required(ErrorMessage = "Select the biggest limitation of your current farm technology. / 请选择现有农场技术的最大局限。")]
     public string TechnologyLimitation { get; set; } = string.Empty;
 
     [StringLength(180)]
@@ -445,14 +445,14 @@ public sealed class FarmerSurveyInput : IValidatableObject
     [StringLength(180)]
     public string? ImprovementAreasOther { get; set; }
 
-    [Required(ErrorMessage = "Tell us the one area you would most like technology to improve.")]
+    [Required(ErrorMessage = "Tell us the one area you would most like technology to improve. / 请说明您最希望技术改善的一个方面。")]
     [StringLength(2000)]
     public string PriorityImprovement { get; set; } = string.Empty;
 
-    [Required(ErrorMessage = "Select whether you would consider an on-farm research visit.")]
+    [Required(ErrorMessage = "Select whether you would consider an on-farm research visit. / 请选择是否考虑参加农场实地调研。")]
     public string ResearchVisit { get; set; } = string.Empty;
 
-    [Required(ErrorMessage = "Select whether you would consider future technology trials.")]
+    [Required(ErrorMessage = "Select whether you would consider future technology trials. / 请选择是否考虑参加未来技术试验。")]
     public string TechnologyTrials { get; set; } = string.Empty;
 
     [StringLength(160)]
@@ -474,58 +474,58 @@ public sealed class FarmerSurveyInput : IValidatableObject
 
     public IEnumerable<ValidationResult> Validate(ValidationContext validationContext)
     {
-        foreach (var result in RequireSelections(Challenges, 1, 3, nameof(Challenges), "Select one to three current farm challenges."))
+        foreach (var result in RequireSelections(Challenges, 1, 3, nameof(Challenges), "Select one to three current farm challenges. / 请选择一至三项当前农场挑战。"))
         {
             yield return result;
         }
 
-        foreach (var result in RequireSelections(TimeConsumingActivities, 1, 3, nameof(TimeConsumingActivities), "Select one to three activities taking the most staff time."))
+        foreach (var result in RequireSelections(TimeConsumingActivities, 1, 3, nameof(TimeConsumingActivities), "Select one to three activities taking the most staff time. / 请选择一至三项最占用员工时间的工作。"))
         {
             yield return result;
         }
 
-        foreach (var result in RequireSelections(FinancialImpacts, 1, 3, nameof(FinancialImpacts), "Select one to three areas with the greatest financial impact."))
+        foreach (var result in RequireSelections(FinancialImpacts, 1, 3, nameof(FinancialImpacts), "Select one to three areas with the greatest financial impact. / 请选择一至三项财务影响最大的领域。"))
         {
             yield return result;
         }
 
-        foreach (var result in RequireSelections(MonitoringMethods, 1, int.MaxValue, nameof(MonitoringMethods), "Select at least one current animal monitoring method."))
+        foreach (var result in RequireSelections(MonitoringMethods, 1, int.MaxValue, nameof(MonitoringMethods), "Select at least one current animal monitoring method. / 请至少选择一种动物监测方式。"))
         {
             yield return result;
         }
 
-        foreach (var result in RequireSelections(MonitoringDifficulties, 1, int.MaxValue, nameof(MonitoringDifficulties), "Select at least one animal monitoring difficulty."))
+        foreach (var result in RequireSelections(MonitoringDifficulties, 1, int.MaxValue, nameof(MonitoringDifficulties), "Select at least one animal monitoring difficulty. / 请至少选择一项动物监测困难。"))
         {
             yield return result;
         }
 
-        foreach (var result in RequireSelections(CurrentTechnologies, 1, int.MaxValue, nameof(CurrentTechnologies), "Select at least one technology, or select None."))
+        foreach (var result in RequireSelections(CurrentTechnologies, 1, int.MaxValue, nameof(CurrentTechnologies), "Select at least one technology, or select None. / 请至少选择一项技术，或选择“无”。"))
         {
             yield return result;
         }
 
         if (CurrentTechnologies.Contains("None", StringComparer.Ordinal) && CurrentTechnologies.Count > 1)
         {
-            yield return new ValidationResult("Select None by itself, or choose the technologies you use.", [nameof(CurrentTechnologies)]);
+            yield return new ValidationResult("Select None by itself, or choose the technologies you use. / “无”需单独选择，或请选择正在使用的技术。", [nameof(CurrentTechnologies)]);
         }
 
-        foreach (var result in RequireSelections(ImprovementAreas, 1, 3, nameof(ImprovementAreas), "Select one to three areas for future technology to improve."))
+        foreach (var result in RequireSelections(ImprovementAreas, 1, 3, nameof(ImprovementAreas), "Select one to three areas for future technology to improve. / 请选择一至三项希望未来技术改善的领域。"))
         {
             yield return result;
         }
 
-        foreach (var result in RequireOther(Role, RoleOther, nameof(RoleOther), "Describe your other farm role.")) yield return result;
-        foreach (var result in RequireOther(Region, RegionOther, nameof(RegionOther), "Enter your other region.")) yield return result;
-        foreach (var result in RequireOther(LivestockOperation, LivestockOperationOther, nameof(LivestockOperationOther), "Describe your other livestock operation.")) yield return result;
-        foreach (var result in RequireOther(Challenges, ChallengesOther, nameof(ChallengesOther), "Describe the other farm challenge.")) yield return result;
-        foreach (var result in RequireOther(TimeConsumingActivities, TimeConsumingActivitiesOther, nameof(TimeConsumingActivitiesOther), "Describe the other time-consuming activity.")) yield return result;
-        foreach (var result in RequireOther(FinancialImpacts, FinancialImpactsOther, nameof(FinancialImpactsOther), "Describe the other financial impact.")) yield return result;
-        foreach (var result in RequireOther(MonitoringMethods, MonitoringMethodsOther, nameof(MonitoringMethodsOther), "Describe the other monitoring method.")) yield return result;
-        foreach (var result in RequireOther(MonitoringDifficulties, MonitoringDifficultiesOther, nameof(MonitoringDifficultiesOther), "Describe the other monitoring difficulty.")) yield return result;
-        foreach (var result in RequireOther(ProblemDetection, ProblemDetectionOther, nameof(ProblemDetectionOther), "Describe how the problem is otherwise detected.")) yield return result;
-        foreach (var result in RequireOther(CurrentTechnologies, CurrentTechnologiesOther, nameof(CurrentTechnologiesOther), "Describe the other technology.")) yield return result;
-        foreach (var result in RequireOther(TechnologyLimitation, TechnologyLimitationOther, nameof(TechnologyLimitationOther), "Describe the other technology limitation.")) yield return result;
-        foreach (var result in RequireOther(ImprovementAreas, ImprovementAreasOther, nameof(ImprovementAreasOther), "Describe the other improvement area.")) yield return result;
+        foreach (var result in RequireOther(Role, RoleOther, nameof(RoleOther), "Describe your other farm role. / 请说明其他农场角色。")) yield return result;
+        foreach (var result in RequireOther(Region, RegionOther, nameof(RegionOther), "Enter your other region. / 请输入其他地区。")) yield return result;
+        foreach (var result in RequireOther(LivestockOperation, LivestockOperationOther, nameof(LivestockOperationOther), "Describe your other livestock operation. / 请说明其他畜牧经营类型。")) yield return result;
+        foreach (var result in RequireOther(Challenges, ChallengesOther, nameof(ChallengesOther), "Describe the other farm challenge. / 请说明其他农场挑战。")) yield return result;
+        foreach (var result in RequireOther(TimeConsumingActivities, TimeConsumingActivitiesOther, nameof(TimeConsumingActivitiesOther), "Describe the other time-consuming activity. / 请说明其他耗时工作。")) yield return result;
+        foreach (var result in RequireOther(FinancialImpacts, FinancialImpactsOther, nameof(FinancialImpactsOther), "Describe the other financial impact. / 请说明其他财务影响。")) yield return result;
+        foreach (var result in RequireOther(MonitoringMethods, MonitoringMethodsOther, nameof(MonitoringMethodsOther), "Describe the other monitoring method. / 请说明其他监测方式。")) yield return result;
+        foreach (var result in RequireOther(MonitoringDifficulties, MonitoringDifficultiesOther, nameof(MonitoringDifficultiesOther), "Describe the other monitoring difficulty. / 请说明其他监测困难。")) yield return result;
+        foreach (var result in RequireOther(ProblemDetection, ProblemDetectionOther, nameof(ProblemDetectionOther), "Describe how the problem is otherwise detected. / 请说明其他发现方式。")) yield return result;
+        foreach (var result in RequireOther(CurrentTechnologies, CurrentTechnologiesOther, nameof(CurrentTechnologiesOther), "Describe the other technology. / 请说明其他技术。")) yield return result;
+        foreach (var result in RequireOther(TechnologyLimitation, TechnologyLimitationOther, nameof(TechnologyLimitationOther), "Describe the other technology limitation. / 请说明其他技术局限。")) yield return result;
+        foreach (var result in RequireOther(ImprovementAreas, ImprovementAreasOther, nameof(ImprovementAreasOther), "Describe the other improvement area. / 请说明其他改善领域。")) yield return result;
     }
 
     private static IEnumerable<ValidationResult> RequireSelections(
