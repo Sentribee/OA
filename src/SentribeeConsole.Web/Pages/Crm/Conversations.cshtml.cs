@@ -1,6 +1,8 @@
 using Microsoft.AspNetCore.Mvc;
 using MySqlConnector;
 using SentribeeConsole.Web.Domain.Entities;
+using System.Text.Json;
+using System.Text.Json.Nodes;
 
 namespace SentribeeConsole.Web.Pages.Crm;
 
@@ -13,8 +15,12 @@ public class ConversationsModel(IConfiguration configuration) : CrmMerchantPageM
     public IReadOnlyList<CrmConversationMessageRow> Messages { get; private set; } = [];
 
     public long? SelectedConversationId { get; private set; }
+    public string? ConversationLabel { get; private set; }
+    public bool IsWeComConversation { get; private set; }
+    public int MessagePage { get; private set; }
+    public bool HasMoreMessages { get; private set; }
 
-    public async Task<IActionResult> OnGetAsync(long? conversationId, int pageNumber = 1, CancellationToken cancellationToken = default)
+    public async Task<IActionResult> OnGetAsync(long? conversationId, int pageNumber = 1, int messagePage = 1, CancellationToken cancellationToken = default)
     {
         var merchant = await LoadCurrentMerchantAsync(cancellationToken);
         if (merchant is null)
@@ -28,6 +34,7 @@ public class ConversationsModel(IConfiguration configuration) : CrmMerchantPageM
         ViewData["PageTitle"] = "Conversations";
         ViewData["ActiveMenu"] = "Conversations";
         SelectedConversationId = conversationId;
+        MessagePage = Math.Clamp(messagePage, 1, 100000);
 
         await LoadConversationsAsync(pageNumber, cancellationToken);
         if (conversationId.HasValue)
@@ -93,18 +100,32 @@ public class ConversationsModel(IConfiguration configuration) : CrmMerchantPageM
     {
         await using var connection = new MySqlConnection(ConnectionString);
         await connection.OpenAsync(cancellationToken);
+        await using (var selected = new MySqlCommand("SELECT VisitorLabel, Channel FROM bee_CrmConversation WHERE id=@id AND MerchantId=@merchant", connection))
+        {
+            selected.Parameters.AddWithValue("@id", conversationId);
+            selected.Parameters.AddWithValue("@merchant", Merchant.Id);
+            await using var selection = await selected.ExecuteReaderAsync(cancellationToken);
+            if (!await selection.ReadAsync(cancellationToken)) return;
+            ConversationLabel = selection["VisitorLabel"] as string;
+            IsWeComConversation = selection.GetString("Channel") == "WeCom";
+        }
         const string sql = """
             SELECT message.id, message.SenderRole, message.Body, message.ImageUrl,
-                message.ModelName, message.PromptTokens, message.CompletionTokens, message.CreatedAtUtc
+                message.ModelName, message.PromptTokens, message.CompletionTokens, message.CreatedAtUtc,
+                wecom.MessageType, wecom.UserId, wecom.SenderName, wecom.SenderAvatarUrl,
+                wecom.ChatName, wecom.ChatId, wecom.NormalizedJson
             FROM bee_CrmConversationMessage AS message
             INNER JOIN bee_CrmConversation AS conversation ON conversation.id = message.ConversationId
+            LEFT JOIN bee_WeComAibotMessage AS wecom ON wecom.CrmMessageId=message.id AND wecom.MerchantId=conversation.MerchantId
             WHERE message.ConversationId = @ConversationId
               AND conversation.MerchantId = @MerchantId
-            ORDER BY message.CreatedAtUtc, message.id;
+            ORDER BY message.CreatedAtUtc DESC, message.id DESC
+            LIMIT 101 OFFSET @Offset;
             """;
         await using var command = new MySqlCommand(sql, connection);
         command.Parameters.Add("@ConversationId", MySqlDbType.Int64).Value = conversationId;
         command.Parameters.Add("@MerchantId", MySqlDbType.Int64).Value = Merchant.Id;
+        command.Parameters.AddWithValue("@Offset", (MessagePage - 1) * 100);
         await using var reader = await command.ExecuteReaderAsync(cancellationToken);
         var rows = new List<CrmConversationMessageRow>();
         while (await reader.ReadAsync(cancellationToken))
@@ -117,10 +138,40 @@ public class ConversationsModel(IConfiguration configuration) : CrmMerchantPageM
                 reader["ModelName"] as string,
                 reader.GetInt32(reader.GetOrdinal("PromptTokens")),
                 reader.GetInt32(reader.GetOrdinal("CompletionTokens")),
-                reader.GetDateTime(reader.GetOrdinal("CreatedAtUtc"))));
+                reader.GetDateTime(reader.GetOrdinal("CreatedAtUtc")),
+                reader["MessageType"] is string type ? new WeComConversationInfo(type,
+                    reader["UserId"] as string ?? "", reader["SenderName"] as string,
+                    SafeAvatar(reader["SenderAvatarUrl"] as string), reader["ChatName"] as string,
+                    reader["ChatId"] as string ?? "", SafeDetails(reader["NormalizedJson"] as string)) : null));
         }
 
-        Messages = rows;
+        HasMoreMessages = rows.Count > 100;
+        Messages = rows.Take(100).Reverse().ToList();
+    }
+
+    public async Task<IActionResult> OnPostLabelAsync(long conversationId, string? label, CancellationToken cancellationToken)
+    {
+        var merchant = await LoadCurrentMerchantAsync(cancellationToken);
+        if (merchant is null) return RedirectToPage("/Crm/Login");
+        label = label?.Trim();
+        if (string.IsNullOrEmpty(label) || label.Length > 140) return BadRequest();
+        await using var connection = new MySqlConnection(ConnectionString);
+        await connection.OpenAsync(cancellationToken);
+        await using var command = new MySqlCommand("UPDATE bee_CrmConversation SET VisitorLabel=@label WHERE id=@id AND MerchantId=@merchant AND Channel='WeCom'", connection);
+        command.Parameters.AddWithValue("@label", label);
+        command.Parameters.AddWithValue("@id", conversationId);
+        command.Parameters.AddWithValue("@merchant", merchant.Id);
+        if (await command.ExecuteNonQueryAsync(cancellationToken) == 0) return NotFound();
+        return RedirectToPage(new { conversationId });
+    }
+
+    private static string? SafeAvatar(string? value) => Uri.TryCreate(value, UriKind.Absolute, out var uri) && uri.Scheme == "https" ? value : null;
+    private static string SafeDetails(string? value)
+    {
+        var data = JsonNode.Parse(value ?? "{}");
+        // Callback signatures and temporary reply URLs are not needed in the OA view.
+        var details = new JsonObject { ["attachments"] = data?["attachments"]?.DeepClone(), ["quote"] = data?["quote"]?.DeepClone(), ["event"] = data?["rawMessage"]?["event"]?.DeepClone(), ["msgid"] = data?["msgid"]?.DeepClone() };
+        return details.ToJsonString(new JsonSerializerOptions { WriteIndented=true });
     }
 }
 
@@ -143,4 +194,7 @@ public sealed record CrmConversationMessageRow(
     string? ModelName,
     int PromptTokens,
     int CompletionTokens,
-    DateTime CreatedAtUtc);
+    DateTime CreatedAtUtc,
+    WeComConversationInfo? WeCom = null);
+
+public sealed record WeComConversationInfo(string MessageType, string UserId, string? Name, string? AvatarUrl, string? ChatName, string ChatId, string Details);

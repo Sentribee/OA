@@ -11,7 +11,6 @@
         <div class="card">
             <div class="card-body">
                 <h3 class="card-title fs-6">Conversation history</h3>
-                <p class="card-subtitle text-body-secondary">Customer sessions from public chat.</p>
                 <div class="crm-conversation-list mt-4">
                     @if (Model.Conversations.Items.Count == 0)
                     {
@@ -25,6 +24,7 @@
                                asp-page="/Crm/Conversations"
                                asp-route-conversationId="@item.Id">
                                 <div class="fw-semibold">@(item.VisitorLabel ?? $"Visitor {item.Id}")</div>
+                                <div class="text-body-secondary fs-8">@item.Channel &middot; @item.BotName</div>
                                 <div class="text-body-secondary fs-8">@item.MessageCount messages, @item.ImageMessageCount images</div>
                                 <div class="text-body-secondary fs-8">@ProjectTimeZone.Format(item.LastMessageAtUtc ?? item.StartedAtUtc, Model.Merchant.TimeZoneId)</div>
                             </a>
@@ -45,6 +45,15 @@
         <div class="card">
             <div class="card-body">
                 <h3 class="card-title fs-6">Messages</h3>
+                @if (Model.IsWeComConversation)
+                {
+                    <form method="post" asp-page-handler="Label" class="d-flex gap-2 my-3">
+                        <input type="hidden" name="conversationId" value="@Model.SelectedConversationId" />
+                        <label for="conversation-label" class="visually-hidden">Conversation alias</label>
+                        <input id="conversation-label" class="form-control" name="label" value="@Model.ConversationLabel" maxlength="140" required />
+                        <button class="btn btn-outline-primary" type="submit" title="Save conversation alias" aria-label="Save conversation alias"><i class="material-symbols-rounded">save</i></button>
+                    </form>
+                }
                 @if (Model.SelectedConversationId is null)
                 {
                     <p class="card-subtitle text-body-secondary">Select a conversation to inspect the context.</p>
@@ -59,7 +68,19 @@
                         @foreach (var message in Model.Messages)
                         {
                             <div class="crm-message-row crm-message-@message.SenderRole.ToLowerInvariant()">
-                                <div class="crm-message-meta">@message.SenderRole &middot; @ProjectTimeZone.Format(message.CreatedAtUtc, Model.Merchant.TimeZoneId)</div>
+                                <div class="crm-message-meta d-flex align-items-center gap-2">
+                                    @if (message.WeCom is { } wecom)
+                                    {
+                                        @if (!string.IsNullOrEmpty(wecom.AvatarUrl))
+                                        {
+                                            <img src="@wecom.AvatarUrl" alt="" width="32" height="32" referrerpolicy="no-referrer" loading="lazy" style="width:32px;height:32px;object-fit:cover;border-radius:50%;flex:none" />
+                                        }
+                                        <span>@(string.IsNullOrWhiteSpace(wecom.Name) ? wecom.UserId : wecom.Name) &middot; @wecom.MessageType</span>
+                                        @if (!string.IsNullOrWhiteSpace(wecom.ChatName)) { <span>@wecom.ChatName</span> }
+                                    }
+                                    else { <span>@message.SenderRole</span> }
+                                    <span>@ProjectTimeZone.Format(message.CreatedAtUtc, Model.Merchant.TimeZoneId)</span>
+                                </div>
                                 @if (!string.IsNullOrWhiteSpace(message.ImageUrl))
                                 {
                                     <img src="/api/crm/conversation-messages/@message.Id/image" alt="" />
@@ -72,9 +93,21 @@
                                 {
                                     <div class="crm-message-meta">@message.ModelName, @(message.PromptTokens + message.CompletionTokens) tokens</div>
                                 }
+                                @if (message.WeCom is { } info)
+                                {
+                                    <details class="mt-2">
+                                        <summary class="crm-message-meta">Message details</summary>
+                                        <div class="crm-message-meta">User: @info.UserId @if (!string.IsNullOrEmpty(info.ChatId)) { <span>&middot; Group: @info.ChatId</span> }</div>
+                                        <pre class="fs-8" style="white-space:pre-wrap;overflow-wrap:anywhere">@info.Details</pre>
+                                    </details>
+                                }
                             </div>
                         }
                     </div>
+                    <nav class="d-flex justify-content-between mt-3" aria-label="Message pages">
+                        @if (Model.HasMoreMessages) { <a asp-route-conversationId="@Model.SelectedConversationId" asp-route-messagePage="@(Model.MessagePage + 1)">Older messages</a> }
+                        @if (Model.MessagePage > 1) { <a asp-route-conversationId="@Model.SelectedConversationId" asp-route-messagePage="@(Model.MessagePage - 1)">Newer messages</a> }
+                    </nav>
                 }
             </div>
         </div>
