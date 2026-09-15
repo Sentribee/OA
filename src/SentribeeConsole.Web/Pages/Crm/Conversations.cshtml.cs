@@ -107,7 +107,7 @@ public class ConversationsModel(IConfiguration configuration) : CrmMerchantPageM
             await using var selection = await selected.ExecuteReaderAsync(cancellationToken);
             if (!await selection.ReadAsync(cancellationToken)) return;
             ConversationLabel = selection["VisitorLabel"] as string;
-            IsWeComConversation = selection.GetString("Channel") == "WeCom";
+            IsWeComConversation = selection.GetString("Channel") is "WeCom" or "WeChatKf";
         }
         const string sql = """
             SELECT message.id, message.SenderRole, message.Body, message.ImageUrl,
@@ -157,7 +157,7 @@ public class ConversationsModel(IConfiguration configuration) : CrmMerchantPageM
         if (string.IsNullOrEmpty(label) || label.Length > 140) return BadRequest();
         await using var connection = new MySqlConnection(ConnectionString);
         await connection.OpenAsync(cancellationToken);
-        await using var command = new MySqlCommand("UPDATE bee_CrmConversation SET VisitorLabel=@label WHERE id=@id AND MerchantId=@merchant AND Channel='WeCom'", connection);
+        await using var command = new MySqlCommand("UPDATE bee_CrmConversation SET VisitorLabel=@label WHERE id=@id AND MerchantId=@merchant AND Channel IN ('WeCom','WeChatKf')", connection);
         command.Parameters.AddWithValue("@label", label);
         command.Parameters.AddWithValue("@id", conversationId);
         command.Parameters.AddWithValue("@merchant", merchant.Id);
@@ -171,6 +171,15 @@ public class ConversationsModel(IConfiguration configuration) : CrmMerchantPageM
         var data = JsonNode.Parse(value ?? "{}");
         // Callback signatures and temporary reply URLs are not needed in the OA view.
         var details = new JsonObject { ["attachments"] = data?["attachments"]?.DeepClone(), ["quote"] = data?["quote"]?.DeepClone(), ["event"] = data?["rawMessage"]?["event"]?.DeepClone(), ["msgid"] = data?["msgid"]?.DeepClone() };
+        if (data?["source"]?.GetValue<string>() == "wecom_kf")
+        {
+            var type=data["msgtype"]?.GetValue<string>() ?? "unknown";
+            details["source"]=JsonValue.Create("wecom_kf");
+            details["content"]=data["rawMessage"]?[type]?.DeepClone();
+            // Event response codes are capabilities, not display fields.
+            foreach (var item in new[] { details["event"],details["content"] }.OfType<JsonObject>())
+            { item.Remove("welcome_code"); item.Remove("msg_code"); }
+        }
         return details.ToJsonString(new JsonSerializerOptions { WriteIndented=true });
     }
 }
