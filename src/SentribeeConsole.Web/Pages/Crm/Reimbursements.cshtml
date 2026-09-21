@@ -1,0 +1,54 @@
+@page "/oa/reimbursements"
+@model SentribeeConsole.Web.Pages.Crm.ReimbursementsModel
+@using System.Text.Json.Nodes
+@using static SentribeeConsole.Web.Pages.Crm.ReimbursementsModel
+@{ Layout="_CrmLayout"; }
+<link rel="stylesheet" href="~/css/chat-expenses.css" asp-append-version="true" />
+<div class="expense-toolbar">
+    <form method="get" class="expense-filters">
+        <label>资料状态<select class="form-select" name="status"><option value="">全部状态</option>@foreach(var item in States){<option value="@item.Key" selected="@(Model.Filter==item.Key)">@item.Value</option>}</select></label>
+        <label>分类<select class="form-select" name="category"><option value="">全部分类</option>@foreach(var item in Categories){<option value="@item.Key" selected="@(Model.Category==item.Key)">@item.Value</option>}</select></label>
+        <button class="btn btn-outline-primary" type="submit" title="筛选" aria-label="筛选"><i class="material-symbols-rounded">filter_alt</i></button>
+    </form>
+    <a asp-page="/Crm/Reimbursements" class="btn btn-outline-secondary" title="刷新" aria-label="刷新"><i class="material-symbols-rounded">refresh</i></a>
+</div>
+@if(Model.Selected is {} row)
+{
+    var p=row.Classification;var doc=row.Document;
+    <section class="expense-detail">
+        <div class="expense-toolbar"><h2 class="fs-5">@Categories[T(p,"category")] <span class="badge bg-light text-dark">@States[row.Status]</span></h2><a asp-page="/Crm/Reimbursements" title="返回列表" aria-label="返回列表"><i class="material-symbols-rounded">close</i></a></div>
+        <p>@T(p,"summary")</p>
+        <dl class="expense-fields">
+            @foreach(var field in new[]{("claimant","报销人（未核实）"),("amount","金额"),("currency","币种"),("expenseDate","发生日期"),("merchant","商家"),("expenseType","费用类型"),("purpose","用途"),("invoiceNumber","发票号码")})
+            {<div><dt>@field.Item2</dt><dd>@(string.IsNullOrEmpty(T(p,field.Item1))?"待补充":T(p,field.Item1))</dd></div>}
+        </dl>
+        @foreach(var flag in ((JsonArray)p["missing"]!).Concat((JsonArray)p["risks"]!)){<p class="expense-warning">@flag?.ToString()</p>}
+        <h3 class="fs-6">原始资料</h3>
+        <p class="text-body-secondary">群：@(T(doc,"groupName").Length>0?T(doc,"groupName"):T(doc,"roomId")) · 发送人：@(T(doc,"senderName").Length>0?T(doc,"senderName"):T(doc,"senderId")) · @T(doc,"messageTime")</p>
+        <pre class="expense-source">@T(doc,"sourceText")</pre>
+        <div class="expense-images">
+            @foreach(var image in Model.Images)
+            {
+                <figure><a asp-page-handler="Image" asp-route-evidenceId="@row.Id" asp-route-imageId="@image.Id" target="_blank" rel="noopener"><img src="@Url.Page("/Crm/Reimbursements","Image",new{evidenceId=row.Id,imageId=image.Id})" alt="报销原图" loading="lazy" /></a><figcaption><a asp-page-handler="Image" asp-route-evidenceId="@row.Id" asp-route-imageId="@image.Id" asp-route-download="true">下载原图</a></figcaption></figure>
+            }
+        </div>
+        @if(Model.Related.Count>0){<h3 class="fs-6">关联资料</h3><ul>@foreach(var related in Model.Related){<li><a asp-route-eventId="@related.EventId">@Categories[T(related.Classification,"category")] · @T(related.Classification,"summary")</a></li>}</ul>}
+        <form method="post" asp-page-handler="Review" class="expense-review">
+            <input type="hidden" name="evidenceId" value="@row.Id" />
+            <label>资料核对状态<select name="reviewStatus" class="form-select">@foreach(var state in States){<option value="@state.Key" selected="@(row.Status==state.Key)">@state.Value</option>}</select></label>
+            <label>核对备注<textarea name="notes" class="form-control" rows="3" maxlength="4000">@row.Notes</textarea></label>
+            <button type="submit" class="btn btn-primary">保存核对结果</button>
+        </form>
+    </section>
+}
+<div class="table-responsive">
+    <table class="table align-middle expense-table"><thead><tr><th>群 / 发送人</th><th>分类 / 时间</th><th>摘要</th><th>金额</th><th>状态</th><th></th></tr></thead><tbody>
+    @foreach(var entry in Model.Rows)
+    {
+        var p=entry.Classification;var doc=entry.Document;
+        <tr><td>@(T(doc,"groupName").Length>0?T(doc,"groupName"):T(doc,"roomId"))<br /><small>@(T(doc,"senderName").Length>0?T(doc,"senderName"):T(doc,"senderId"))</small></td><td>@Categories[T(p,"category")]<br /><small>@T(doc,"messageTime")</small></td><td>@T(p,"summary")</td><td>@(T(p,"amount").Length>0?T(p,"currency")+" "+T(p,"amount"):"待补充")</td><td>@States[entry.Status]</td><td><a asp-route-eventId="@entry.EventId" title="查看资料" aria-label="查看资料"><i class="material-symbols-rounded">chevron_right</i></a></td></tr>
+    }
+    </tbody></table>
+</div>
+@if(Model.Rows.Count==0){<p class="text-body-secondary py-4">暂无报销资料</p>}
+@if(Model.Rows.Count==100){<a asp-route-before="@Model.Rows[^1].Id" asp-route-status="@Model.Filter" asp-route-category="@Model.Category" class="btn btn-outline-secondary">下一页</a>}

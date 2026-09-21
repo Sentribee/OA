@@ -71,6 +71,7 @@ builder.Services.Configure<S3StorageOptions>(builder.Configuration.GetSection(S3
 builder.Services.Configure<OpenAIOptions>(builder.Configuration.GetSection(OpenAIOptions.SectionName));
 builder.Services.Configure<EdgeEventAutoAnalysisOptions>(builder.Configuration.GetSection(EdgeEventAutoAnalysisOptions.SectionName));
 builder.Services.AddScoped<IAdminRepository, AdminRepository>();
+builder.Services.AddScoped<SentribeeConsole.Web.Application.Services.ChatExpenseInbox>();
 builder.Services.AddScoped<IAdminAuthenticationService, AdminAuthenticationService>();
 builder.Services.AddScoped<IAdminProfileService, AdminProfileService>();
 builder.Services.AddHttpClient<IFileStorageService, S3EdgeImageStorageService>();
@@ -195,6 +196,7 @@ app.UseSession();
 app.UseAuthorization();
 
 app.MapRazorPages();
+app.MapPost("/api/oa/chat-expenses", (HttpContext context, SentribeeConsole.Web.Application.Services.ChatExpenseInbox inbox) => inbox.Receive(context));
 
 app.MapGet("/api/crm/public/chat/{publicChatPath}/avatar", async (
     string publicChatPath,
