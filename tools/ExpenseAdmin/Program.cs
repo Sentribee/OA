@@ -23,6 +23,14 @@ else if(args[0]=="counts")
     await using var command=new MySqlCommand("SELECT MerchantId,Category,ReviewStatus,COUNT(*) FROM bee_CrmChatExpenseEvidence GROUP BY MerchantId,Category,ReviewStatus",connection);
     await using var reader=await command.ExecuteReaderAsync();while(await reader.ReadAsync())Console.WriteLine($"{reader.GetInt64(0)}\t{reader.GetString(1)}\t{reader.GetString(2)}\t{reader.GetInt64(3)}");
 }
+else if(args[0]=="exclude")
+{
+    if(args.Length!=3||!System.Text.RegularExpressions.Regex.IsMatch(args[1],"^[a-f0-9]{64}$")||args[2].Length is <1 or >1000)throw new Exception("Expected event ID and review note");
+    var tenant=Environment.GetEnvironmentVariable("ChatExpenses__TenantId")??throw new Exception("missing_tenant");var merchant=long.Parse(Environment.GetEnvironmentVariable("ChatExpenses__MerchantId")!);
+    await using var transaction=await connection.BeginTransactionAsync();
+    await using var command=new MySqlCommand("UPDATE bee_CrmChatExpenseEvidence SET ReviewStatus='excluded',Notes=@note,UpdatedAtUtc=UTC_TIMESTAMP(6) WHERE EventId=@event AND SourceTenantId=@t AND MerchantId=@m; INSERT INTO bee_CrmChatExpenseReview(EvidenceId,MerchantId,ReviewStatus,Notes) SELECT id,MerchantId,'excluded',@note FROM bee_CrmChatExpenseEvidence WHERE EventId=@event AND SourceTenantId=@t AND MerchantId=@m",connection,transaction);
+    command.Parameters.AddWithValue("@event",args[1]);command.Parameters.AddWithValue("@t",tenant);command.Parameters.AddWithValue("@m",merchant);command.Parameters.AddWithValue("@note",args[2]);if(await command.ExecuteNonQueryAsync()!=2)throw new Exception("evidence_not_found");await transaction.CommitAsync();Console.WriteLine("Evidence excluded; original classification retained and review audited");
+}
 else if(args[0]=="roundtrip")
 {
     var secret=Environment.GetEnvironmentVariable("ChatExpenses__Secret")??throw new Exception("missing_signing_key");
